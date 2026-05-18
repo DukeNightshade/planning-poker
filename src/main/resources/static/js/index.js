@@ -17,8 +17,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
 
     if (response.ok) {
         const data = await response.json();
-        // Moderator-ID in sessionStorage speichern
-        sessionStorage.setItem('participantId', 'moderator');
+        sessionStorage.setItem('participantId', data.participantId);
         sessionStorage.setItem('isModerator', 'true');
         window.location.href = '/session/' + data.roomCode;
     } else {
