@@ -113,16 +113,13 @@
 
     <!-- Sidebar -->
     <aside class="session__sidebar">
-        <h3 class="sidebar__title">Teilnehmer</h3>
+        <h3 class="sidebar__title" id="sidebarTitle">Teilnehmer</h3>
         <ul class="sidebar__list" id="participantList">
-            <li class="sidebar__item"
-                th:each="p : ${participants}"
-                th:text="${p.name} + (${p.role.name() == 'MODERATOR'} ? ' (Moderator)' : '')">
-            </li>
+            <!-- wird via JS befüllt -->
         </ul>
-        <div class="sidebar__method">
-            <span>Methode: </span>
-            <strong th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></strong>
+        <div class="sidebar__method-block">
+            <div class="sidebar__method-label">Methode</div>
+            <div class="sidebar__method-value" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></div>
         </div>
     </aside>
 
