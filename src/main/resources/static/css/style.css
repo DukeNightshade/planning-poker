@@ -774,6 +774,20 @@ body {
 }
 
 /* ================================
+   Karten Aufdecken Animation
+   ================================ */
+@keyframes cardFlip {
+    0%   { transform: scaleX(1); }
+    40%  { transform: scaleX(0); }
+    60%  { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+}
+
+.poker-table--flipping {
+    animation: cardFlip 0.6s ease-in-out;
+}
+
+/* ================================
    Footer
    ================================ */
 .footer {
