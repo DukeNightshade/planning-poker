@@ -59,7 +59,8 @@ public class PokerWsController {
                 Map.of(
                         "type", "VOTE_UPDATE",
                         "votedCount", votedCount,
-                        "totalCount", totalParticipants
+                        "totalCount", totalParticipants,
+                        "voterId", participantId.toString()
                 )
         );
     }

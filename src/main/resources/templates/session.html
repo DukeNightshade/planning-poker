@@ -22,7 +22,7 @@
 <main class="session">
 
     <!-- Settings Panel -->
-    <div class="settings-panel" id="settingsPanel" style="display:none;">
+    <div class="settings-panel" id="settingsPanel" style="display:none; grid-column: 1 / -1;">
         <div class="settings-panel__header">
             <h3>Einstellungen</h3>
             <button class="btn--icon" onclick="toggleSettings()">✕</button>
@@ -44,37 +44,22 @@
     </div>
 
     <!-- Topic -->
-    <section class="session__topic">
+    <section class="session__topic" style="grid-column: 1 / -1;">
         <h2 class="session__topic-title">Aktuelles Ticket / User Story</h2>
         <p class="session__topic-text" id="topicText"
            th:text="${session.topic != null ? session.topic : 'Kein Ticket gewählt'}">
         </p>
     </section>
 
-    <!-- Teilnehmerliste -->
-    <aside class="session__sidebar">
-        <h3 class="sidebar__title">Teilnehmer</h3>
-        <ul class="sidebar__list" id="participantList">
-            <li class="sidebar__item"
-                th:each="p : ${participants}"
-                th:text="${p.name} + (${p.role.name() == 'MODERATOR'} ? ' (Moderator)' : '')">
-            </li>
-        </ul>
+    <!-- Poker Tisch -->
+    <section class="session__poker">
 
-        <div class="sidebar__method">
-            <span>Methode: </span>
-            <strong th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></strong>
-        </div>
-    </aside>
+        <!-- SVG wird hier von JS eingefügt -->
+        <div id="pokerTable" style="width:100%; min-height:500px;"></div>
 
-    <!-- Abstimmungsbereich -->
-    <section class="session__voting">
-
-        <!-- Karten -->
-        <div class="cards" id="cardArea">
-
-            <!-- Fibonacci -->
-            <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid">
+        <!-- Karten zum Wählen -->
+        <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
+            <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,0,0.5,1,2,3,5,8,13,20,40,100'.split(',')}"
                         th:text="${v}"
@@ -82,9 +67,7 @@
                         onclick="selectCard(this)">
                 </button>
             </div>
-
-            <!-- T-Shirt -->
-            <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid">
+            <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,XS,S,M,L,XL,XXL'.split(',')}"
                         th:text="${v}"
@@ -92,9 +75,7 @@
                         onclick="selectCard(this)">
                 </button>
             </div>
-
-            <!-- Zweierpotenzen -->
-            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid">
+            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,1,2,4,8,16,32,64'.split(',')}"
                         th:text="${v}"
@@ -102,29 +83,24 @@
                         onclick="selectCard(this)">
                 </button>
             </div>
-
         </div>
 
-        <!-- Status -->
-        <div class="session__status">
-            <p id="voteStatus">Warte auf Abstimmung...</p>
-        </div>
-
-        <!-- Ergebnisse (nach Aufdecken) -->
-        <div class="session__results" id="resultsArea" style="display:none;">
+        <!-- Ergebnisse nach Aufdecken -->
+        <div class="session__results" id="resultsArea" style="display:none; padding: 1rem;">
             <h3>Ergebnisse</h3>
             <ul id="resultsList" class="results__list"></ul>
         </div>
 
         <!-- Moderator Aktionen -->
-        <div class="session__actions" id="moderatorActions" style="display:none;">
+        <div class="session__actions" id="moderatorActions"
+             style="display:none; justify-content:center; padding: 0 1rem 1rem;">
             <button class="btn btn--primary" onclick="revealCards()">
                 Karten aufdecken
             </button>
             <button class="btn btn--secondary" onclick="resetRound()">
                 Neue Runde
             </button>
-            <div class="form">
+            <div class="form" id="topicForm" style="flex-direction:row; align-items:center; gap: 0.5rem;">
                 <input class="form__input" type="text" id="topicInput"
                        placeholder="Ticket / User Story eingeben">
                 <button class="btn btn--secondary" onclick="updateTopic()">
@@ -135,17 +111,45 @@
 
     </section>
 
+    <!-- Sidebar -->
+    <aside class="session__sidebar">
+        <h3 class="sidebar__title">Teilnehmer</h3>
+        <ul class="sidebar__list" id="participantList">
+            <li class="sidebar__item"
+                th:each="p : ${participants}"
+                th:text="${p.name} + (${p.role.name() == 'MODERATOR'} ? ' (Moderator)' : '')">
+            </li>
+        </ul>
+        <div class="sidebar__method">
+            <span>Methode: </span>
+            <strong th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></strong>
+        </div>
+    </aside>
+
 </main>
 
 <footer class="footer">
     &copy; 2026 SIV.AG – Internes Tool
 </footer>
 
+<!-- Versteckte Status-Daten für JS -->
+<div style="display:none;">
+    <span id="voteStatus">Warte auf Abstimmung...</span>
+    <span id="progressBar"></span>
+</div>
+
 <!-- Sessiondaten für JavaScript -->
 <div id="sessionData"
-     th:attr="data-roomcode=${roomCode},
-              data-participantid=''"
+     th:attr="data-roomcode=${roomCode}"
      style="display:none;">
+</div>
+
+<!-- Spieler-Daten für JS -->
+<div id="playerData" style="display:none;">
+    <span th:each="p : ${participants}"
+          class="player-entry"
+          th:attr="data-player-id=${p.id}, data-player-name=${p.name}">
+    </span>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
