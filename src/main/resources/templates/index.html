@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning Poker – SIV.AG</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header class="header">
+    <div class="header__logo">SIV.AG</div>
+    <h1 class="header__title">Planning Poker</h1>
+    <p class="header__subtitle">Agile Aufwandsschätzung für Teams</p>
+</header>
+
+<main class="main">
+
+    <!-- Session erstellen -->
+    <section class="card">
+        <h2 class="card__title">Neue Session erstellen</h2>
+        <form id="createForm" class="form">
+            <label class="form__label" for="moderatorName">Ihr Name</label>
+            <input class="form__input" type="text" id="moderatorName"
+                   placeholder="Name eingeben" required>
+
+            <label class="form__label" for="method">Schätzmethode</label>
+            <select class="form__select" id="method">
+                <option th:each="m : ${methods}"
+                        th:value="${m.name()}"
+                        th:text="${m.name()}">
+                </option>
+            </select>
+
+            <button class="btn btn--primary" type="submit">
+                Session erstellen
+            </button>
+        </form>
+    </section>
+
+    <!-- Session beitreten -->
+    <section class="card">
+        <h2 class="card__title">Session beitreten</h2>
+        <form id="joinForm" class="form">
+            <label class="form__label" for="participantName">Ihr Name</label>
+            <input class="form__input" type="text" id="participantName"
+                   placeholder="Name eingeben" required>
+
+            <label class="form__label" for="roomCode">Raumcode</label>
+            <input class="form__input" type="text" id="roomCode"
+                   placeholder="z.B. SPR-4821" required>
+
+            <button class="btn btn--secondary" type="submit">
+                Beitreten
+            </button>
+        </form>
+    </section>
+
+</main>
+
+<footer class="footer">
+    &copy; 2026 SIV.AG – Internes Tool
+</footer>
+
+<script th:src="@{/js/index.js}"></script>
+
+</body>
+</html>

@@ -1,0 +1,399 @@
+/* ================================
+   CSS Variables – SIV.AG Corporate Design
+   ================================ */
+:root {
+    --color-primary:    #004178;
+    --color-red:        #E1001A;
+    --color-accent:     #00579d;
+    --color-ice:        #e4eff9;
+    --color-dark:       #333333;
+    --color-white:      #ffffff;
+    --color-grey:       #f4f6f9;
+    --color-border:     #d0d8e4;
+    --color-text:       #1a1a2e;
+    --color-text-light: #6b7280;
+    --font-main:        'Fira Sans', 'Lucida Sans', sans-serif;
+    --radius:           8px;
+    --shadow:           0 2px 12px rgba(0,65,120,0.10);
+    --transition:       0.2s ease;
+}
+
+/* ================================
+   Reset & Base
+   ================================ */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-main);
+    background: var(--color-grey);
+    color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ================================
+   Header
+   ================================ */
+.header {
+    background: var(--color-primary);
+    color: var(--color-white);
+    text-align: center;
+    padding: 2.5rem 1rem 2rem;
+}
+
+.header__logo {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.header__title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.header__subtitle {
+    font-size: 1rem;
+    opacity: 0.75;
+}
+
+.header--session {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    text-align: left;
+}
+
+.header__session-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.header__method {
+    font-size: 0.9rem;
+    background: rgba(255,255,255,0.15);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+}
+
+/* ================================
+   Main Layout
+   ================================ */
+.main {
+    flex: 1;
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 3rem 1rem;
+    flex-wrap: wrap;
+}
+
+/* ================================
+   Card
+   ================================ */
+.card {
+    background: var(--color-white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.card__title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--color-ice);
+}
+
+/* ================================
+   Form
+   ================================ */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.form__label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-dark);
+}
+
+.form__input,
+.form__select {
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: var(--font-main);
+    color: var(--color-text);
+    transition: border-color var(--transition);
+    background: var(--color-white);
+}
+
+.form__input:focus,
+.form__select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* ================================
+   Buttons
+   ================================ */
+.btn {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn--primary {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.btn--primary:hover {
+    background: var(--color-accent);
+}
+
+.btn--secondary {
+    background: var(--color-red);
+    color: var(--color-white);
+}
+
+.btn--secondary:hover {
+    background: #c0001a;
+}
+
+.btn--outline {
+    background: transparent;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+}
+
+.btn--outline:hover {
+    background: var(--color-ice);
+}
+
+/* ================================
+   Session Layout
+   ================================ */
+.session {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: auto 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.session__topic {
+    grid-column: 1 / -1;
+    background: var(--color-white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.5rem;
+    border-left: 4px solid var(--color-primary);
+}
+
+.session__topic-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-light);
+    margin-bottom: 0.5rem;
+}
+
+.session__topic-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+/* ================================
+   Sidebar
+   ================================ */
+.session__sidebar {
+    background: var(--color-white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+}
+
+.sidebar__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+}
+
+.sidebar__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--color-ice);
+}
+
+.sidebar__item::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.sidebar__method {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-ice);
+}
+
+/* ================================
+   Voting Area
+   ================================ */
+.session__voting {
+    background: var(--color-white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* ================================
+   Karten
+   ================================ */
+.cards__grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.card-btn {
+    width: 64px;
+    height: 90px;
+    border: 2.5px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: var(--font-main);
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.card-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-ice);
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0,65,120,0.15);
+}
+
+.card-btn.selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-white);
+    transform: translateY(-6px);
+    box-shadow: 0 8px 20px rgba(0,65,120,0.25);
+}
+
+/* ================================
+   Status & Ergebnisse
+   ================================ */
+.session__status {
+    font-size: 0.95rem;
+    color: var(--color-text-light);
+    padding: 0.75rem 1rem;
+    background: var(--color-ice);
+    border-radius: var(--radius);
+}
+
+.results__list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.results__item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    background: var(--color-ice);
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+}
+
+.results__value {
+    font-weight: 700;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+}
+
+/* ================================
+   Moderator Aktionen
+   ================================ */
+.session__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--color-ice);
+}
+
+/* ================================
+   Footer
+   ================================ */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    background: var(--color-white);
+    border-top: 1px solid var(--color-border);
+}
