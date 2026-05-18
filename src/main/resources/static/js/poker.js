@@ -5,6 +5,11 @@ const sessionData = document.getElementById('sessionData');
 const roomCode = sessionData.dataset.roomcode;
 const participantId = sessionStorage.getItem('participantId');
 const isModerator = sessionStorage.getItem('isModerator') === 'true';
+const AVATAR_COLORS = [
+    '#004178', '#E1001A', '#2563eb', '#16a34a',
+    '#9333ea', '#ea580c', '#0891b2', '#be185d',
+    '#854d0e', '#166534'
+];
 
 let selectedCard = null;
 let stompClient = null;
@@ -35,6 +40,7 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
     };
 });
 renderTable();
+renderSidebar();
 
 // ================================
 // WebSocket
@@ -62,6 +68,7 @@ async function loadState() {
     if (response.ok) {
         const data = await response.json();
         renderTable();
+        renderSidebar();
     }
 }
 
@@ -95,6 +102,7 @@ function handleMessage(data) {
                 };
             }
             renderTable();
+            renderSidebar();
             break;
     }
 }
@@ -285,6 +293,36 @@ function renderTable() {
     syncStatusToSvg();
 }
 
+function renderSidebar() {
+    const playerList = Object.entries(players);
+    const total = playerList.length;
+
+    document.getElementById('sidebarTitle').textContent = `Teilnehmer (${total})`;
+
+    const ul = document.getElementById('participantList');
+    ul.innerHTML = '';
+
+    playerList.forEach(([id, player]) => {
+        const isSelf = id === participantId;
+        const hasVoted = player.voted;
+        const initial = player.name.charAt(0).toUpperCase();
+        const color = getAvatarColor(player.name);
+
+        const li = document.createElement('li');
+        li.className = 'sidebar__item';
+        li.innerHTML = `
+            <div class="player-avatar" style="background:${color};">${initial}</div>
+            <div class="player-info">
+                <span class="player-info__name ${isSelf ? 'player-info__name--self' : ''}">
+                    ${player.name}${isSelf ? ' (Sie)' : ''}
+                </span>
+            </div>
+            <div class="player-status ${hasVoted ? 'player-status--voted' : 'player-status--waiting'}"></div>
+        `;
+        ul.appendChild(li);
+    });
+}
+
 function syncStatusToSvg() {
     const svgStatus = document.getElementById('svgVoteStatus');
     const svgProgress = document.getElementById('svgProgressBar');
@@ -314,6 +352,7 @@ function updateVoteStatus(votedCount, totalCount, voterId) {
         players[voterId].voted = true;
     }
     renderTable();
+    renderSidebar();
 }
 
 // ================================
@@ -329,6 +368,7 @@ function selectCard(button) {
         players[participantId].cardValue = selectedCard;
     }
     renderTable();
+    renderSidebar();
 
     stompClient.send(
         '/app/session/' + roomCode + '/vote',
@@ -375,6 +415,7 @@ function showResults(votes) {
     });
 
     renderTable();
+    renderSidebar();
 
     const resultsList = document.getElementById('resultsList');
     resultsList.innerHTML = '';
@@ -402,6 +443,7 @@ function resetUI() {
         players[id].cardValue = null;
     });
     renderTable();
+    renderSidebar();
 
     document.getElementById('resultsArea').style.display = 'none';
     document.getElementById('cardArea').style.display = 'block';
@@ -443,6 +485,17 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
     document.getElementById('settingShowTopic').checked = showTopic;
     document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
     document.getElementById('settingAutoReveal').checked = autoReveal;
+}
+
+// ================================
+// Avatar Farben
+// ================================
+function getAvatarColor(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 // ================================
