@@ -13,8 +13,9 @@ const AVATAR_COLORS = [
 
 let selectedCard = null;
 let stompClient = null;
+let isRevealed = false;
 
-// Teilnehmerstatus: { id -> { name, voted, cardValue } }
+// Teilnehmerstatus: { id -> { name, voted, cardValue, originalCardValue, changed } }
 let players = {};
 
 // ================================
@@ -36,7 +37,9 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
     players[el.dataset.playerId] = {
         name: el.dataset.playerName,
         voted: false,
-        cardValue: null
+        cardValue: null,
+        originalCardValue: null,
+        changed: false
     };
 });
 renderTable();
@@ -55,7 +58,6 @@ function connect() {
             handleMessage(JSON.parse(message.body));
         });
 
-        // Aktuellen State laden
         loadState();
     }, function (error) {
         console.error('WebSocket Verbindungsfehler:', error);
@@ -66,7 +68,6 @@ function connect() {
 async function loadState() {
     const response = await fetch('/api/sessions/' + roomCode + '/state');
     if (response.ok) {
-        const data = await response.json();
         renderTable();
         renderSidebar();
     }
@@ -83,6 +84,9 @@ function handleMessage(data) {
         case 'REVEAL':
             showResults(data.votes);
             break;
+        case 'DISCUSSION_UPDATE':
+            updateDiscussion(data.participantId, data.participantName, data.cardValue);
+            break;
         case 'RESET':
             resetUI();
             break;
@@ -98,7 +102,9 @@ function handleMessage(data) {
                 players[data.participantId] = {
                     name: data.participantName,
                     voted: false,
-                    cardValue: null
+                    cardValue: null,
+                    originalCardValue: null,
+                    changed: false
                 };
             }
             renderTable();
@@ -117,11 +123,9 @@ function renderTable() {
     const playerList = Object.entries(players);
     const total = playerList.length;
 
-    // Tisch-Ellipse Radien (fix)
     const tableRx = 200;
     const tableRy = 110;
 
-    // Orbit dynamisch skalieren
     const baseOrbitRx = tableRx + 110;
     const baseOrbitRy = tableRy + 100;
     const minSpacing = 65;
@@ -132,25 +136,21 @@ function renderTable() {
     const orbitRx = baseOrbitRx * scaleFactor;
     const orbitRy = baseOrbitRy * scaleFactor;
 
-    // SVG Dimensionen dynamisch
     const W = Math.max(900, orbitRx * 2 + 200);
     const H = Math.max(500, orbitRy * 2 + 200);
     const cx = W / 2;
     const cy = H / 2;
 
-    // Kartengröße skalieren
     const cardW = total <= 6 ? 44 : total <= 10 ? 38 : total <= 15 ? 32 : 26;
     const cardH = Math.round(cardW * 1.4);
     const nameFontSize = total <= 8 ? 12 : total <= 14 ? 10 : 9;
 
-    // SVG erstellen
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
     svg.style.overflow = 'visible';
 
-    // Defs
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
         <radialGradient id="tableGrad" cx="40%" cy="35%" r="60%">
@@ -163,7 +163,6 @@ function renderTable() {
     `;
     svg.appendChild(defs);
 
-    // Tisch Ellipse
     const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
     ellipse.setAttribute('cx', cx);
     ellipse.setAttribute('cy', cy);
@@ -173,7 +172,6 @@ function renderTable() {
     ellipse.setAttribute('filter', 'url(#tableShadow)');
     svg.appendChild(ellipse);
 
-    // Status Text
     const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     statusText.setAttribute('x', cx);
     statusText.setAttribute('y', cy - 10);
@@ -186,7 +184,6 @@ function renderTable() {
     statusText.textContent = document.getElementById('voteStatus').textContent;
     svg.appendChild(statusText);
 
-    // Fortschrittsbalken Hintergrund
     const progressBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     progressBg.setAttribute('x', cx - 70);
     progressBg.setAttribute('y', cy + 10);
@@ -196,7 +193,6 @@ function renderTable() {
     progressBg.setAttribute('fill', 'rgba(255,255,255,0.2)');
     svg.appendChild(progressBg);
 
-    // Fortschrittsbalken Fill
     const progressFill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     progressFill.setAttribute('x', cx - 70);
     progressFill.setAttribute('y', cy + 10);
@@ -207,7 +203,6 @@ function renderTable() {
     progressFill.setAttribute('id', 'svgProgressBar');
     svg.appendChild(progressFill);
 
-    // Spieler positionieren
     if (total > 0) {
         playerList.forEach(([id, player], index) => {
             const angle = (2 * Math.PI * index / total) - Math.PI / 2;
@@ -216,12 +211,18 @@ function renderTable() {
 
             const isSelf = id === participantId;
             const hasVoted = player.voted;
-            const isRevealed = player.cardValue &&
-                document.getElementById('resultsArea').style.display !== 'none';
 
             let cardFill, cardStroke, textFill;
-            if (isRevealed) {
-                cardFill = 'white'; cardStroke = '#004178'; textFill = '#004178';
+            if (isRevealed && player.cardValue) {
+                if (player.changed) {
+                    cardFill = '#fff7ed';
+                    cardStroke = '#f97316';
+                    textFill = '#c2410c';
+                } else {
+                    cardFill = 'white';
+                    cardStroke = '#004178';
+                    textFill = '#004178';
+                }
             } else if (hasVoted) {
                 cardFill = '#E1001A'; cardStroke = '#c0001a'; textFill = 'white';
             } else if (isSelf) {
@@ -230,7 +231,6 @@ function renderTable() {
                 cardFill = '#c8ddf0'; cardStroke = '#d0d8e4'; textFill = 'transparent';
             }
 
-            // Karte
             const cardRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             cardRect.setAttribute('x', px - cardW / 2);
             cardRect.setAttribute('y', py - cardH / 2);
@@ -243,8 +243,19 @@ function renderTable() {
             cardRect.setAttribute('id', `card-${id}`);
             svg.appendChild(cardRect);
 
-            // Kartenwert
-            if ((isSelf && player.cardValue) || isRevealed) {
+            if (isRevealed && player.cardValue) {
+                const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                cardText.setAttribute('x', px);
+                cardText.setAttribute('y', py + 5);
+                cardText.setAttribute('text-anchor', 'middle');
+                cardText.setAttribute('fill', textFill);
+                cardText.setAttribute('font-size', cardW > 36 ? 14 : 11);
+                cardText.setAttribute('font-weight', '700');
+                cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+                cardText.setAttribute('id', `cardtext-${id}`);
+                cardText.textContent = player.cardValue || '';
+                svg.appendChild(cardText);
+            } else if (isSelf && player.cardValue) {
                 const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 cardText.setAttribute('x', px);
                 cardText.setAttribute('y', py + 5);
@@ -258,7 +269,6 @@ function renderTable() {
                 svg.appendChild(cardText);
             }
 
-            // Name Hintergrund
             const nameY = py + cardH / 2 + 6;
             const displayName = player.name.length > 10
                 ? player.name.substring(0, 9) + '…'
@@ -275,7 +285,6 @@ function renderTable() {
             nameBg.setAttribute('opacity', '0.9');
             svg.appendChild(nameBg);
 
-            // Name Text
             const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             nameText.setAttribute('x', px);
             nameText.setAttribute('y', nameY + nameFontSize);
@@ -302,7 +311,20 @@ function renderSidebar() {
     const ul = document.getElementById('participantList');
     ul.innerHTML = '';
 
-    playerList.forEach(([id, player]) => {
+    // Sortierung: vor Aufdecken alphabetisch, nach Aufdecken nach Kartenwert
+    const sorted = [...playerList].sort(([, a], [, b]) => {
+        if (isRevealed && a.cardValue && b.cardValue) {
+            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8', '13', '16', '20', '32', '40', '64', '100',
+                'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            const ai = order.indexOf(a.cardValue);
+            const bi = order.indexOf(b.cardValue);
+            if (ai !== -1 && bi !== -1) return ai - bi;
+            return a.cardValue.localeCompare(b.cardValue);
+        }
+        return a.name.localeCompare(b.name);
+    });
+
+    sorted.forEach(([id, player]) => {
         const isSelf = id === participantId;
         const hasVoted = player.voted;
         const initial = player.name.charAt(0).toUpperCase();
@@ -317,7 +339,13 @@ function renderSidebar() {
                     ${player.name}${isSelf ? ' (Sie)' : ''}
                 </span>
             </div>
-            <div class="player-status ${hasVoted ? 'player-status--voted' : 'player-status--waiting'}"></div>
+            ${isRevealed && player.cardValue ? `
+                <span class="sidebar__card-value ${player.changed ? 'sidebar__card-value--changed' : ''}">
+                    ${player.cardValue}
+                </span>
+            ` : `
+                <div class="player-status ${player.changed ? 'player-status--changed' : (hasVoted ? 'player-status--voted' : 'player-status--waiting')}"></div>
+            `}
         `;
         ul.appendChild(li);
     });
@@ -356,6 +384,25 @@ function updateVoteStatus(votedCount, totalCount, voterId) {
 }
 
 // ================================
+// Diskussions-Update
+// ================================
+function updateDiscussion(id, name, cardValue) {
+
+    let playerId = id;
+    if (!players[playerId]) {
+        playerId = Object.keys(players).find(k => players[k].name === name);
+    }
+    if (playerId && players[playerId]) {
+        players[playerId].cardValue = cardValue;
+        players[playerId].voted = true;
+        players[playerId].changed =
+            cardValue !== players[playerId].originalCardValue;
+    }
+    renderTable();
+    renderSidebar();
+}
+
+// ================================
 // Karte wählen
 // ================================
 function selectCard(button) {
@@ -363,7 +410,13 @@ function selectCard(button) {
     button.classList.add('selected');
     selectedCard = button.dataset.value;
 
+    const isDiscussion = isRevealed;
+
     if (players[participantId]) {
+        if (isDiscussion && players[participantId].originalCardValue) {
+            players[participantId].changed =
+                selectedCard !== players[participantId].originalCardValue;
+        }
         players[participantId].voted = true;
         players[participantId].cardValue = selectedCard;
     }
@@ -373,7 +426,7 @@ function selectCard(button) {
     stompClient.send(
         '/app/session/' + roomCode + '/vote',
         {},
-        JSON.stringify({ participantId, cardValue: selectedCard })
+        JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion })
     );
 }
 
@@ -406,11 +459,15 @@ function updateTopic() {
 // Ergebnisse anzeigen
 // ================================
 function showResults(votes) {
+    isRevealed = true;
+
     votes.forEach(vote => {
         const id = Object.keys(players).find(k => players[k].name === vote.participantName);
         if (id) {
             players[id].cardValue = vote.cardValue;
+            players[id].originalCardValue = vote.cardValue;
             players[id].voted = true;
+            players[id].changed = false;
         }
     });
 
@@ -430,30 +487,40 @@ function showResults(votes) {
     });
 
     document.getElementById('resultsArea').style.display = 'block';
-    document.getElementById('cardArea').style.display = 'none';
+    document.getElementById('cardArea').style.display = 'block';
+    document.getElementById('pokerPane').classList.add('session__poker--discussion');
+    document.getElementById('discussionLabel').style.display = 'block';
+    document.querySelector('[onclick="revealCards()"]').disabled = true;
 }
 
 // ================================
 // UI zurücksetzen
 // ================================
 function resetUI() {
+    isRevealed = false;
     selectedCard = null;
     Object.keys(players).forEach(id => {
         players[id].voted = false;
         players[id].cardValue = null;
+        players[id].originalCardValue = null;
+        players[id].changed = false;
     });
-    renderTable();
-    renderSidebar();
 
+    document.getElementById('pokerPane').classList.remove('session__poker--discussion');
+    document.getElementById('discussionLabel').style.display = 'none';
     document.getElementById('resultsArea').style.display = 'none';
     document.getElementById('cardArea').style.display = 'block';
     document.getElementById('voteStatus').textContent = 'Warte auf Abstimmung...';
     document.getElementById('progressBar').style.width = '0%';
+    document.querySelector('[onclick="revealCards()"]').disabled = false;
 
     const topicEl = document.getElementById('topicText');
     if (topicEl) topicEl.textContent = 'Kein Ticket gewählt';
 
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
+
+    renderTable();
+    renderSidebar();
 }
 
 // ================================
