@@ -28,7 +28,7 @@
             <select class="form__select" id="method">
                 <option th:each="m : ${methods}"
                         th:value="${m.name()}"
-                        th:text="${m.name()}">
+                        th:text="${methodLabels[m.name()]}">
                 </option>
             </select>
 

@@ -9,6 +9,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.util.Map;
+
 @Controller
 @RequiredArgsConstructor
 public class SessionController {
@@ -22,6 +24,11 @@ public class SessionController {
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("methods", EstimationMethod.values());
+        model.addAttribute("methodLabels", Map.of(
+                "FIBONACCI", "Fibonacci",
+                "T_SHIRT", "T-Shirt Größen",
+                "POWERS_OF_TWO", "Zweierpotenzen"
+        ));
         return "index";
     }
 

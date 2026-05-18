@@ -13,7 +13,7 @@
     <span class="header__session-title"
           th:text="'Session: ' + ${roomCode}">
     </span>
-    <span class="header__method" th:text="${estimationMethod}"></span>
+    <span class="header__method" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></span>
 </header>
 
 <main class="session">
@@ -38,7 +38,7 @@
 
         <div class="sidebar__method">
             <span>Methode: </span>
-            <strong th:text="${estimationMethod}"></strong>
+            <strong th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></strong>
         </div>
     </aside>
 
@@ -51,7 +51,7 @@
             <!-- Fibonacci -->
             <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid">
                 <button class="card-btn"
-                        th:each="v : ${'1,2,3,5,8,13,21,?'.split(',')}"
+                        th:each="v : ${'?,☕,0,0.5,1,2,3,5,8,13,20,40,100'.split(',')}"
                         th:text="${v}"
                         th:attr="data-value=${v}"
                         onclick="selectCard(this)">
@@ -61,17 +61,17 @@
             <!-- T-Shirt -->
             <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid">
                 <button class="card-btn"
-                        th:each="v : ${'XS,S,M,L,XL,XXL,?'.split(',')}"
+                        th:each="v : ${'?,☕,XS,S,M,L,XL,XXL'.split(',')}"
                         th:text="${v}"
                         th:attr="data-value=${v}"
                         onclick="selectCard(this)">
                 </button>
             </div>
 
-            <!-- Powers of Two -->
+            <!-- Zweierpotenzen -->
             <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid">
                 <button class="card-btn"
-                        th:each="v : ${'1,2,4,8,16,32,64,?'.split(',')}"
+                        th:each="v : ${'?,☕,1,2,4,8,16,32,64'.split(',')}"
                         th:text="${v}"
                         th:attr="data-value=${v}"
                         onclick="selectCard(this)">
