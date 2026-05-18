@@ -31,15 +31,15 @@ public class PokerWsController {
 
         Long participantId = Long.parseLong(payload.get("participantId"));
         String cardValue = payload.get("cardValue");
+        boolean isDiscussion = Boolean.parseBoolean(payload.getOrDefault("isDiscussion", "false"));
 
-        sessionService.submitVote(roomCode, participantId, cardValue);
+        sessionService.submitVote(roomCode, participantId, cardValue, isDiscussion);
 
         int totalParticipants = sessionService.getParticipants(roomCode).size();
         int votedCount = sessionService.getVotes(roomCode).size();
 
-        // Prüfen ob auto-reveal aktiv und alle abgestimmt haben
         Session session = sessionService.getSessionByRoomCode(roomCode);
-        if (session.isAutoReveal() && votedCount >= totalParticipants) {
+        if (session.isAutoReveal() && votedCount >= totalParticipants && !isDiscussion) {
             List<Vote> votes = sessionService.revealCards(roomCode);
             messagingTemplate.convertAndSend(
                     "/topic/session/" + roomCode,
@@ -49,6 +49,26 @@ public class PokerWsController {
                                     "participantName", v.getParticipant().getName(),
                                     "cardValue", v.getCardValue()
                             )).toList()
+                    )
+            );
+            return;
+        }
+
+        if (isDiscussion) {
+            // Diskussions-Update mit Name und neuem Wert
+            String participantName = sessionService.getParticipants(roomCode).stream()
+                    .filter(p -> p.getId().equals(participantId))
+                    .findFirst()
+                    .map(p -> p.getName())
+                    .orElse("");
+
+            messagingTemplate.convertAndSend(
+                    "/topic/session/" + roomCode,
+                    Map.of(
+                            "type", "DISCUSSION_UPDATE",
+                            "participantId", participantId.toString(),
+                            "participantName", participantName,
+                            "cardValue", cardValue
                     )
             );
             return;

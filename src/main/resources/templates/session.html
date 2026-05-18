@@ -9,13 +9,20 @@
 <body>
 
 <header class="header header--session">
-    <div class="header__logo">SIV.AG</div>
-    <span class="header__session-title"
-          th:text="'Session: ' + ${roomCode}">
-    </span>
-    <div class="header__right">
-        <span class="header__method" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></span>
-        <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()">⚙️</button>
+    <div class="header__top">
+        <div class="header__logo">SIV.AG</div>
+        <span class="header__app-title">Planning Poker</span>
+    </div>
+    <div class="header__bottom">
+        <div class="header__left">
+            <a href="/" class="header__back">&#8592; Dashboard</a>
+        </div>
+        <div class="header__right">
+            <span class="header__roomcode-label">Raumcode:</span>
+            <span class="header__roomcode" id="roomCodeDisplay" th:text="${roomCode}"></span>
+            <button class="header__copy-btn" id="copyBtn" onclick="copyRoomCode()">Kopieren</button>
+            <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()">⚙️</button>
+        </div>
     </div>
 </header>
 
@@ -43,6 +50,8 @@
         </div>
     </div>
 
+
+
     <!-- Topic -->
     <section class="session__topic" style="grid-column: 1 / -1;">
         <h2 class="session__topic-title">Aktuelles Ticket / User Story</h2>
@@ -52,7 +61,12 @@
     </section>
 
     <!-- Poker Tisch -->
-    <section class="session__poker">
+    <section class="session__poker" id="pokerPane">
+
+        <!-- Diskussionsmodus Label -->
+        <div id="discussionLabel" style="display:none;" class="poker-pane__discussion-label">
+            💬 Diskussionsmodus
+        </div>
 
         <!-- SVG wird hier von JS eingefügt -->
         <div id="pokerTable" style="width:100%; min-height:500px;"></div>
@@ -85,11 +99,9 @@
             </div>
         </div>
 
-        <!-- Ergebnisse nach Aufdecken -->
-        <div class="session__results" id="resultsArea" style="display:none; padding: 1rem;">
-            <h3>Ergebnisse</h3>
-            <ul id="resultsList" class="results__list"></ul>
-        </div>
+        <!-- wird für State-Tracking benötigt -->
+        <div id="resultsArea" style="display:none;"></div>
+        <ul id="resultsList" style="display:none;"></ul>
 
         <!-- Moderator Aktionen -->
         <div class="session__actions" id="moderatorActions"
