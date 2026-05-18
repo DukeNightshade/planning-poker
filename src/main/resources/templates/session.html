@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session – Planning Poker</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header class="header header--session">
+    <div class="header__logo">SIV.AG</div>
+    <span class="header__session-title"
+          th:text="'Session: ' + ${roomCode}">
+    </span>
+    <span class="header__method" th:text="${estimationMethod}"></span>
+</header>
+
+<main class="session">
+
+    <!-- Topic -->
+    <section class="session__topic">
+        <h2 class="session__topic-title">Aktuelles Ticket / User Story</h2>
+        <p class="session__topic-text" id="topicText"
+           th:text="${session.topic != null ? session.topic : 'Kein Ticket gewählt'}">
+        </p>
+    </section>
+
+    <!-- Teilnehmerliste -->
+    <aside class="session__sidebar">
+        <h3 class="sidebar__title">Teilnehmer</h3>
+        <ul class="sidebar__list" id="participantList">
+            <li class="sidebar__item"
+                th:each="p : ${participants}"
+                th:text="${p.name} + (${p.role.name() == 'MODERATOR'} ? ' (Moderator)' : '')">
+            </li>
+        </ul>
+
+        <div class="sidebar__method">
+            <span>Methode: </span>
+            <strong th:text="${estimationMethod}"></strong>
+        </div>
+    </aside>
+
+    <!-- Abstimmungsbereich -->
+    <section class="session__voting">
+
+        <!-- Karten -->
+        <div class="cards" id="cardArea">
+
+            <!-- Fibonacci -->
+            <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid">
+                <button class="card-btn"
+                        th:each="v : ${'1,2,3,5,8,13,21,?'.split(',')}"
+                        th:text="${v}"
+                        th:attr="data-value=${v}"
+                        onclick="selectCard(this)">
+                </button>
+            </div>
+
+            <!-- T-Shirt -->
+            <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid">
+                <button class="card-btn"
+                        th:each="v : ${'XS,S,M,L,XL,XXL,?'.split(',')}"
+                        th:text="${v}"
+                        th:attr="data-value=${v}"
+                        onclick="selectCard(this)">
+                </button>
+            </div>
+
+            <!-- Powers of Two -->
+            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid">
+                <button class="card-btn"
+                        th:each="v : ${'1,2,4,8,16,32,64,?'.split(',')}"
+                        th:text="${v}"
+                        th:attr="data-value=${v}"
+                        onclick="selectCard(this)">
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Status -->
+        <div class="session__status">
+            <p id="voteStatus">Warte auf Abstimmung...</p>
+        </div>
+
+        <!-- Ergebnisse (nach Aufdecken) -->
+        <div class="session__results" id="resultsArea" style="display:none;">
+            <h3>Ergebnisse</h3>
+            <ul id="resultsList" class="results__list"></ul>
+        </div>
+
+        <!-- Moderator Aktionen -->
+        <div class="session__actions" id="moderatorActions" style="display:none;">
+            <button class="btn btn--primary" onclick="revealCards()">
+                Karten aufdecken
+            </button>
+            <button class="btn btn--secondary" onclick="resetRound()">
+                Neue Runde
+            </button>
+            <div class="form">
+                <input class="form__input" type="text" id="topicInput"
+                       placeholder="Ticket / User Story eingeben">
+                <button class="btn btn--secondary" onclick="updateTopic()">
+                    Ticket setzen
+                </button>
+            </div>
+        </div>
+
+    </section>
+
+</main>
+
+<footer class="footer">
+    &copy; 2026 SIV.AG – Internes Tool
+</footer>
+
+<!-- Sessiondaten für JavaScript -->
+<div id="sessionData"
+     th:attr="data-roomcode=${roomCode},
+              data-participantid=''"
+     style="display:none;">
+</div>
+
+<script th:src="@{/webjars/sockjs-client/1.5.1/dist/sockjs.min.js}"></script>
+<script th:src="@{/webjars/stomp-websocket/2.3.4/lib/stomp.min.js}"></script>
+<script th:src="@{/js/poker.js}"></script>
+
+</body>
+</html>

@@ -3,44 +3,48 @@ package de.sivag.planningpoker.model;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "sessions")
-@Data
-@NoArgsConstructor
-@Builder
-@AllArgsConstructor
-@ToString(exclude = "participants")
-@EqualsAndHashCode(exclude = "participants")
+@Getter
+@Setter
 public class Session {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(unique = true, length = 6)
+    @Column(unique = true, nullable = false, length = 8)
     private String roomCode;
 
-    private String moderatorName;
+    @Column(length = 255)
+    private String topic;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private EstimationMethod estimationMethod;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SessionStatus status;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Participant> participants;
-
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserStory> userStories;
-
-    @CreationTimestamp
+    @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Participant> participants = new ArrayList<>();
+
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Vote> votes = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.status = SessionStatus.WAITING;
+    }
 }
