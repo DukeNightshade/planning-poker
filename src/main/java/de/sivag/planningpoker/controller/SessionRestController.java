@@ -6,6 +6,7 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.NoSuchElementException;
 public class SessionRestController {
 
     private final SessionService sessionService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping
     public ResponseEntity<?> createSession(@RequestBody Map<String, String> body) {
@@ -53,6 +55,17 @@ public class SessionRestController {
         try {
             String name = body.get("name");
             Participant participant = sessionService.joinSession(roomCode, name);
+
+            // Alle informieren dass jemand beigetreten ist
+            messagingTemplate.convertAndSend(
+                    "/topic/session/" + roomCode,
+                    Map.of(
+                            "type", "PLAYER_JOINED",
+                            "participantId", participant.getId().toString(),
+                            "participantName", participant.getName()
+                    )
+            );
+
             return ResponseEntity.ok(Map.of(
                     "participantId", participant.getId(),
                     "name", participant.getName(),
