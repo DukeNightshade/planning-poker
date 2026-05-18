@@ -14,6 +14,7 @@ const AVATAR_COLORS = [
 let selectedCard = null;
 let stompClient = null;
 let isRevealed = false;
+let averageValue = null;
 
 // Teilnehmerstatus: { id -> { name, voted, cardValue, originalCardValue, changed } }
 let players = {};
@@ -181,7 +182,9 @@ function renderTable() {
     statusText.setAttribute('font-weight', '600');
     statusText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
     statusText.setAttribute('id', 'svgVoteStatus');
-    statusText.textContent = document.getElementById('voteStatus').textContent;
+    statusText.textContent = isRevealed && averageValue
+        ? `Ø ${averageValue}`
+        : document.getElementById('voteStatus').textContent;
     svg.appendChild(statusText);
 
     const progressBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -311,7 +314,6 @@ function renderSidebar() {
     const ul = document.getElementById('participantList');
     ul.innerHTML = '';
 
-    // Sortierung: vor Aufdecken alphabetisch, nach Aufdecken nach Kartenwert
     const sorted = [...playerList].sort(([, a], [, b]) => {
         if (isRevealed && a.cardValue && b.cardValue) {
             const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8', '13', '16', '20', '32', '40', '64', '100',
@@ -357,8 +359,11 @@ function syncStatusToSvg() {
     const htmlStatus = document.getElementById('voteStatus');
     const htmlProgress = document.getElementById('progressBar');
 
-    if (svgStatus && htmlStatus) {
-        svgStatus.textContent = htmlStatus.textContent;
+    if (svgStatus) {
+        // Im revealed Modus Durchschnitt anzeigen, sonst Vote-Status
+        svgStatus.textContent = isRevealed && averageValue
+            ? `Ø ${averageValue}`
+            : (htmlStatus ? htmlStatus.textContent : '');
     }
     if (svgProgress && htmlProgress) {
         const pct = parseFloat(htmlProgress.style.width) || 0;
@@ -387,7 +392,6 @@ function updateVoteStatus(votedCount, totalCount, voterId) {
 // Diskussions-Update
 // ================================
 function updateDiscussion(id, name, cardValue) {
-
     let playerId = id;
     if (!players[playerId]) {
         playerId = Object.keys(players).find(k => players[k].name === name);
@@ -398,6 +402,10 @@ function updateDiscussion(id, name, cardValue) {
         players[playerId].changed =
             cardValue !== players[playerId].originalCardValue;
     }
+
+    // Durchschnitt neu berechnen
+    recalculateAverage();
+
     renderTable();
     renderSidebar();
 }
@@ -420,6 +428,9 @@ function selectCard(button) {
         players[participantId].voted = true;
         players[participantId].cardValue = selectedCard;
     }
+    if (isDiscussion) {
+        recalculateAverage();
+    }
     renderTable();
     renderSidebar();
 
@@ -434,7 +445,19 @@ function selectCard(button) {
 // Karten aufdecken
 // ================================
 function revealCards() {
-    stompClient.send('/app/session/' + roomCode + '/reveal', {}, {});
+    const cards = document.querySelectorAll('#pokerTable rect');
+    cards.forEach(card => {
+        if (card.getAttribute('id')?.startsWith('card-')) {
+            card.style.transition = 'transform 0.25s ease-in';
+            card.style.transformBox = 'fill-box';
+            card.style.transformOrigin = 'center';
+            card.style.transform = 'scaleX(0)';
+        }
+    });
+
+    setTimeout(() => {
+        stompClient.send('/app/session/' + roomCode + '/reveal', {}, {});
+    }, 250);
 }
 
 // ================================
@@ -471,8 +494,34 @@ function showResults(votes) {
         }
     });
 
+    // Durchschnitt berechnen
+    recalculateAverage();
+
+    // Erst Karten ausblenden
+    document.querySelectorAll('#pokerTable rect').forEach(card => {
+        if (card.getAttribute('id')?.startsWith('card-')) {
+            card.style.transition = 'none';
+            card.style.transformBox = 'fill-box';
+            card.style.transformOrigin = 'center';
+            card.style.transform = 'scaleX(0)';
+        }
+    });
+
+    // Neu rendern mit aufgedeckten Werten
     renderTable();
     renderSidebar();
+
+    // Einblenden
+    setTimeout(() => {
+        document.querySelectorAll('#pokerTable rect').forEach(card => {
+            if (card.getAttribute('id')?.startsWith('card-')) {
+                card.style.transition = 'transform 0.3s ease-out';
+                card.style.transformBox = 'fill-box';
+                card.style.transformOrigin = 'center';
+                card.style.transform = 'scaleX(1)';
+            }
+        });
+    }, 50);
 
     const resultsList = document.getElementById('resultsList');
     resultsList.innerHTML = '';
@@ -499,6 +548,7 @@ function showResults(votes) {
 function resetUI() {
     isRevealed = false;
     selectedCard = null;
+    averageValue = null;
     Object.keys(players).forEach(id => {
         players[id].voted = false;
         players[id].cardValue = null;
@@ -574,6 +624,22 @@ function getAvatarColor(name) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+// ================================
+// Durchschnitt berechnen
+// ================================
+function recalculateAverage() {
+    const numericVotes = Object.values(players)
+        .map(p => parseFloat(p.cardValue))
+        .filter(v => !isNaN(v));
+
+    if (numericVotes.length > 0) {
+        const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
+        averageValue = Number.isInteger(avg) ? avg.toString() : avg.toFixed(1);
+    } else {
+        averageValue = null;
+    }
 }
 
 // ================================
