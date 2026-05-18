@@ -13,10 +13,35 @@
     <span class="header__session-title"
           th:text="'Session: ' + ${roomCode}">
     </span>
-    <span class="header__method" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></span>
+    <div class="header__right">
+        <span class="header__method" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></span>
+        <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()">⚙️</button>
+    </div>
 </header>
 
 <main class="session">
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel" style="display:none;">
+        <div class="settings-panel__header">
+            <h3>Einstellungen</h3>
+            <button class="btn--icon" onclick="toggleSettings()">✕</button>
+        </div>
+        <div class="settings-panel__body">
+            <label class="settings__toggle">
+                <span>Ticket-Modul anzeigen</span>
+                <input type="checkbox" id="settingShowTopic" th:checked="${showTopic}" onchange="saveSettings()">
+            </label>
+            <label class="settings__toggle">
+                <span>Moderator darf mitwählen</span>
+                <input type="checkbox" id="settingModeratorCanVote" th:checked="${moderatorCanVote}" onchange="saveSettings()">
+            </label>
+            <label class="settings__toggle">
+                <span>Automatisch aufdecken</span>
+                <input type="checkbox" id="settingAutoReveal" th:checked="${autoReveal}" onchange="saveSettings()">
+            </label>
+        </div>
+    </div>
 
     <!-- Topic -->
     <section class="session__topic">

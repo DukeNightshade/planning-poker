@@ -73,10 +73,15 @@ public class SessionService {
     @Transactional
     public Vote submitVote(String roomCode, Long participantId, String cardValue) {
         Session session = getSessionByRoomCode(roomCode);
+
+        // Keine Votes mehr wenn bereits aufgedeckt
+        if (session.getStatus() == SessionStatus.REVEALED) {
+            throw new IllegalStateException("Karten bereits aufgedeckt.");
+        }
+
         Participant participant = participantRepository.findById(participantId)
                 .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
 
-        // Vorhandenen Vote überschreiben falls vorhanden
         voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
                 .ifPresent(voteRepository::delete);
 
@@ -135,6 +140,19 @@ public class SessionService {
     public void endSession(String roomCode) {
         Session session = getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.FINISHED);
+        sessionRepository.save(session);
+    }
+
+    // ====================================
+    // Einstellungen updaten
+    // ====================================
+
+    @Transactional
+    public void updateSettings(String roomCode, boolean showTopic, boolean moderatorCanVote, boolean autoReveal) {
+        Session session = getSessionByRoomCode(roomCode);
+        session.setShowTopic(showTopic);
+        session.setModeratorCanVote(moderatorCanVote);
+        session.setAutoReveal(autoReveal);
         sessionRepository.save(session);
     }
 
