@@ -67,15 +67,106 @@ body {
 
 .header--session {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 2rem;
-    text-align: left;
+    flex-direction: column;
+    padding: 0;
 }
 
-.header__session-title {
+.header__top {
+    background: var(--color-primary);
+    color: var(--color-white);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 2rem;
+}
+
+.header__app-title {
     font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.header__bottom {
+    background: var(--color-white);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 2rem;
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.header__left {
+    display: flex;
+    align-items: center;
+}
+
+.header__back {
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.95rem;
     font-weight: 600;
+    opacity: 0.75;
+    transition: opacity var(--transition);
+}
+
+.header__back:hover {
+    opacity: 1;
+}
+
+.header__right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header__roomcode-label {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+}
+
+.header__roomcode {
+    font-size: 0.95rem;
+    font-weight: 700;
+    background: var(--color-ice);
+    color: var(--color-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+    letter-spacing: 1px;
+    border: 1.5px solid var(--color-border);
+}
+
+.btn--icon {
+    background: transparent;
+    border: none;
+    color: var(--color-text-light);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius);
+    transition: background var(--transition);
+}
+
+.btn--icon:hover {
+    background: var(--color-ice);
+}
+
+.header__copy-btn {
+    background: #004178;
+    border: 1.5px solid #004178;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-family: var(--font-main);
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.header__copy-btn:hover {
+    background: #00579d;
+    border-color: #00579d;
 }
 
 .header__method {
@@ -84,6 +175,8 @@ body {
     padding: 0.25rem 0.75rem;
     border-radius: var(--radius);
 }
+
+
 
 /* ================================
    Main Layout

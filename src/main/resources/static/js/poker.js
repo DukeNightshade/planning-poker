@@ -488,6 +488,17 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
 }
 
 // ================================
+// Raumcode kopieren
+// ================================
+function copyRoomCode() {
+    navigator.clipboard.writeText(roomCode).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✓ Kopiert';
+        setTimeout(() => btn.textContent = 'Kopieren', 2000);
+    });
+}
+
+// ================================
 // Avatar Farben
 // ================================
 function getAvatarColor(name) {
