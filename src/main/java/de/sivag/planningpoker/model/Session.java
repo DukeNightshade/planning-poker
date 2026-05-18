@@ -36,6 +36,15 @@ public class Session {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private boolean showTopic = true;
+
+    @Column(nullable = false)
+    private boolean moderatorCanVote = true;
+
+    @Column(nullable = false)
+    private boolean autoReveal = false;
+
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants = new ArrayList<>();
 

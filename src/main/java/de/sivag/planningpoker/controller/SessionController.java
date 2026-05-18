@@ -43,6 +43,9 @@ public class SessionController {
         model.addAttribute("roomCode", roomCode);
         model.addAttribute("estimationMethod", session.getEstimationMethod().name());
         model.addAttribute("participants", sessionService.getParticipants(roomCode));
+        model.addAttribute("showTopic", session.isShowTopic());
+        model.addAttribute("moderatorCanVote", session.isModeratorCanVote());
+        model.addAttribute("autoReveal", session.isAutoReveal());
         return "session";
     }
 }

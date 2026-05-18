@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.controller;
 
+import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Vote;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,23 @@ public class PokerWsController {
 
         int totalParticipants = sessionService.getParticipants(roomCode).size();
         int votedCount = sessionService.getVotes(roomCode).size();
+
+        // Prüfen ob auto-reveal aktiv und alle abgestimmt haben
+        Session session = sessionService.getSessionByRoomCode(roomCode);
+        if (session.isAutoReveal() && votedCount >= totalParticipants) {
+            List<Vote> votes = sessionService.revealCards(roomCode);
+            messagingTemplate.convertAndSend(
+                    "/topic/session/" + roomCode,
+                    Map.of(
+                            "type", "REVEAL",
+                            "votes", votes.stream().map(v -> Map.of(
+                                    "participantName", v.getParticipant().getName(),
+                                    "cardValue", v.getCardValue()
+                            )).toList()
+                    )
+            );
+            return;
+        }
 
         messagingTemplate.convertAndSend(
                 "/topic/session/" + roomCode,
@@ -97,6 +115,32 @@ public class PokerWsController {
                 Map.of(
                         "type", "TOPIC_UPDATE",
                         "topic", topic
+                )
+        );
+    }
+
+    // ====================================
+    // Einstellungen aktualisieren
+    // ====================================
+
+    @MessageMapping("/session/{roomCode}/settings")
+    public void updateSettings(
+            @DestinationVariable String roomCode,
+            @Payload Map<String, Object> payload) {
+
+        boolean showTopic = (boolean) payload.get("showTopic");
+        boolean moderatorCanVote = (boolean) payload.get("moderatorCanVote");
+        boolean autoReveal = (boolean) payload.get("autoReveal");
+
+        sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal);
+
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type", "SETTINGS_UPDATE",
+                        "showTopic", showTopic,
+                        "moderatorCanVote", moderatorCanVote,
+                        "autoReveal", autoReveal
                 )
         );
     }

@@ -14,7 +14,15 @@ let stompClient = null;
 // ================================
 if (isModerator) {
     document.getElementById('moderatorActions').style.display = 'flex';
+    document.getElementById('settingsBtn').style.display = 'block';
 }
+
+// Settings initial anwenden
+applySettings(
+    document.getElementById('settingShowTopic').checked,
+    document.getElementById('settingModeratorCanVote').checked,
+    document.getElementById('settingAutoReveal').checked
+);
 
 // ================================
 // WebSocket Verbindung aufbauen
@@ -55,6 +63,10 @@ function handleMessage(data) {
         case 'TOPIC_UPDATE':
             document.getElementById('topicText').textContent =
                 data.topic || 'Kein Ticket gewählt';
+            break;
+
+        case 'SETTINGS_UPDATE':
+            applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
             break;
     }
 }
@@ -145,6 +157,48 @@ function resetUI() {
     document.querySelectorAll('.card-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
+}
+
+// ================================
+// Settings Panel
+// ================================
+function toggleSettings() {
+    const panel = document.getElementById('settingsPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveSettings() {
+    const showTopic = document.getElementById('settingShowTopic').checked;
+    const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
+    const autoReveal = document.getElementById('settingAutoReveal').checked;
+
+    stompClient.send(
+        '/app/session/' + roomCode + '/settings',
+        {},
+        JSON.stringify({showTopic, moderatorCanVote, autoReveal})
+    );
+}
+
+function applySettings(showTopic, moderatorCanVote, autoReveal) {
+    // Ticket-Modul
+    const topicSection = document.querySelector('.session__topic');
+    if (topicSection) topicSection.style.display = showTopic ? 'block' : 'none';
+
+    // Ticket-Eingabe in Moderator-Aktionen
+    const topicForm = document.querySelector('.session__actions .form');
+    if (topicForm) topicForm.style.display = showTopic ? 'flex' : 'none';
+
+    // Moderator-Voting
+    if (isModerator && !moderatorCanVote) {
+        document.getElementById('cardArea').style.display = 'none';
+    } else {
+        document.getElementById('cardArea').style.display = 'block';
+    }
+
+    // Checkboxen synchronisieren
+    document.getElementById('settingShowTopic').checked = showTopic;
+    document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
+    document.getElementById('settingAutoReveal').checked = autoReveal;
 }
 
 // ================================
