@@ -2,11 +2,13 @@ package de.sivag.planningpoker.controller;
 
 import de.sivag.planningpoker.model.*;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
+import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -23,10 +25,20 @@ public class SessionRestController {
             String moderatorName = body.get("moderatorName");
             EstimationMethod method = EstimationMethod.valueOf(body.get("method"));
             Session session = sessionService.createSession(moderatorName, method);
+
+            // Moderator-Participant aus DB laden
+            List<Participant> participants = sessionService.getParticipants(session.getRoomCode());
+            Long moderatorId = participants.stream()
+                    .filter(p -> p.getRole() == ParticipantRole.MODERATOR)
+                    .findFirst()
+                    .map(Participant::getId)
+                    .orElse(null);
+
             return ResponseEntity.ok(Map.of(
                     "roomCode", session.getRoomCode(),
                     "method", session.getEstimationMethod().name(),
-                    "status", session.getStatus().name()
+                    "status", session.getStatus().name(),
+                    "participantId", moderatorId
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
