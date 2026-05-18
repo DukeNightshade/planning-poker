@@ -100,7 +100,7 @@ public class SessionService {
         Session session = getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.REVEALED);
         sessionRepository.save(session);
-        return voteRepository.findBySessionRoomCode(roomCode);
+        return voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
     }
 
     // ====================================
