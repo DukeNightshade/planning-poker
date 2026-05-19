@@ -26,6 +26,9 @@ public class Participant {
     @Column(nullable = false)
     private LocalDateTime joinedAt;
 
+    @Column(nullable = false)
+    private boolean moderator = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;

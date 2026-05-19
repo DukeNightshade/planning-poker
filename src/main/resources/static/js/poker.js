@@ -4,7 +4,7 @@
 const sessionData = document.getElementById('sessionData');
 const roomCode = sessionData.dataset.roomcode;
 const participantId = sessionStorage.getItem('participantId');
-const isModerator = sessionStorage.getItem('isModerator') === 'true';
+let isModerator = sessionStorage.getItem('isModerator') === 'true';
 const participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 const AVATAR_COLORS = [
@@ -51,6 +51,7 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
     players[el.dataset.playerId] = {
         name: el.dataset.playerName,
         role: el.dataset.playerRole || 'DEVELOPER',
+        moderator: el.dataset.playerModerator === 'true',
         voted: false,
         cardValue: null,
         originalCardValue: null,
@@ -83,6 +84,29 @@ function connect() {
         console.error('WebSocket Verbindungsfehler:', error);
         setTimeout(connect, 3000);
     });
+}
+
+async function promoteMyself() {
+    const response = await fetch(
+        `/api/sessions/${roomCode}/participants/${participantId}/promote`,
+        { method: 'POST' }
+    );
+    if (response.ok) {
+        sessionStorage.setItem('isModerator', 'true');
+    }
+}
+
+async function demoteParticipant(targetParticipantId) {
+    const response = await fetch(
+        `/api/sessions/${roomCode}/participants/${targetParticipantId}/demote`,
+        { method: 'POST' }
+    );
+    if (!response.ok) {
+        const data = await response.json();
+        alert(data.error || 'Demote fehlgeschlagen.');
+    } else if (targetParticipantId === participantId) {
+        sessionStorage.setItem('isModerator', 'false');
+    }
 }
 
 async function loadInitialData() {
@@ -142,6 +166,7 @@ function handleMessage(data) {
                 players[data.participantId] = {
                     name: data.participantName,
                     role: data.participantRole || 'DEVELOPER',
+                    moderator: false,
                     voted: false,
                     cardValue: null,
                     originalCardValue: null,
@@ -149,6 +174,32 @@ function handleMessage(data) {
                 };
             }
             renderTable();
+            renderSidebar();
+            break;
+        case 'MODERATOR_PROMOTED':
+            if (players[data.participantId]) {
+                players[data.participantId].moderator = true;
+            }
+            // Wenn ich selbst befördert wurde
+            if (data.participantId === participantId) {
+                isModerator = true;  // const → let machen oben!
+                document.getElementById('moderatorActions').style.display = 'flex';
+                document.getElementById('settingsBtn').style.display = 'block';
+                document.getElementById('addTicketBtn').style.display = 'block';
+            }
+            renderSidebar();
+            break;
+        case 'MODERATOR_DEMOTED':
+            if (players[data.participantId]) {
+                players[data.participantId].moderator = false;
+            }
+            if (data.participantId === participantId) {
+                isModerator = false;
+                sessionStorage.setItem('isModerator', 'false');
+                document.getElementById('moderatorActions').style.display = 'none';
+                document.getElementById('settingsBtn').style.display = 'none';
+                document.getElementById('addTicketBtn').style.display = 'none';
+            }
             renderSidebar();
             break;
         case 'TICKET_ADDED':
@@ -439,6 +490,11 @@ function renderSidebar() {
     const total = playerList.length;
     document.getElementById('sidebarTitle').textContent = `Teilnehmer (${total})`;
 
+    // Sicherer: über players direkt
+    const activeModerators = Object.entries(players).filter(([id, p]) =>
+        p.moderator || (id === participantId && isModerator)
+    ).length;
+
     const ul = document.getElementById('participantList');
     ul.innerHTML = '';
 
@@ -455,11 +511,13 @@ function renderSidebar() {
     });
 
     sorted.forEach(([id, player]) => {
-        const isSelf = id === participantId;
+        const isSelfEntry = id === participantId;
         const hasVoted = player.voted;
         const initial = player.name.charAt(0).toUpperCase();
         const avatarColor = getAvatarColor(player.name);
         const roleColor = ROLE_COLORS[player.role] || '#004178';
+        const isAlreadyModerator = player.moderator || (isSelfEntry && isModerator);
+        const canDemote = isAlreadyModerator && activeModerators > 1;
 
         const li = document.createElement('li');
         li.className = 'sidebar__item';
@@ -468,11 +526,11 @@ function renderSidebar() {
                 ${initial}
             </div>
             <div class="player-info">
-                <span class="player-info__name ${isSelf ? 'player-info__name--self' : ''}">
-                    ${player.name}${isSelf ? ' (Sie)' : ''}
+                <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
+                    ${player.name}${isSelfEntry ? ' (Sie)' : ''}
                 </span>
                 <span class="player-info__role" style="color:${roleColor};">
-                    ${getRoleLabel(player.role)}
+                    ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · Moderator' : ''}
                 </span>
             </div>
             ${isRevealed && player.cardValue ? `
@@ -483,6 +541,15 @@ function renderSidebar() {
                 <div class="player-status ${player.changed ? 'player-status--changed' :
             (hasVoted ? 'player-status--voted' : 'player-status--waiting')}"></div>
             `}
+            ${isSelfEntry && !isAlreadyModerator ? `
+                <button class="btn--promote" onclick="promoteMyself()" title="Zum Moderator werden">↑</button>
+            ` : ''}
+            ${isSelfEntry && canDemote ? `
+                <button class="btn--demote" onclick="demoteParticipant('${id}')" title="Moderator-Rechte abgeben">↓</button>
+            ` : ''}
+            ${!isSelfEntry && isModerator && isAlreadyModerator && canDemote ? `
+                <button class="btn--demote" onclick="demoteParticipant('${id}')" title="Moderator-Rechte entziehen">↓</button>
+            ` : ''}
         `;
         ul.appendChild(li);
     });
