@@ -16,42 +16,82 @@
 
 <main class="main">
 
-    <!-- Session erstellen -->
-    <section class="card">
-        <h2 class="card__title">Neue Session erstellen</h2>
-        <form id="createForm" class="form">
-            <label class="form__label" for="moderatorName">Ihr Name</label>
-            <input class="form__input" type="text" id="moderatorName"
+    <!-- Obere Reihe -->
+    <div class="main__row">
+
+        <!-- Session erstellen -->
+        <section class="card">
+            <h2 class="card__title">Neue Session erstellen</h2>
+            <form id="createForm" class="form">
+                <label class="form__label" for="moderatorName">Ihr Name</label>
+                <input class="form__input" type="text" id="moderatorName"
+                       placeholder="Name eingeben" required>
+
+                <label class="form__label" for="method">Schätzmethode</label>
+                <select class="form__select" id="method">
+                    <option th:each="m : ${methods}"
+                            th:value="${m.name()}"
+                            th:text="${methodLabels[m.name()]}">
+                    </option>
+                </select>
+
+                <button class="btn btn--primary" type="submit">
+                    Session erstellen
+                </button>
+            </form>
+        </section>
+
+        <!-- Session beitreten -->
+        <section class="card">
+            <h2 class="card__title">Session beitreten</h2>
+            <form id="joinForm" class="form">
+                <label class="form__label" for="participantName">Ihr Name</label>
+                <input class="form__input" type="text" id="participantName"
+                       placeholder="Name eingeben" required>
+
+                <label class="form__label" for="roomCode">Raumcode</label>
+                <input class="form__input" type="text" id="roomCode"
+                       placeholder="z.B. ABX93KLM" required>
+
+                <button class="btn btn--secondary" type="submit">
+                    Beitreten
+                </button>
+            </form>
+        </section>
+
+    </div>
+
+    <!-- Session mit Tickets erstellen -->
+    <section class="card card--wide">
+        <h2 class="card__title">Session mit Ticket-Liste erstellen</h2>
+        <form id="createWithTicketsForm" class="form">
+            <label class="form__label" for="moderatorNameTickets">Ihr Name</label>
+            <input class="form__input" type="text" id="moderatorNameTickets"
                    placeholder="Name eingeben" required>
 
-            <label class="form__label" for="method">Schätzmethode</label>
-            <select class="form__select" id="method">
+            <label class="form__label" for="methodTickets">Schätzmethode</label>
+            <select class="form__select" id="methodTickets">
                 <option th:each="m : ${methods}"
                         th:value="${m.name()}"
                         th:text="${methodLabels[m.name()]}">
                 </option>
             </select>
 
+            <label class="form__label">Tickets</label>
+            <div id="ticketList" class="ticket-list">
+                <div class="ticket-entry">
+                    <input class="form__input ticket-input" type="text"
+                           placeholder="Ticket-Titel eingeben" required>
+                    <button type="button" class="btn--remove" onclick="removeTicket(this)">✕</button>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn--outline" onclick="addTicketField()">
+                + Ticket hinzufügen
+            </button>
+
             <button class="btn btn--primary" type="submit">
                 Session erstellen
-            </button>
-        </form>
-    </section>
-
-    <!-- Session beitreten -->
-    <section class="card">
-        <h2 class="card__title">Session beitreten</h2>
-        <form id="joinForm" class="form">
-            <label class="form__label" for="participantName">Ihr Name</label>
-            <input class="form__input" type="text" id="participantName"
-                   placeholder="Name eingeben" required>
-
-            <label class="form__label" for="roomCode">Raumcode</label>
-            <input class="form__input" type="text" id="roomCode"
-                   placeholder="z.B. SPR-4821" required>
-
-            <button class="btn btn--secondary" type="submit">
-                Beitreten
             </button>
         </form>
     </section>

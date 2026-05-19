@@ -50,18 +50,37 @@
         </div>
     </div>
 
+    <!-- Ticket-Liste (links) -->
+    <aside class="ticket-sidebar" id="ticketSidebar" style="display:none;">
+        <h3 class="sidebar__title">Tickets</h3>
+        <ul class="ticket-sidebar__list" id="ticketSidebarList">
+            <!-- wird via JS befüllt -->
+        </ul>
+        <div id="addTicketForm" style="display:none; margin-top: 0.75rem;">
+            <div class="ticket-entry">
+                <input class="form__input" type="text" id="newTicketInput"
+                       placeholder="Ticket-Titel" style="font-size: 0.85rem;">
+                <button class="btn--remove" onclick="cancelAddTicket()">✕</button>
+            </div>
+            <button class="btn btn--primary" style="width:100%; margin-top: 0.5rem; font-size: 0.85rem;"
+                    onclick="submitNewTicket()">
+                Hinzufügen
+            </button>
+        </div>
+        <button class="btn btn--outline" id="addTicketBtn" style="display:none; width:100%; margin-top: 0.75rem; font-size: 0.85rem;"
+                onclick="showAddTicketForm()">
+            + Ticket hinzufügen
+        </button>
+    </aside>
 
-
-    <!-- Topic -->
-    <section class="session__topic" style="grid-column: 1 / -1;">
-        <h2 class="session__topic-title">Aktuelles Ticket / User Story</h2>
-        <p class="session__topic-text" id="topicText"
-           th:text="${session.topic != null ? session.topic : 'Kein Ticket gewählt'}">
-        </p>
-    </section>
-
-    <!-- Poker Tisch -->
+    <!-- Poker Tisch (Mitte) -->
     <section class="session__poker" id="pokerPane">
+
+        <!-- Aktuelles Ticket -->
+        <div class="session__topic" id="topicBar">
+            <span class="session__topic-title">Aktuelles Ticket:</span>
+            <span class="session__topic-text" id="topicText">–</span>
+        </div>
 
         <!-- Diskussionsmodus Label -->
         <div id="discussionLabel" style="display:none;" class="poker-pane__discussion-label">
@@ -99,7 +118,6 @@
             </div>
         </div>
 
-        <!-- wird für State-Tracking benötigt -->
         <div id="resultsArea" style="display:none;"></div>
         <ul id="resultsList" style="display:none;"></ul>
 
@@ -112,18 +130,11 @@
             <button class="btn btn--secondary" onclick="resetRound()">
                 Neue Runde
             </button>
-            <div class="form" id="topicForm" style="flex-direction:row; align-items:center; gap: 0.5rem;">
-                <input class="form__input" type="text" id="topicInput"
-                       placeholder="Ticket / User Story eingeben">
-                <button class="btn btn--secondary" onclick="updateTopic()">
-                    Ticket setzen
-                </button>
-            </div>
         </div>
 
     </section>
 
-    <!-- Sidebar -->
+    <!-- Teilnehmer-Sidebar (rechts) -->
     <aside class="session__sidebar">
         <h3 class="sidebar__title" id="sidebarTitle">Teilnehmer</h3>
         <ul class="sidebar__list" id="participantList">
@@ -131,7 +142,10 @@
         </ul>
         <div class="sidebar__method-block">
             <div class="sidebar__method-label">Methode</div>
-            <div class="sidebar__method-value" th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' : (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}"></div>
+            <div class="sidebar__method-value"
+                 th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' :
+                           (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}">
+            </div>
         </div>
     </aside>
 
@@ -141,7 +155,7 @@
     &copy; 2026 SIV.AG – Internes Tool
 </footer>
 
-<!-- Versteckte Status-Daten für JS -->
+<!-- Status-Daten für JS -->
 <div style="display:none;">
     <span id="voteStatus">Warte auf Abstimmung...</span>
     <span id="progressBar"></span>

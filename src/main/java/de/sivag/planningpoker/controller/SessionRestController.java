@@ -22,13 +22,18 @@ public class SessionRestController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping
-    public ResponseEntity<?> createSession(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> createSession(@RequestBody Map<String, Object> body) {
         try {
-            String moderatorName = body.get("moderatorName");
-            EstimationMethod method = EstimationMethod.valueOf(body.get("method"));
-            Session session = sessionService.createSession(moderatorName, method);
+            String moderatorName = (String) body.get("moderatorName");
+            EstimationMethod method = EstimationMethod.valueOf((String) body.get("method"));
 
-            // Moderator-Participant aus DB laden
+            @SuppressWarnings("unchecked")
+            List<String> ticketTitles = (List<String>) body.getOrDefault("tickets", List.of());
+
+            Session session = ticketTitles.isEmpty()
+                    ? sessionService.createSession(moderatorName, method)
+                    : sessionService.createSessionWithTickets(moderatorName, method, ticketTitles);
+
             List<Participant> participants = sessionService.getParticipants(session.getRoomCode());
             Long moderatorId = participants.stream()
                     .filter(p -> p.getRole() == ParticipantRole.MODERATOR)
@@ -83,14 +88,76 @@ public class SessionRestController {
     public ResponseEntity<?> getState(@PathVariable String roomCode) {
         try {
             Session session = sessionService.getSessionByRoomCode(roomCode);
+
+            // Aktives Ticket ermitteln
+            String currentTicketTitle = "";
+            if (session.getCurrentTicketId() != null) {
+                currentTicketTitle = sessionService.getTickets(session.getRoomCode())
+                        .stream()
+                        .filter(t -> t.getId().equals(session.getCurrentTicketId()))
+                        .findFirst()
+                        .map(t -> t.getTitle())
+                        .orElse("");
+            }
+
             return ResponseEntity.ok(Map.of(
                     "roomCode", session.getRoomCode(),
-                    "topic", session.getTopic() != null ? session.getTopic() : "",
+                    "currentTicketId", session.getCurrentTicketId() != null ? session.getCurrentTicketId() : "",
+                    "currentTicketTitle", currentTicketTitle,
                     "method", session.getEstimationMethod().name(),
                     "status", session.getStatus().name(),
-                    "participantCount",
-                    sessionService.getParticipants(roomCode).size()
+                    "participantCount", sessionService.getParticipants(roomCode).size()
             ));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{roomCode}/tickets")
+    public ResponseEntity<?> addTicket(
+            @PathVariable String roomCode,
+            @RequestBody Map<String, String> body) {
+        try {
+            String title = body.get("title");
+            Ticket ticket = sessionService.addTicket(roomCode, title);
+            return ResponseEntity.ok(Map.of(
+                    "id", ticket.getId(),
+                    "title", ticket.getTitle(),
+                    "status", ticket.getStatus().name(),
+                    "orderIndex", ticket.getOrderIndex()
+            ));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{roomCode}/tickets/{ticketId}/select")
+    public ResponseEntity<?> selectTicket(
+            @PathVariable String roomCode,
+            @PathVariable Long ticketId) {
+        try {
+            Ticket ticket = sessionService.selectTicket(roomCode, ticketId);
+            return ResponseEntity.ok(Map.of(
+                    "id", ticket.getId(),
+                    "title", ticket.getTitle(),
+                    "status", ticket.getStatus().name()
+            ));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{roomCode}/tickets")
+    public ResponseEntity<?> getTickets(@PathVariable String roomCode) {
+        try {
+            List<Ticket> tickets = sessionService.getTickets(roomCode);
+            return ResponseEntity.ok(tickets.stream().map(t -> Map.of(
+                    "id", t.getId(),
+                    "title", t.getTitle(),
+                    "status", t.getStatus().name(),
+                    "finalEstimate", t.getFinalEstimate() != null ? t.getFinalEstimate() : "",
+                    "orderIndex", t.getOrderIndex()
+            )).toList());
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         }

@@ -15,6 +15,10 @@ let selectedCard = null;
 let stompClient = null;
 let isRevealed = false;
 let averageValue = null;
+let currentTicketId = null;
+
+// Tickets: { id -> { title, status, finalEstimate } }
+let tickets = {};
 
 // Teilnehmerstatus: { id -> { name, voted, cardValue, originalCardValue, changed } }
 let players = {};
@@ -25,6 +29,7 @@ let players = {};
 if (isModerator) {
     document.getElementById('moderatorActions').style.display = 'flex';
     document.getElementById('settingsBtn').style.display = 'block';
+    document.getElementById('addTicketBtn').style.display = 'block';
 }
 
 applySettings(
@@ -33,7 +38,6 @@ applySettings(
     document.getElementById('settingAutoReveal').checked
 );
 
-// Teilnehmer aus DOM laden (server-side gerendert)
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
     players[el.dataset.playerId] = {
         name: el.dataset.playerName,
@@ -43,6 +47,7 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
         changed: false
     };
 });
+
 renderTable();
 renderSidebar();
 
@@ -58,20 +63,51 @@ function connect() {
         stompClient.subscribe('/topic/session/' + roomCode, function (message) {
             handleMessage(JSON.parse(message.body));
         });
-
-        loadState();
+        loadInitialData();
     }, function (error) {
         console.error('WebSocket Verbindungsfehler:', error);
         setTimeout(connect, 3000);
     });
 }
 
-async function loadState() {
-    const response = await fetch('/api/sessions/' + roomCode + '/state');
-    if (response.ok) {
-        renderTable();
-        renderSidebar();
+async function loadInitialData() {
+    // Tickets laden
+    const ticketResponse = await fetch('/api/sessions/' + roomCode + '/tickets');
+    if (ticketResponse.ok) {
+        const ticketList = await ticketResponse.json();
+        tickets = {};
+        ticketList.forEach(t => {
+            tickets[t.id] = {
+                title: t.title,
+                status: t.status,
+                finalEstimate: t.finalEstimate
+            };
+        });
+
+        // Ticket-Sidebar nur anzeigen wenn Tickets vorhanden oder Moderator
+        if (ticketList.length > 0) {
+            document.getElementById('ticketSidebar').style.display = 'flex';
+            document.querySelector('.session').classList.add('session--with-tickets');
+        } else {
+            document.getElementById('ticketSidebar').style.display = 'none';
+            document.querySelector('.session').classList.remove('session--with-tickets');
+        }
+
+        renderTicketSidebar();
     }
+
+    // State laden
+    const stateResponse = await fetch('/api/sessions/' + roomCode + '/state');
+    if (stateResponse.ok) {
+        const state = await stateResponse.json();
+        if (state.currentTicketId) {
+            currentTicketId = state.currentTicketId.toString();
+            document.getElementById('topicText').textContent = state.currentTicketTitle;
+        }
+    }
+
+    renderTable();
+    renderSidebar();
 }
 
 // ================================
@@ -91,10 +127,6 @@ function handleMessage(data) {
         case 'RESET':
             resetUI();
             break;
-        case 'TOPIC_UPDATE':
-            document.getElementById('topicText').textContent =
-                data.topic || 'Kein Ticket gewählt';
-            break;
         case 'SETTINGS_UPDATE':
             applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
             break;
@@ -111,7 +143,88 @@ function handleMessage(data) {
             renderTable();
             renderSidebar();
             break;
+        case 'TICKET_ADDED':
+            tickets[data.id] = {
+                title: data.title,
+                status: data.status,
+                finalEstimate: ''
+            };
+            document.getElementById('ticketSidebar').style.display = 'flex';
+            document.querySelector('.session').classList.add('session--with-tickets');
+            renderTicketSidebar();
+            break;
+        case 'TICKET_SELECTED':
+            currentTicketId = data.id;
+            document.getElementById('topicText').textContent = data.title;
+            resetUI();
+            renderTicketSidebar();
+            break;
     }
+}
+
+// ================================
+// Ticket-Sidebar rendern
+// ================================
+function renderTicketSidebar() {
+    const ul = document.getElementById('ticketSidebarList');
+    ul.innerHTML = '';
+
+    Object.entries(tickets).forEach(([id, ticket]) => {
+        const isActive = id === currentTicketId?.toString();
+        const isVoted = ticket.status === 'VOTED';
+
+        const li = document.createElement('li');
+        li.className = 'ticket-sidebar__item' +
+            (isActive ? ' ticket-sidebar__item--active' : '') +
+            (isVoted ? ' ticket-sidebar__item--voted' : '');
+
+        li.innerHTML = `
+            <span class="ticket-sidebar__title">${ticket.title}</span>
+            ${isVoted && ticket.finalEstimate
+            ? `<span class="ticket-sidebar__estimate">${ticket.finalEstimate}</span>`
+            : ''}
+        `;
+
+        if (isModerator && !isVoted) {
+            li.style.cursor = 'pointer';
+            li.onclick = () => selectTicket(id);
+        }
+
+        ul.appendChild(li);
+    });
+}
+
+function selectTicket(ticketId) {
+    stompClient.send(
+        '/app/session/' + roomCode + '/ticket/select',
+        {},
+        JSON.stringify({ ticketId: ticketId.toString() })
+    );
+}
+
+function showAddTicketForm() {
+    document.getElementById('addTicketForm').style.display = 'block';
+    document.getElementById('addTicketBtn').style.display = 'none';
+    document.getElementById('newTicketInput').focus();
+}
+
+function cancelAddTicket() {
+    document.getElementById('addTicketForm').style.display = 'none';
+    document.getElementById('addTicketBtn').style.display = 'block';
+    document.getElementById('newTicketInput').value = '';
+}
+
+function submitNewTicket() {
+    const title = document.getElementById('newTicketInput').value.trim();
+    if (!title) return;
+
+    stompClient.send(
+        '/app/session/' + roomCode + '/ticket/add',
+        {},
+        JSON.stringify({ title })
+    );
+
+    cancelAddTicket();
 }
 
 // ================================
@@ -218,13 +331,9 @@ function renderTable() {
             let cardFill, cardStroke, textFill;
             if (isRevealed && player.cardValue) {
                 if (player.changed) {
-                    cardFill = '#fff7ed';
-                    cardStroke = '#f97316';
-                    textFill = '#c2410c';
+                    cardFill = '#fff7ed'; cardStroke = '#f97316'; textFill = '#c2410c';
                 } else {
-                    cardFill = 'white';
-                    cardStroke = '#004178';
-                    textFill = '#004178';
+                    cardFill = 'white'; cardStroke = '#004178'; textFill = '#004178';
                 }
             } else if (hasVoted) {
                 cardFill = '#E1001A'; cardStroke = '#c0001a'; textFill = 'white';
@@ -255,8 +364,7 @@ function renderTable() {
                 cardText.setAttribute('font-size', cardW > 36 ? 14 : 11);
                 cardText.setAttribute('font-weight', '700');
                 cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-                cardText.setAttribute('id', `cardtext-${id}`);
-                cardText.textContent = player.cardValue || '';
+                cardText.textContent = player.cardValue;
                 svg.appendChild(cardText);
             } else if (isSelf && player.cardValue) {
                 const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -267,8 +375,7 @@ function renderTable() {
                 cardText.setAttribute('font-size', cardW > 36 ? 14 : 11);
                 cardText.setAttribute('font-weight', '700');
                 cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-                cardText.setAttribute('id', `cardtext-${id}`);
-                cardText.textContent = player.cardValue || '';
+                cardText.textContent = player.cardValue;
                 svg.appendChild(cardText);
             }
 
@@ -346,7 +453,8 @@ function renderSidebar() {
                     ${player.cardValue}
                 </span>
             ` : `
-                <div class="player-status ${player.changed ? 'player-status--changed' : (hasVoted ? 'player-status--voted' : 'player-status--waiting')}"></div>
+                <div class="player-status ${player.changed ? 'player-status--changed' :
+            (hasVoted ? 'player-status--voted' : 'player-status--waiting')}"></div>
             `}
         `;
         ul.appendChild(li);
@@ -360,7 +468,6 @@ function syncStatusToSvg() {
     const htmlProgress = document.getElementById('progressBar');
 
     if (svgStatus) {
-        // Im revealed Modus Durchschnitt anzeigen, sonst Vote-Status
         svgStatus.textContent = isRevealed && averageValue
             ? `Ø ${averageValue}`
             : (htmlStatus ? htmlStatus.textContent : '');
@@ -402,10 +509,7 @@ function updateDiscussion(id, name, cardValue) {
         players[playerId].changed =
             cardValue !== players[playerId].originalCardValue;
     }
-
-    // Durchschnitt neu berechnen
     recalculateAverage();
-
     renderTable();
     renderSidebar();
 }
@@ -468,17 +572,6 @@ function resetRound() {
 }
 
 // ================================
-// Topic setzen
-// ================================
-function updateTopic() {
-    const topic = document.getElementById('topicInput').value.trim();
-    if (!topic) return;
-    stompClient.send('/app/session/' + roomCode + '/topic', {},
-        JSON.stringify({ topic }));
-    document.getElementById('topicInput').value = '';
-}
-
-// ================================
 // Ergebnisse anzeigen
 // ================================
 function showResults(votes) {
@@ -494,10 +587,15 @@ function showResults(votes) {
         }
     });
 
-    // Durchschnitt berechnen
     recalculateAverage();
 
-    // Erst Karten ausblenden
+    // Ticket in der Liste als VOTED markieren
+    if (currentTicketId && tickets[currentTicketId]) {
+        tickets[currentTicketId].status = 'VOTED';
+        tickets[currentTicketId].finalEstimate = averageValue || '–';
+        renderTicketSidebar();
+    }
+
     document.querySelectorAll('#pokerTable rect').forEach(card => {
         if (card.getAttribute('id')?.startsWith('card-')) {
             card.style.transition = 'none';
@@ -507,11 +605,9 @@ function showResults(votes) {
         }
     });
 
-    // Neu rendern mit aufgedeckten Werten
     renderTable();
     renderSidebar();
 
-    // Einblenden
     setTimeout(() => {
         document.querySelectorAll('#pokerTable rect').forEach(card => {
             if (card.getAttribute('id')?.startsWith('card-')) {
@@ -564,9 +660,6 @@ function resetUI() {
     document.getElementById('progressBar').style.width = '0%';
     document.querySelector('[onclick="revealCards()"]').disabled = false;
 
-    const topicEl = document.getElementById('topicText');
-    if (topicEl) topicEl.textContent = 'Kein Ticket gewählt';
-
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
 
     renderTable();
@@ -590,10 +683,8 @@ function saveSettings() {
 }
 
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
-    const topicSection = document.querySelector('.session__topic');
-    if (topicSection) topicSection.style.display = showTopic ? 'block' : 'none';
-    const topicForm = document.querySelector('.session__actions .form');
-    if (topicForm) topicForm.style.display = showTopic ? 'flex' : 'none';
+    const topicBar = document.getElementById('topicBar');
+    if (topicBar) topicBar.style.display = showTopic ? 'block' : 'none';
     if (isModerator && !moderatorCanVote) {
         document.getElementById('cardArea').style.display = 'none';
     } else {

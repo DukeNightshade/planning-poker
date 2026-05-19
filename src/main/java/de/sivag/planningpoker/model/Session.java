@@ -22,8 +22,8 @@ public class Session {
     @Column(unique = true, nullable = false, length = 8)
     private String roomCode;
 
-    @Column(length = 255)
-    private String topic;
+    @Column
+    private Long currentTicketId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,6 +50,9 @@ public class Session {
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Vote> votes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Ticket> tickets = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
