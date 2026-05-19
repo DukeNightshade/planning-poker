@@ -5,11 +5,20 @@ const sessionData = document.getElementById('sessionData');
 const roomCode = sessionData.dataset.roomcode;
 const participantId = sessionStorage.getItem('participantId');
 const isModerator = sessionStorage.getItem('isModerator') === 'true';
+const participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
+
 const AVATAR_COLORS = [
     '#004178', '#E1001A', '#2563eb', '#16a34a',
     '#9333ea', '#ea580c', '#0891b2', '#be185d',
     '#854d0e', '#166534'
 ];
+
+const ROLE_COLORS = {
+    DEVELOPER:     '#004178',
+    TESTER:        '#16a34a',
+    PRODUCT_OWNER: '#9333ea',
+    MODERATOR:     '#004178'
+};
 
 let selectedCard = null;
 let stompClient = null;
@@ -20,7 +29,7 @@ let currentTicketId = null;
 // Tickets: { id -> { title, status, finalEstimate } }
 let tickets = {};
 
-// Teilnehmerstatus: { id -> { name, voted, cardValue, originalCardValue, changed } }
+// Teilnehmer: { id -> { name, role, voted, cardValue, originalCardValue, changed } }
 let players = {};
 
 // ================================
@@ -41,12 +50,18 @@ applySettings(
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
     players[el.dataset.playerId] = {
         name: el.dataset.playerName,
+        role: el.dataset.playerRole || 'DEVELOPER',
         voted: false,
         cardValue: null,
         originalCardValue: null,
         changed: false
     };
 });
+
+// Karten für PO ausblenden
+if (participantRole === 'PRODUCT_OWNER') {
+    document.getElementById('cardArea').style.display = 'none';
+}
 
 renderTable();
 renderSidebar();
@@ -71,20 +86,14 @@ function connect() {
 }
 
 async function loadInitialData() {
-    // Tickets laden
     const ticketResponse = await fetch('/api/sessions/' + roomCode + '/tickets');
     if (ticketResponse.ok) {
         const ticketList = await ticketResponse.json();
         tickets = {};
         ticketList.forEach(t => {
-            tickets[t.id] = {
-                title: t.title,
-                status: t.status,
-                finalEstimate: t.finalEstimate
-            };
+            tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
 
-        // Ticket-Sidebar nur anzeigen wenn Tickets vorhanden oder Moderator
         if (ticketList.length > 0) {
             document.getElementById('ticketSidebar').style.display = 'flex';
             document.querySelector('.session').classList.add('session--with-tickets');
@@ -92,11 +101,9 @@ async function loadInitialData() {
             document.getElementById('ticketSidebar').style.display = 'none';
             document.querySelector('.session').classList.remove('session--with-tickets');
         }
-
         renderTicketSidebar();
     }
 
-    // State laden
     const stateResponse = await fetch('/api/sessions/' + roomCode + '/state');
     if (stateResponse.ok) {
         const state = await stateResponse.json();
@@ -134,6 +141,7 @@ function handleMessage(data) {
             if (!players[data.participantId]) {
                 players[data.participantId] = {
                     name: data.participantName,
+                    role: data.participantRole || 'DEVELOPER',
                     voted: false,
                     cardValue: null,
                     originalCardValue: null,
@@ -144,11 +152,7 @@ function handleMessage(data) {
             renderSidebar();
             break;
         case 'TICKET_ADDED':
-            tickets[data.id] = {
-                title: data.title,
-                status: data.status,
-                finalEstimate: ''
-            };
+            tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
             document.getElementById('ticketSidebar').style.display = 'flex';
             document.querySelector('.session').classList.add('session--with-tickets');
             renderTicketSidebar();
@@ -163,71 +167,6 @@ function handleMessage(data) {
 }
 
 // ================================
-// Ticket-Sidebar rendern
-// ================================
-function renderTicketSidebar() {
-    const ul = document.getElementById('ticketSidebarList');
-    ul.innerHTML = '';
-
-    Object.entries(tickets).forEach(([id, ticket]) => {
-        const isActive = id === currentTicketId?.toString();
-        const isVoted = ticket.status === 'VOTED';
-
-        const li = document.createElement('li');
-        li.className = 'ticket-sidebar__item' +
-            (isActive ? ' ticket-sidebar__item--active' : '') +
-            (isVoted ? ' ticket-sidebar__item--voted' : '');
-
-        li.innerHTML = `
-            <span class="ticket-sidebar__title">${ticket.title}</span>
-            ${isVoted && ticket.finalEstimate
-            ? `<span class="ticket-sidebar__estimate">${ticket.finalEstimate}</span>`
-            : ''}
-        `;
-
-        if (isModerator && !isVoted) {
-            li.style.cursor = 'pointer';
-            li.onclick = () => selectTicket(id);
-        }
-
-        ul.appendChild(li);
-    });
-}
-
-function selectTicket(ticketId) {
-    stompClient.send(
-        '/app/session/' + roomCode + '/ticket/select',
-        {},
-        JSON.stringify({ ticketId: ticketId.toString() })
-    );
-}
-
-function showAddTicketForm() {
-    document.getElementById('addTicketForm').style.display = 'block';
-    document.getElementById('addTicketBtn').style.display = 'none';
-    document.getElementById('newTicketInput').focus();
-}
-
-function cancelAddTicket() {
-    document.getElementById('addTicketForm').style.display = 'none';
-    document.getElementById('addTicketBtn').style.display = 'block';
-    document.getElementById('newTicketInput').value = '';
-}
-
-function submitNewTicket() {
-    const title = document.getElementById('newTicketInput').value.trim();
-    if (!title) return;
-
-    stompClient.send(
-        '/app/session/' + roomCode + '/ticket/add',
-        {},
-        JSON.stringify({ title })
-    );
-
-    cancelAddTicket();
-}
-
-// ================================
 // SVG Poker Tisch
 // ================================
 function renderTable() {
@@ -239,14 +178,11 @@ function renderTable() {
 
     const tableRx = 200;
     const tableRy = 110;
-
     const baseOrbitRx = tableRx + 110;
     const baseOrbitRy = tableRy + 100;
     const minSpacing = 65;
-    const circumference = 2 * Math.PI * Math.sqrt((baseOrbitRx * baseOrbitRx + baseOrbitRy * baseOrbitRy) / 2);
-    const neededCircumference = total * minSpacing;
-    const scaleFactor = Math.max(1, neededCircumference / circumference);
-
+    const circumference = 2 * Math.PI * Math.sqrt((baseOrbitRx ** 2 + baseOrbitRy ** 2) / 2);
+    const scaleFactor = Math.max(1, (total * minSpacing) / circumference);
     const orbitRx = baseOrbitRx * scaleFactor;
     const orbitRy = baseOrbitRy * scaleFactor;
 
@@ -265,6 +201,7 @@ function renderTable() {
     svg.setAttribute('height', '100%');
     svg.style.overflow = 'visible';
 
+    // Defs
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
         <radialGradient id="tableGrad" cx="40%" cy="35%" r="60%">
@@ -277,6 +214,7 @@ function renderTable() {
     `;
     svg.appendChild(defs);
 
+    // Tisch Ellipse
     const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
     ellipse.setAttribute('cx', cx);
     ellipse.setAttribute('cy', cy);
@@ -286,45 +224,50 @@ function renderTable() {
     ellipse.setAttribute('filter', 'url(#tableShadow)');
     svg.appendChild(ellipse);
 
-    const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    statusText.setAttribute('x', cx);
-    statusText.setAttribute('y', cy - 10);
-    statusText.setAttribute('text-anchor', 'middle');
-    statusText.setAttribute('fill', 'white');
-    statusText.setAttribute('font-size', '16');
-    statusText.setAttribute('font-weight', '600');
-    statusText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-    statusText.setAttribute('id', 'svgVoteStatus');
-    statusText.textContent = isRevealed && averageValue
-        ? `Ø ${averageValue}`
-        : document.getElementById('voteStatus').textContent;
-    svg.appendChild(statusText);
+    // Tisch-Inhalt: Stats oder Vote-Status
+    if (isRevealed) {
+        const stats = recalculateStats();
+        _renderTableStats(svg, cx, cy, stats);
+    } else {
+        const statusText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        statusText.setAttribute('x', cx);
+        statusText.setAttribute('y', cy + 6);
+        statusText.setAttribute('text-anchor', 'middle');
+        statusText.setAttribute('fill', 'white');
+        statusText.setAttribute('font-size', '16');
+        statusText.setAttribute('font-weight', '600');
+        statusText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        statusText.setAttribute('id', 'svgVoteStatus');
+        statusText.textContent = document.getElementById('voteStatus').textContent;
+        svg.appendChild(statusText);
 
-    const progressBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    progressBg.setAttribute('x', cx - 70);
-    progressBg.setAttribute('y', cy + 10);
-    progressBg.setAttribute('width', 140);
-    progressBg.setAttribute('height', 5);
-    progressBg.setAttribute('rx', 3);
-    progressBg.setAttribute('fill', 'rgba(255,255,255,0.2)');
-    svg.appendChild(progressBg);
+        // Fortschrittsbalken
+        const progressBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        progressBg.setAttribute('x', cx - 70);
+        progressBg.setAttribute('y', cy + 20);
+        progressBg.setAttribute('width', 140);
+        progressBg.setAttribute('height', 5);
+        progressBg.setAttribute('rx', 3);
+        progressBg.setAttribute('fill', 'rgba(255,255,255,0.2)');
+        svg.appendChild(progressBg);
 
-    const progressFill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    progressFill.setAttribute('x', cx - 70);
-    progressFill.setAttribute('y', cy + 10);
-    progressFill.setAttribute('width', 0);
-    progressFill.setAttribute('height', 5);
-    progressFill.setAttribute('rx', 3);
-    progressFill.setAttribute('fill', '#E1001A');
-    progressFill.setAttribute('id', 'svgProgressBar');
-    svg.appendChild(progressFill);
+        const progressFill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        progressFill.setAttribute('x', cx - 70);
+        progressFill.setAttribute('y', cy + 20);
+        progressFill.setAttribute('width', 0);
+        progressFill.setAttribute('height', 5);
+        progressFill.setAttribute('rx', 3);
+        progressFill.setAttribute('fill', '#E1001A');
+        progressFill.setAttribute('id', 'svgProgressBar');
+        svg.appendChild(progressFill);
+    }
 
+    // Spieler
     if (total > 0) {
         playerList.forEach(([id, player], index) => {
             const angle = (2 * Math.PI * index / total) - Math.PI / 2;
             const px = cx + orbitRx * Math.cos(angle);
             const py = cy + orbitRy * Math.sin(angle);
-
             const isSelf = id === participantId;
             const hasVoted = player.voted;
 
@@ -343,6 +286,7 @@ function renderTable() {
                 cardFill = '#c8ddf0'; cardStroke = '#d0d8e4'; textFill = 'transparent';
             }
 
+            // Karte
             const cardRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             cardRect.setAttribute('x', px - cardW / 2);
             cardRect.setAttribute('y', py - cardH / 2);
@@ -355,18 +299,8 @@ function renderTable() {
             cardRect.setAttribute('id', `card-${id}`);
             svg.appendChild(cardRect);
 
-            if (isRevealed && player.cardValue) {
-                const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                cardText.setAttribute('x', px);
-                cardText.setAttribute('y', py + 5);
-                cardText.setAttribute('text-anchor', 'middle');
-                cardText.setAttribute('fill', textFill);
-                cardText.setAttribute('font-size', cardW > 36 ? 14 : 11);
-                cardText.setAttribute('font-weight', '700');
-                cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-                cardText.textContent = player.cardValue;
-                svg.appendChild(cardText);
-            } else if (isSelf && player.cardValue) {
+            // Kartenwert
+            if ((isRevealed && player.cardValue) || (isSelf && player.cardValue)) {
                 const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 cardText.setAttribute('x', px);
                 cardText.setAttribute('y', py + 5);
@@ -379,7 +313,9 @@ function renderTable() {
                 svg.appendChild(cardText);
             }
 
+            // Namens-Hintergrund
             const nameY = py + cardH / 2 + 6;
+            const roleColor = ROLE_COLORS[player.role] || '#004178';
             const displayName = player.name.length > 10
                 ? player.name.substring(0, 9) + '…'
                 : player.name + (isSelf ? ' (Du)' : '');
@@ -392,8 +328,18 @@ function renderTable() {
             nameBg.setAttribute('height', nameFontSize + 8);
             nameBg.setAttribute('rx', 4);
             nameBg.setAttribute('fill', 'white');
-            nameBg.setAttribute('opacity', '0.9');
+            nameBg.setAttribute('opacity', '0.95');
             svg.appendChild(nameBg);
+
+            // Rolle-Indikator (kleiner farbiger Streifen links am Namensbadge)
+            const roleBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            roleBar.setAttribute('x', px - nameW / 2);
+            roleBar.setAttribute('y', nameY);
+            roleBar.setAttribute('width', 3);
+            roleBar.setAttribute('height', nameFontSize + 8);
+            roleBar.setAttribute('rx', 2);
+            roleBar.setAttribute('fill', roleColor);
+            svg.appendChild(roleBar);
 
             const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             nameText.setAttribute('x', px);
@@ -412,10 +358,85 @@ function renderTable() {
     syncStatusToSvg();
 }
 
+function _renderTableStats(svg, cx, cy, stats) {
+    const hasDevs = stats.devAvg !== null;
+    const hasTesters = stats.testerAvg !== null;
+
+    if (!hasDevs && !hasTesters) {
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', cx); t.setAttribute('y', cy + 6);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', 'rgba(255,255,255,0.6)');
+        t.setAttribute('font-size', '14');
+        t.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        t.textContent = 'Keine numerischen Werte';
+        svg.appendChild(t);
+        return;
+    }
+
+    // Trennlinie
+    const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    divider.setAttribute('x1', cx); divider.setAttribute('y1', cy - 28);
+    divider.setAttribute('x2', cx); divider.setAttribute('y2', cy + 28);
+    divider.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+    divider.setAttribute('stroke-width', '1');
+    svg.appendChild(divider);
+
+    // Devs (links)
+    if (hasDevs) {
+        _renderStatBlock(svg, cx - 55, cy, '⚙ Dev', stats.devAvg, stats.devSpread, '#60a5fa');
+    }
+
+    // Testers (rechts)
+    if (hasTesters) {
+        _renderStatBlock(svg, cx + 55, cy, '✓ Test', stats.testerAvg, stats.testerSpread, '#4ade80');
+    }
+}
+
+function _renderStatBlock(svg, x, y, label, avg, spread, color) {
+    // Label
+    const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    labelText.setAttribute('x', x); labelText.setAttribute('y', y - 18);
+    labelText.setAttribute('text-anchor', 'middle');
+    labelText.setAttribute('fill', color);
+    labelText.setAttribute('font-size', '11');
+    labelText.setAttribute('font-weight', '700');
+    labelText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+    labelText.setAttribute('letter-spacing', '0.5');
+    labelText.textContent = label;
+    svg.appendChild(labelText);
+
+    // Durchschnitt
+    const avgText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    avgText.setAttribute('x', x); avgText.setAttribute('y', y + 8);
+    avgText.setAttribute('text-anchor', 'middle');
+    avgText.setAttribute('fill', 'white');
+    avgText.setAttribute('font-size', '22');
+    avgText.setAttribute('font-weight', '700');
+    avgText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+    avgText.textContent = `Ø ${avg}`;
+    svg.appendChild(avgText);
+
+    // Spread
+    if (spread !== null) {
+        const spreadText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        spreadText.setAttribute('x', x);
+        spreadText.setAttribute('y', y + 26);
+        spreadText.setAttribute('text-anchor', 'middle');
+        spreadText.setAttribute('fill', 'rgba(255,255,255,0.55)');
+        spreadText.setAttribute('font-size', '11');
+        spreadText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        spreadText.textContent = `↕ ${spread}`;
+        svg.appendChild(spreadText);
+    }
+}
+
+// ================================
+// Sidebar
+// ================================
 function renderSidebar() {
     const playerList = Object.entries(players);
     const total = playerList.length;
-
     document.getElementById('sidebarTitle').textContent = `Teilnehmer (${total})`;
 
     const ul = document.getElementById('participantList');
@@ -423,8 +444,8 @@ function renderSidebar() {
 
     const sorted = [...playerList].sort(([, a], [, b]) => {
         if (isRevealed && a.cardValue && b.cardValue) {
-            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8', '13', '16', '20', '32', '40', '64', '100',
-                'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8', '13',
+                '16', '20', '32', '40', '64', '100', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
             const ai = order.indexOf(a.cardValue);
             const bi = order.indexOf(b.cardValue);
             if (ai !== -1 && bi !== -1) return ai - bi;
@@ -437,22 +458,28 @@ function renderSidebar() {
         const isSelf = id === participantId;
         const hasVoted = player.voted;
         const initial = player.name.charAt(0).toUpperCase();
-        const color = getAvatarColor(player.name);
+        const avatarColor = getAvatarColor(player.name);
+        const roleColor = ROLE_COLORS[player.role] || '#004178';
 
         const li = document.createElement('li');
         li.className = 'sidebar__item';
         li.innerHTML = `
-            <div class="player-avatar" style="background:${color};">${initial}</div>
+            <div class="player-avatar" style="background:${avatarColor}; border: 2px solid ${roleColor}20;">
+                ${initial}
+            </div>
             <div class="player-info">
                 <span class="player-info__name ${isSelf ? 'player-info__name--self' : ''}">
                     ${player.name}${isSelf ? ' (Sie)' : ''}
+                </span>
+                <span class="player-info__role" style="color:${roleColor};">
+                    ${getRoleLabel(player.role)}
                 </span>
             </div>
             ${isRevealed && player.cardValue ? `
                 <span class="sidebar__card-value ${player.changed ? 'sidebar__card-value--changed' : ''}">
                     ${player.cardValue}
                 </span>
-            ` : `
+            ` : player.role === 'PRODUCT_OWNER' ? '' : `
                 <div class="player-status ${player.changed ? 'player-status--changed' :
             (hasVoted ? 'player-status--voted' : 'player-status--waiting')}"></div>
             `}
@@ -462,24 +489,79 @@ function renderSidebar() {
 }
 
 function syncStatusToSvg() {
-    const svgStatus = document.getElementById('svgVoteStatus');
     const svgProgress = document.getElementById('svgProgressBar');
-    const htmlStatus = document.getElementById('voteStatus');
     const htmlProgress = document.getElementById('progressBar');
-
-    if (svgStatus) {
-        svgStatus.textContent = isRevealed && averageValue
-            ? `Ø ${averageValue}`
-            : (htmlStatus ? htmlStatus.textContent : '');
-    }
     if (svgProgress && htmlProgress) {
         const pct = parseFloat(htmlProgress.style.width) || 0;
         svgProgress.setAttribute('width', (140 * pct / 100).toString());
     }
+    // Vote-Status Text direkt setzen wenn nicht revealed
+    if (!isRevealed) {
+        const svgStatus = document.getElementById('svgVoteStatus');
+        const htmlStatus = document.getElementById('voteStatus');
+        if (svgStatus && htmlStatus) svgStatus.textContent = htmlStatus.textContent;
+    }
 }
 
 // ================================
-// Vote-Status aktualisieren
+// Ticket-Sidebar
+// ================================
+function renderTicketSidebar() {
+    const ul = document.getElementById('ticketSidebarList');
+    ul.innerHTML = '';
+
+    Object.entries(tickets).forEach(([id, ticket]) => {
+        const isActive = id === currentTicketId?.toString();
+        const isVoted = ticket.status === 'VOTED';
+
+        const li = document.createElement('li');
+        li.className = 'ticket-sidebar__item'
+            + (isActive ? ' ticket-sidebar__item--active' : '')
+            + (isVoted ? ' ticket-sidebar__item--voted' : '');
+
+        li.innerHTML = `
+            <span class="ticket-sidebar__title">${ticket.title}</span>
+            ${isVoted && ticket.finalEstimate
+            ? `<span class="ticket-sidebar__estimate">${ticket.finalEstimate}</span>`
+            : ''}
+        `;
+
+        if (isModerator && !isVoted) {
+            li.style.cursor = 'pointer';
+            li.onclick = () => selectTicket(id);
+        }
+
+        ul.appendChild(li);
+    });
+}
+
+function selectTicket(ticketId) {
+    stompClient.send('/app/session/' + roomCode + '/ticket/select', {},
+        JSON.stringify({ ticketId: ticketId.toString() }));
+}
+
+function showAddTicketForm() {
+    document.getElementById('addTicketForm').style.display = 'block';
+    document.getElementById('addTicketBtn').style.display = 'none';
+    document.getElementById('newTicketInput').focus();
+}
+
+function cancelAddTicket() {
+    document.getElementById('addTicketForm').style.display = 'none';
+    document.getElementById('addTicketBtn').style.display = 'block';
+    document.getElementById('newTicketInput').value = '';
+}
+
+function submitNewTicket() {
+    const title = document.getElementById('newTicketInput').value.trim();
+    if (!title) return;
+    stompClient.send('/app/session/' + roomCode + '/ticket/add', {},
+        JSON.stringify({ title }));
+    cancelAddTicket();
+}
+
+// ================================
+// Vote-Status
 // ================================
 function updateVoteStatus(votedCount, totalCount, voterId) {
     document.getElementById('voteStatus').textContent =
@@ -488,9 +570,8 @@ function updateVoteStatus(votedCount, totalCount, voterId) {
     const pct = totalCount > 0 ? (votedCount / totalCount * 100) : 0;
     document.getElementById('progressBar').style.width = pct + '%';
 
-    if (voterId && players[voterId]) {
-        players[voterId].voted = true;
-    }
+    if (voterId && players[voterId]) players[voterId].voted = true;
+
     renderTable();
     renderSidebar();
 }
@@ -506,10 +587,10 @@ function updateDiscussion(id, name, cardValue) {
     if (playerId && players[playerId]) {
         players[playerId].cardValue = cardValue;
         players[playerId].voted = true;
-        players[playerId].changed =
-            cardValue !== players[playerId].originalCardValue;
+        players[playerId].changed = cardValue !== players[playerId].originalCardValue;
     }
-    recalculateAverage();
+    const stats = recalculateStats();
+    averageValue = stats.overallAvg;
     renderTable();
     renderSidebar();
 }
@@ -518,6 +599,8 @@ function updateDiscussion(id, name, cardValue) {
 // Karte wählen
 // ================================
 function selectCard(button) {
+    if (participantRole === 'PRODUCT_OWNER') return;
+
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
     button.classList.add('selected');
     selectedCard = button.dataset.value;
@@ -532,25 +615,24 @@ function selectCard(button) {
         players[participantId].voted = true;
         players[participantId].cardValue = selectedCard;
     }
+
     if (isDiscussion) {
-        recalculateAverage();
+        const stats = recalculateStats();
+        averageValue = stats.overallAvg;
     }
+
     renderTable();
     renderSidebar();
 
-    stompClient.send(
-        '/app/session/' + roomCode + '/vote',
-        {},
-        JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion })
-    );
+    stompClient.send('/app/session/' + roomCode + '/vote', {},
+        JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion }));
 }
 
 // ================================
 // Karten aufdecken
 // ================================
 function revealCards() {
-    const cards = document.querySelectorAll('#pokerTable rect');
-    cards.forEach(card => {
+    document.querySelectorAll('#pokerTable rect').forEach(card => {
         if (card.getAttribute('id')?.startsWith('card-')) {
             card.style.transition = 'transform 0.25s ease-in';
             card.style.transformBox = 'fill-box';
@@ -558,7 +640,6 @@ function revealCards() {
             card.style.transform = 'scaleX(0)';
         }
     });
-
     setTimeout(() => {
         stompClient.send('/app/session/' + roomCode + '/reveal', {}, {});
     }, 250);
@@ -582,17 +663,22 @@ function showResults(votes) {
         if (id) {
             players[id].cardValue = vote.cardValue;
             players[id].originalCardValue = vote.cardValue;
+            players[id].role = vote.participantRole || players[id].role;
             players[id].voted = true;
             players[id].changed = false;
         }
     });
 
-    recalculateAverage();
+    const stats = recalculateStats();
+    averageValue = stats.overallAvg;
 
-    // Ticket in der Liste als VOTED markieren
     if (currentTicketId && tickets[currentTicketId]) {
         tickets[currentTicketId].status = 'VOTED';
-        tickets[currentTicketId].finalEstimate = averageValue || '–';
+        const parts = [];
+        if (stats.devAvg) parts.push(`Dev ${stats.devAvg}`);
+        if (stats.testerAvg) parts.push(`Test ${stats.testerAvg}`);
+        tickets[currentTicketId].finalEstimate = parts.length > 0 ? parts.join(' / ') : '–';
+
         renderTicketSidebar();
     }
 
@@ -624,15 +710,13 @@ function showResults(votes) {
     votes.forEach(vote => {
         const li = document.createElement('li');
         li.className = 'results__item';
-        li.innerHTML = `
-            <span>${vote.participantName}</span>
-            <span class="results__value">${vote.cardValue}</span>
-        `;
+        li.innerHTML = `<span>${vote.participantName}</span><span class="results__value">${vote.cardValue}</span>`;
         resultsList.appendChild(li);
     });
 
     document.getElementById('resultsArea').style.display = 'block';
-    document.getElementById('cardArea').style.display = 'block';
+    document.getElementById('cardArea').style.display =
+        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
     document.getElementById('pokerPane').classList.add('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
@@ -645,6 +729,7 @@ function resetUI() {
     isRevealed = false;
     selectedCard = null;
     averageValue = null;
+
     Object.keys(players).forEach(id => {
         players[id].voted = false;
         players[id].cardValue = null;
@@ -655,11 +740,11 @@ function resetUI() {
     document.getElementById('pokerPane').classList.remove('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'none';
     document.getElementById('resultsArea').style.display = 'none';
-    document.getElementById('cardArea').style.display = 'block';
+    document.getElementById('cardArea').style.display =
+        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
     document.getElementById('voteStatus').textContent = 'Warte auf Abstimmung...';
     document.getElementById('progressBar').style.width = '0%';
     document.querySelector('[onclick="revealCards()"]').disabled = false;
-
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
 
     renderTable();
@@ -684,12 +769,12 @@ function saveSettings() {
 
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
-    if (topicBar) topicBar.style.display = showTopic ? 'block' : 'none';
-    if (isModerator && !moderatorCanVote) {
-        document.getElementById('cardArea').style.display = 'none';
-    } else {
-        document.getElementById('cardArea').style.display = 'block';
-    }
+    if (topicBar) topicBar.style.display = showTopic ? 'flex' : 'none';
+
+    const canVote = participantRole !== 'PRODUCT_OWNER' &&
+        !(isModerator && !moderatorCanVote);
+    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
+
     document.getElementById('settingShowTopic').checked = showTopic;
     document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
     document.getElementById('settingAutoReveal').checked = autoReveal;
@@ -707,30 +792,56 @@ function copyRoomCode() {
 }
 
 // ================================
-// Avatar Farben
+// Stats berechnen
 // ================================
+function recalculateStats() {
+    const devVotes = Object.values(players)
+        .filter(p => p.role === 'DEVELOPER' && p.cardValue)
+        .map(p => parseFloat(p.cardValue))
+        .filter(v => !isNaN(v));
+
+    const testerVotes = Object.values(players)
+        .filter(p => p.role === 'TESTER' && p.cardValue)
+        .map(p => parseFloat(p.cardValue))
+        .filter(v => !isNaN(v));
+
+    const fmt = v => Number.isInteger(v) ? v.toString() : v.toFixed(1);
+
+    const devAvg = devVotes.length > 0
+        ? fmt(devVotes.reduce((a, b) => a + b, 0) / devVotes.length) : null;
+    const testerAvg = testerVotes.length > 0
+        ? fmt(testerVotes.reduce((a, b) => a + b, 0) / testerVotes.length) : null;
+    const devSpread = devVotes.length >= 2
+        ? fmt(Math.max(...devVotes) - Math.min(...devVotes)) : null;
+    const testerSpread = testerVotes.length >= 2
+        ? fmt(Math.max(...testerVotes) - Math.min(...testerVotes)) : null;
+
+    const allVotes = [...devVotes, ...testerVotes];
+    const overallAvg = allVotes.length > 0
+        ? fmt(allVotes.reduce((a, b) => a + b, 0) / allVotes.length) : null;
+
+    return { devAvg, testerAvg, devSpread, testerSpread, overallAvg };
+}
+
+// ================================
+// Hilfsfunktionen
+// ================================
+function getRoleLabel(role) {
+    const labels = {
+        DEVELOPER: 'Entwickler',
+        TESTER: 'Tester',
+        PRODUCT_OWNER: 'Product Owner',
+        MODERATOR: 'Moderator'
+    };
+    return labels[role] || '';
+}
+
 function getAvatarColor(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-// ================================
-// Durchschnitt berechnen
-// ================================
-function recalculateAverage() {
-    const numericVotes = Object.values(players)
-        .map(p => parseFloat(p.cardValue))
-        .filter(v => !isNaN(v));
-
-    if (numericVotes.length > 0) {
-        const avg = numericVotes.reduce((a, b) => a + b, 0) / numericVotes.length;
-        averageValue = Number.isInteger(avg) ? avg.toString() : avg.toFixed(1);
-    } else {
-        averageValue = null;
-    }
 }
 
 // ================================

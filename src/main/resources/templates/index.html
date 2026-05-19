@@ -16,7 +16,6 @@
 
 <main class="main">
 
-    <!-- Obere Reihe -->
     <div class="main__row">
 
         <!-- Session erstellen -->
@@ -33,6 +32,11 @@
                             th:value="${m.name()}"
                             th:text="${methodLabels[m.name()]}">
                     </option>
+                </select>
+                <label class="form__label" for="moderatorRole">Ihre Rolle</label>
+                <select class="form__select" id="moderatorRole">
+                    <option value="DEVELOPER">Entwickler</option>
+                    <option value="TESTER">Tester</option>
                 </select>
 
                 <button class="btn btn--primary" type="submit">
@@ -52,6 +56,13 @@
                 <label class="form__label" for="roomCode">Raumcode</label>
                 <input class="form__input" type="text" id="roomCode"
                        placeholder="z.B. ABX93KLM" required>
+
+                <label class="form__label" for="participantRole">Ihre Rolle</label>
+                <select class="form__select" id="participantRole">
+                    <option value="DEVELOPER">Entwickler</option>
+                    <option value="TESTER">Tester</option>
+                    <option value="PRODUCT_OWNER">Product Owner (Beobachter)</option>
+                </select>
 
                 <button class="btn btn--secondary" type="submit">
                     Beitreten

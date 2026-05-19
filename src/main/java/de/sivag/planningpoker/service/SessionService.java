@@ -33,16 +33,15 @@ public class SessionService {
     // ====================================
 
     @Transactional
-    public Session createSession(String moderatorName, EstimationMethod method) {
+    public Session createSession(String moderatorName, EstimationMethod method, ParticipantRole moderatorRole) {
         Session session = new Session();
         session.setRoomCode(generateUniqueRoomCode());
         session.setEstimationMethod(method);
-
         sessionRepository.save(session);
 
         Participant moderator = new Participant();
         moderator.setName(moderatorName);
-        moderator.setRole(ParticipantRole.MODERATOR);
+        moderator.setRole(moderatorRole);  // statt MODERATOR
         moderator.setSession(session);
         participantRepository.save(moderator);
 
@@ -54,8 +53,9 @@ public class SessionService {
     // ====================================
 
     @Transactional
-    public Session createSessionWithTickets(String moderatorName, EstimationMethod method, List<String> ticketTitles) {
-        Session session = createSession(moderatorName, method);
+    public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
+                                            ParticipantRole moderatorRole, List<String> ticketTitles) {
+        Session session = createSession(moderatorName, method, moderatorRole);
 
         Ticket firstTicket = null;
         for (int i = 0; i < ticketTitles.size(); i++) {
@@ -80,7 +80,7 @@ public class SessionService {
     // ====================================
 
     @Transactional
-    public Participant joinSession(String roomCode, String participantName) {
+    public Participant joinSession(String roomCode, String participantName, ParticipantRole role) {
         Session session = getSessionByRoomCode(roomCode);
 
         if (session.getStatus() == SessionStatus.FINISHED) {
@@ -89,7 +89,7 @@ public class SessionService {
 
         Participant participant = new Participant();
         participant.setName(participantName);
-        participant.setRole(ParticipantRole.PARTICIPANT);
+        participant.setRole(role);
         participant.setSession(session);
 
         return participantRepository.save(participant);
