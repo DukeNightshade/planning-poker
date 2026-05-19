@@ -3,13 +3,14 @@ package de.sivag.planningpoker.controller;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
+import de.sivag.planningpoker.utility.RoleParser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * REST-Controller für Teilnehmer-Operationen.
@@ -18,6 +19,7 @@ import java.util.NoSuchElementException;
  * @author Nico Hoffmann
  * @version 1.0
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/sessions")
 @RequiredArgsConstructor
@@ -38,96 +40,82 @@ public class ParticipantRestController {
     public ResponseEntity<?> joinSession(
             @PathVariable String roomCode,
             @RequestBody Map<String, String> body) {
-        try {
-            String name = body.get("name");
-            ParticipantRole role = parseRole(body.getOrDefault("role", "DEVELOPER"));
 
-            Participant participant = sessionService.joinSession(roomCode, name, role);
+        String name = body.get("name");
+        ParticipantRole role = RoleParser.parseParticipantRole(
+                body.getOrDefault("role", "DEVELOPER"));
 
-            messagingTemplate.convertAndSend(
-                    "/topic/session/" + roomCode,
-                    Map.of(
-                            "type", "PLAYER_JOINED",
-                            "participantId", participant.getId().toString(),
-                            "participantName", participant.getName(),
-                            "participantRole", participant.getRole().name()
-                    )
-            );
+        Participant participant = sessionService.joinSession(roomCode, name, role);
 
-            return ResponseEntity.ok(Map.of(
-                    "participantId", participant.getId(),
-                    "name", participant.getName(),
-                    "role", participant.getRole().name()
-            ));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        log.info("Teilnehmer beigetreten: name={}, rolle={}, roomCode={}",
+                name, role.name(), roomCode);
+
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type",            "PLAYER_JOINED",
+                        "participantId",   participant.getId().toString(),
+                        "participantName", participant.getName(),
+                        "participantRole", participant.getRole().name()
+                )
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "participantId", participant.getId(),
+                "name",          participant.getName(),
+                "role",          participant.getRole().name()
+        ));
     }
 
     @PostMapping("/{roomCode}/participants/{participantId}/promote")
     public ResponseEntity<?> promoteToModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId) {
-        try {
-            Participant participant = sessionService.promoteToModerator(roomCode, participantId);
 
-            messagingTemplate.convertAndSend(
-                    "/topic/session/" + roomCode,
-                    Map.of(
-                            "type", "MODERATOR_PROMOTED",
-                            "participantId", participant.getId().toString(),
-                            "participantName", participant.getName()
-                    )
-            );
+        Participant participant =
+                sessionService.promoteToModerator(roomCode, participantId);
 
-            return ResponseEntity.ok(Map.of(
-                    "participantId", participant.getId(),
-                    "moderator", participant.isModerator()
-            ));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+        log.info("Teilnehmer zum Moderator befördert: name={}, roomCode={}",
+                participant.getName(), roomCode);
+
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type",            "MODERATOR_PROMOTED",
+                        "participantId",   participant.getId().toString(),
+                        "participantName", participant.getName()
+                )
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "participantId", participant.getId(),
+                "moderator",     participant.isModerator()
+        ));
     }
 
     @PostMapping("/{roomCode}/participants/{participantId}/demote")
     public ResponseEntity<?> demoteFromModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId) {
-        try {
-            Participant participant = sessionService.demoteFromModerator(roomCode, participantId);
 
-            messagingTemplate.convertAndSend(
-                    "/topic/session/" + roomCode,
-                    Map.of(
-                            "type", "MODERATOR_DEMOTED",
-                            "participantId", participant.getId().toString(),
-                            "participantName", participant.getName()
-                    )
-            );
+        Participant participant =
+                sessionService.demoteFromModerator(roomCode, participantId);
 
-            return ResponseEntity.ok(Map.of(
-                    "participantId", participant.getId(),
-                    "moderator", participant.isModerator()
-            ));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
+        log.info("Moderator-Rechte entzogen: name={}, roomCode={}",
+                participant.getName(), roomCode);
 
-    // ====================================
-    // Utility Methods
-    // ====================================
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type",            "MODERATOR_DEMOTED",
+                        "participantId",   participant.getId().toString(),
+                        "participantName", participant.getName()
+                )
+        );
 
-    private ParticipantRole parseRole(String roleStr) {
-        try {
-            ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            return role == ParticipantRole.MODERATOR ? ParticipantRole.DEVELOPER : role;
-        } catch (IllegalArgumentException e) {
-            return ParticipantRole.DEVELOPER;
-        }
+        return ResponseEntity.ok(Map.of(
+                "participantId", participant.getId(),
+                "moderator",     participant.isModerator()
+        ));
     }
 }

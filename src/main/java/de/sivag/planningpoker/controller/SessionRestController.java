@@ -6,13 +6,14 @@ import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
+import de.sivag.planningpoker.utility.RoleParser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * REST-Controller für Session-Operationen.
@@ -21,6 +22,7 @@ import java.util.NoSuchElementException;
  * @author Nico Hoffmann
  * @version 1.0
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/sessions")
 @RequiredArgsConstructor
@@ -39,76 +41,61 @@ public class SessionRestController {
 
     @PostMapping
     public ResponseEntity<?> createSession(@RequestBody Map<String, Object> body) {
-        try {
-            String moderatorName = (String) body.get("moderatorName");
-            EstimationMethod method = EstimationMethod.valueOf((String) body.get("method"));
-            ParticipantRole moderatorRole = parseModeratorRole(
-                    (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
+        String moderatorName = (String) body.get("moderatorName");
+        EstimationMethod method = EstimationMethod.valueOf(
+                (String) body.get("method"));
+        ParticipantRole moderatorRole = RoleParser.parseModeratorRole(
+                (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
 
-            @SuppressWarnings("unchecked")
-            List<String> ticketTitles = (List<String>) body.getOrDefault("tickets", List.of());
+        @SuppressWarnings("unchecked")
+        List<String> ticketTitles =
+                (List<String>) body.getOrDefault("tickets", List.of());
 
-            Session session = ticketTitles.isEmpty()
-                    ? sessionService.createSession(moderatorName, method, moderatorRole)
-                    : sessionService.createSessionWithTickets(
-                    moderatorName, method, moderatorRole, ticketTitles);
+        Session session = ticketTitles.isEmpty()
+                ? sessionService.createSession(moderatorName, method, moderatorRole)
+                : sessionService.createSessionWithTickets(
+                moderatorName, method, moderatorRole, ticketTitles);
 
-            Long moderatorId = sessionService.getParticipants(session.getRoomCode())
-                    .stream()
-                    .filter(p -> p.getRole() == moderatorRole)
-                    .findFirst()
-                    .map(Participant::getId)
-                    .orElse(null);
+        log.info("Session erstellt: roomCode={}, methode={}, tickets={}",
+                session.getRoomCode(),
+                method.name(),
+                ticketTitles.size());
 
-            return ResponseEntity.ok(Map.of(
-                    "roomCode", session.getRoomCode(),
-                    "method", session.getEstimationMethod().name(),
-                    "status", session.getStatus().name(),
-                    "participantId", moderatorId,
-                    "moderatorRole", moderatorRole.name()
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Ungültige Schätzmethode."));
-        }
+        Long moderatorId = sessionService.getParticipants(session.getRoomCode())
+                .stream()
+                .filter(p -> p.getRole() == moderatorRole)
+                .findFirst()
+                .map(Participant::getId)
+                .orElse(null);
+
+        return ResponseEntity.ok(Map.of(
+                "roomCode",      session.getRoomCode(),
+                "method",        session.getEstimationMethod().name(),
+                "status",        session.getStatus().name(),
+                "participantId", moderatorId,
+                "moderatorRole", moderatorRole.name()
+        ));
     }
 
     @GetMapping("/{roomCode}/state")
     public ResponseEntity<?> getState(@PathVariable String roomCode) {
-        try {
-            Session session = sessionService.getSessionByRoomCode(roomCode);
+        Session session = sessionService.getSessionByRoomCode(roomCode);
+        String currentTicketTitle = resolveCurrentTicketTitle(session);
 
-            String currentTicketTitle = resolveCurrentTicketTitle(session);
-
-            return ResponseEntity.ok(Map.of(
-                    "roomCode", session.getRoomCode(),
-                    "currentTicketId", session.getCurrentTicketId() != null
-                            ? session.getCurrentTicketId() : "",
-                    "currentTicketTitle", currentTicketTitle,
-                    "method", session.getEstimationMethod().name(),
-                    "status", session.getStatus().name(),
-                    "participantCount", sessionService.getParticipants(roomCode).size()
-            ));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(Map.of(
+                "roomCode",           session.getRoomCode(),
+                "currentTicketId",    session.getCurrentTicketId() != null
+                        ? session.getCurrentTicketId() : "",
+                "currentTicketTitle", currentTicketTitle,
+                "method",             session.getEstimationMethod().name(),
+                "status",             session.getStatus().name(),
+                "participantCount",   sessionService.getParticipants(roomCode).size()
+        ));
     }
 
     // ====================================
     // Utility Methods
     // ====================================
-
-    private ParticipantRole parseModeratorRole(String roleStr) {
-        try {
-            ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            if (role == ParticipantRole.MODERATOR || role == ParticipantRole.PRODUCT_OWNER) {
-                return ParticipantRole.DEVELOPER;
-            }
-            return role;
-        } catch (IllegalArgumentException e) {
-            return ParticipantRole.DEVELOPER;
-        }
-    }
 
     private String resolveCurrentTicketTitle(Session session) {
         if (session.getCurrentTicketId() == null) return "";
@@ -116,7 +103,7 @@ public class SessionRestController {
                 .stream()
                 .filter(t -> t.getId().equals(session.getCurrentTicketId()))
                 .findFirst()
-                .map(t -> t.getTitle())
+                .map(Participant -> Participant.getTitle())
                 .orElse("");
     }
 }
