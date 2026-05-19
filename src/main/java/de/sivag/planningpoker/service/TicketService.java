@@ -6,6 +6,7 @@ import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.repository.VoteRepository;
+import de.sivag.planningpoker.utility.StringUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +42,7 @@ public class TicketService {
         Session session = getSessionByRoomCode(roomCode);
 
         Ticket ticket = new Ticket();
-        ticket.setTitle(title);
+        ticket.setTitle(StringUtils.sanitize(title));
         ticket.setSession(session);
         ticket.setOrderIndex(ticketRepository.countBySessionRoomCode(roomCode));
 
@@ -75,5 +76,15 @@ public class TicketService {
         return sessionRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new NoSuchElementException(
                         "Session mit Raumcode " + roomCode + " nicht gefunden."));
+    }
+
+    private String sanitize(String input) {
+        if (input == null) return "";
+        return input
+                .replace("&",  "&amp;")
+                .replace("<",  "&lt;")
+                .replace(">",  "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'",  "&#x27;");
     }
 }

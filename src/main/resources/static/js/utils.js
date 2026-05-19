@@ -40,3 +40,13 @@ function getAvatarColor(name) {
 function formatNumber(value) {
     return Number.isInteger(value) ? value.toString() : value.toFixed(1);
 }
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g,  '&amp;')
+        .replace(/</g,  '&lt;')
+        .replace(/>/g,  '&gt;')
+        .replace(/"/g,  '&quot;')
+        .replace(/'/g,  '&#x27;');
+}

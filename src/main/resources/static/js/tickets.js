@@ -16,7 +16,7 @@ function renderTicketSidebar() {
             + (isVoted  ? ' ticket-sidebar__item--voted'  : '');
 
         li.innerHTML = `
-            <span class="ticket-sidebar__title">${ticket.title}</span>
+            <span class="ticket-sidebar__title">${escapeHtml(ticket.title)}</span>
             ${isVoted && ticket.finalEstimate
             ? `<span class="ticket-sidebar__estimate">${ticket.finalEstimate}</span>`
             : ''}
