@@ -1,25 +1,26 @@
-// ================================
+// ====================================
 // Session erstellen (ohne Tickets)
-// ================================
+// ====================================
+
 document.getElementById('createForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const moderatorName = document.getElementById('moderatorName').value.trim();
-    const method = document.getElementById('method').value;
+    const method        = document.getElementById('method').value;
     const moderatorRole = document.getElementById('moderatorRole').value;
 
     if (!moderatorName) return;
 
     const response = await fetch('/api/sessions', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({moderatorName, method, moderatorRole})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moderatorName, method, moderatorRole })
     });
 
     if (response.ok) {
         const data = await response.json();
-        sessionStorage.setItem('participantId', data.participantId);
-        sessionStorage.setItem('isModerator', 'true');
+        sessionStorage.setItem('participantId',   data.participantId);
+        sessionStorage.setItem('isModerator',     'true');
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
@@ -27,16 +28,17 @@ document.getElementById('createForm').addEventListener('submit', async function 
     }
 });
 
-// ================================
+// ====================================
 // Session erstellen (mit Tickets)
-// ================================
+// ====================================
+
 document.getElementById('createWithTicketsForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const moderatorName = document.getElementById('moderatorNameTickets').value.trim();
-    const method = document.getElementById('methodTickets').value;
-    const ticketInputs = document.querySelectorAll('.ticket-input');
-    const tickets = Array.from(ticketInputs)
+    const method        = document.getElementById('methodTickets').value;
+    const moderatorRole = document.getElementById('moderatorRoleTickets').value;
+    const tickets       = Array.from(document.querySelectorAll('.ticket-input'))
         .map(input => input.value.trim())
         .filter(title => title.length > 0);
 
@@ -47,14 +49,14 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
 
     const response = await fetch('/api/sessions', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({moderatorName, method, tickets})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moderatorName, method, moderatorRole, tickets })
     });
 
     if (response.ok) {
         const data = await response.json();
-        sessionStorage.setItem('participantId', data.participantId);
-        sessionStorage.setItem('isModerator', 'true');
+        sessionStorage.setItem('participantId',   data.participantId);
+        sessionStorage.setItem('isModerator',     'true');
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
@@ -62,28 +64,29 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
     }
 });
 
-// ================================
+// ====================================
 // Session beitreten
-// ================================
+// ====================================
+
 document.getElementById('joinForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    const name = document.getElementById('participantName').value.trim();
+    const name     = document.getElementById('participantName').value.trim();
     const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
-    const role = document.getElementById('participantRole').value;
+    const role     = document.getElementById('participantRole').value;
 
     if (!name || !roomCode) return;
 
     const response = await fetch(`/api/sessions/${roomCode}/join`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name, role})
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role })
     });
 
     if (response.ok) {
         const data = await response.json();
-        sessionStorage.setItem('participantId', data.participantId);
-        sessionStorage.setItem('isModerator', 'false');
+        sessionStorage.setItem('participantId',   data.participantId);
+        sessionStorage.setItem('isModerator',     'false');
         sessionStorage.setItem('participantRole', data.role);
         window.location.href = '/session/' + roomCode;
     } else {
@@ -91,11 +94,12 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
     }
 });
 
-// ================================
+// ====================================
 // Ticket-Felder dynamisch
-// ================================
+// ====================================
+
 function addTicketField() {
-    const list = document.getElementById('ticketList');
+    const list  = document.getElementById('ticketList');
     const entry = document.createElement('div');
     entry.className = 'ticket-entry';
     entry.innerHTML = `

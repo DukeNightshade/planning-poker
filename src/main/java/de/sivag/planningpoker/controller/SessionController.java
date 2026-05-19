@@ -1,7 +1,7 @@
 package de.sivag.planningpoker.controller;
 
-import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.Session;
+import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -11,14 +11,24 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
 
+/**
+ * Thymeleaf-Controller für die Seitennavigation.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Controller
 @RequiredArgsConstructor
 public class SessionController {
 
+    // ====================================
+    // Dependencies
+    // ====================================
+
     private final SessionService sessionService;
 
     // ====================================
-    // Startseite
+    // View Endpoints
     // ====================================
 
     @GetMapping("/")
@@ -31,10 +41,6 @@ public class SessionController {
         ));
         return "index";
     }
-
-    // ====================================
-    // Abstimmungsraum
-    // ====================================
 
     @GetMapping("/session/{roomCode}")
     public String session(@PathVariable String roomCode, Model model) {

@@ -5,15 +5,26 @@ import de.sivag.planningpoker.model.enums.SessionStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entity für eine Planning-Poker-Session.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Entity
 @Table(name = "sessions")
 @Getter
 @Setter
 public class Session {
+
+    // ====================================
+    // Instance Variables
+    // ====================================
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -53,6 +64,10 @@ public class Session {
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Ticket> tickets = new ArrayList<>();
+
+    // ====================================
+    // Lifecycle Callbacks
+    // ====================================
 
     @PrePersist
     protected void onCreate() {
