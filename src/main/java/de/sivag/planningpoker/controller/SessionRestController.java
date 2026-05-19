@@ -185,4 +185,57 @@ public class SessionRestController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PostMapping("/{roomCode}/participants/{participantId}/promote")
+    public ResponseEntity<?> promoteToModerator(
+            @PathVariable String roomCode,
+            @PathVariable Long participantId) {
+        try {
+            Participant participant = sessionService.promoteToModerator(roomCode, participantId);
+
+            messagingTemplate.convertAndSend(
+                    "/topic/session/" + roomCode,
+                    Map.of(
+                            "type", "MODERATOR_PROMOTED",
+                            "participantId", participant.getId().toString(),
+                            "participantName", participant.getName()
+                    )
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "participantId", participant.getId(),
+                    "moderator", participant.isModerator()
+            ));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{roomCode}/participants/{participantId}/demote")
+    public ResponseEntity<?> demoteFromModerator(
+            @PathVariable String roomCode,
+            @PathVariable Long participantId) {
+        try {
+            Participant participant = sessionService.demoteFromModerator(roomCode, participantId);
+
+            messagingTemplate.convertAndSend(
+                    "/topic/session/" + roomCode,
+                    Map.of(
+                            "type", "MODERATOR_DEMOTED",
+                            "participantId", participant.getId().toString(),
+                            "participantName", participant.getName()
+                    )
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "participantId", participant.getId(),
+                    "moderator", participant.isModerator()
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

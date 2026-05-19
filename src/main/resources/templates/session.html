@@ -171,7 +171,10 @@
 <div id="playerData" style="display:none;">
     <span th:each="p : ${participants}"
           class="player-entry"
-          th:attr="data-player-id=${p.id}, data-player-name=${p.name}">
+          th:attr="data-player-id=${p.id},
+                   data-player-name=${p.name},
+                   data-player-role=${p.role.name()},
+                   data-player-moderator=${p.isModerator()}">
     </span>
 </div>
 

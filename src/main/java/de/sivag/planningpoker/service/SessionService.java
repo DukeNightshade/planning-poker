@@ -41,7 +41,8 @@ public class SessionService {
 
         Participant moderator = new Participant();
         moderator.setName(moderatorName);
-        moderator.setRole(moderatorRole);  // statt MODERATOR
+        moderator.setRole(moderatorRole);
+        moderator.setModerator(true);
         moderator.setSession(session);
         participantRepository.save(moderator);
 
@@ -260,6 +261,41 @@ public class SessionService {
         session.setModeratorCanVote(moderatorCanVote);
         session.setAutoReveal(autoReveal);
         sessionRepository.save(session);
+    }
+
+    // ====================================
+    // User zu Moderator promoten
+    // ====================================
+
+    @Transactional
+    public Participant promoteToModerator(String roomCode, Long participantId) {
+        Participant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
+        participant.setModerator(true);
+        return participantRepository.save(participant);
+    }
+
+    // ====================================
+    // Moderator zu User demoten
+    // ====================================
+
+    @Transactional
+    public Participant demoteFromModerator(String roomCode, Long participantId) {
+        List<Participant> participants = participantRepository.findBySessionRoomCode(roomCode);
+
+        // Moderatoren sind: alle mit moderator=true ODER der Session-Ersteller (erste Participant)
+        long moderatorCount = participants.stream()
+                .filter(p -> p.isModerator())
+                .count();
+
+        if (moderatorCount <= 1) {
+            throw new IllegalStateException("Der letzte Moderator kann nicht demoted werden.");
+        }
+
+        Participant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
+        participant.setModerator(false);
+        return participantRepository.save(participant);
     }
 
     // ====================================

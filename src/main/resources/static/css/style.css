@@ -179,6 +179,46 @@ body {
     transform: none;
 }
 
+.btn--promote {
+    background: transparent;
+    border: 1.5px solid var(--color-border);
+    color: var(--color-text-light);
+    border-radius: var(--radius);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.btn--promote:hover {
+    background: #fefce8;
+    border-color: #eab308;
+    color: #eab308;
+}
+
+.btn--demote {
+    background: transparent;
+    border: 1.5px solid var(--color-border);
+    color: var(--color-text-light);
+    border-radius: var(--radius);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.btn--demote:hover {
+    background: #fef2f2;
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
 .btn--primary {
     background: var(--color-primary);
     color: var(--color-white);
