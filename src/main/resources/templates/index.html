@@ -33,6 +33,7 @@
                             th:text="${methodLabels[m.name()]}">
                     </option>
                 </select>
+
                 <label class="form__label" for="moderatorRole">Ihre Rolle</label>
                 <select class="form__select" id="moderatorRole">
                     <option value="DEVELOPER">Entwickler</option>
@@ -86,6 +87,12 @@
                         th:value="${m.name()}"
                         th:text="${methodLabels[m.name()]}">
                 </option>
+            </select>
+
+            <label class="form__label" for="moderatorRoleTickets">Ihre Rolle</label>
+            <select class="form__select" id="moderatorRoleTickets">
+                <option value="DEVELOPER">Entwickler</option>
+                <option value="TESTER">Tester</option>
             </select>
 
             <label class="form__label">Tickets</label>

@@ -5,11 +5,21 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Entity für ein zu schätzendes Ticket innerhalb einer Session.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Entity
 @Table(name = "tickets")
 @Getter
 @Setter
 public class Ticket {
+
+    // ====================================
+    // Instance Variables
+    // ====================================
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +32,7 @@ public class Ticket {
     @Column(nullable = false)
     private TicketStatus status;
 
-    @Column(length = 10)
+    @Column(length = 20)
     private String finalEstimate;
 
     @Column(nullable = false)
@@ -31,6 +41,10 @@ public class Ticket {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;
+
+    // ====================================
+    // Lifecycle Callbacks
+    // ====================================
 
     @PrePersist
     protected void onCreate() {

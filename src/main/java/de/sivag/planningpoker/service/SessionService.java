@@ -1,11 +1,14 @@
 package de.sivag.planningpoker.service;
 
-import de.sivag.planningpoker.model.*;
+import de.sivag.planningpoker.model.Participant;
+import de.sivag.planningpoker.model.Session;
+import de.sivag.planningpoker.model.Ticket;
+import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
-import de.sivag.planningpoker.model.enums.EstimationMethod;
-import de.sivag.planningpoker.model.enums.TicketStatus;
-import de.sivag.planningpoker.repository.*;
+import de.sivag.planningpoker.repository.ParticipantRepository;
+import de.sivag.planningpoker.repository.SessionRepository;
+import de.sivag.planningpoker.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,27 +16,42 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.OptionalDouble;
 
+/**
+ * Service für den Session-Lifecycle.
+ * Verantwortlich für Erstellung, Beitritt, Einstellungen
+ * und Moderator-Verwaltung.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class SessionService {
 
-    private final SessionRepository sessionRepository;
-    private final ParticipantRepository participantRepository;
-    private final VoteRepository voteRepository;
-    private final TicketRepository ticketRepository;
+    // ====================================
+    // Static Variables
+    // ====================================
 
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 8;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     // ====================================
-    // Session erstellen
+    // Dependencies
+    // ====================================
+
+    private final SessionRepository sessionRepository;
+    private final ParticipantRepository participantRepository;
+    private final TicketRepository ticketRepository;
+
+    // ====================================
+    // Business Logic Methods
     // ====================================
 
     @Transactional
-    public Session createSession(String moderatorName, EstimationMethod method, ParticipantRole moderatorRole) {
+    public Session createSession(String moderatorName, EstimationMethod method,
+                                 ParticipantRole moderatorRole) {
         Session session = new Session();
         session.setRoomCode(generateUniqueRoomCode());
         session.setEstimationMethod(method);
@@ -49,13 +67,10 @@ public class SessionService {
         return session;
     }
 
-    // ====================================
-    // Session erstellen mit Tickets
-    // ====================================
-
     @Transactional
     public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
-                                            ParticipantRole moderatorRole, List<String> ticketTitles) {
+                                            ParticipantRole moderatorRole,
+                                            List<String> ticketTitles) {
         Session session = createSession(moderatorName, method, moderatorRole);
 
         Ticket firstTicket = null;
@@ -76,12 +91,9 @@ public class SessionService {
         return session;
     }
 
-    // ====================================
-    // Session beitreten
-    // ====================================
-
     @Transactional
-    public Participant joinSession(String roomCode, String participantName, ParticipantRole role) {
+    public Participant joinSession(String roomCode, String participantName,
+                                   ParticipantRole role) {
         Session session = getSessionByRoomCode(roomCode);
 
         if (session.getStatus() == SessionStatus.FINISHED) {
@@ -96,176 +108,15 @@ public class SessionService {
         return participantRepository.save(participant);
     }
 
-    // ====================================
-    // Abstimmung
-    // ====================================
-
     @Transactional
-    public Vote submitVote(String roomCode, Long participantId, String cardValue, boolean isDiscussion) {
-        Session session = getSessionByRoomCode(roomCode);
-
-        if (!isDiscussion && session.getStatus() == SessionStatus.REVEALED) {
-            throw new IllegalStateException("Karten bereits aufgedeckt.");
-        }
-
-        Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
-
-        voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
-                .ifPresent(existing -> {
-                    voteRepository.delete(existing);
-                    voteRepository.flush();
-                });
-
-        Vote vote = new Vote();
-        vote.setSession(session);
-        vote.setParticipant(participant);
-        vote.setCardValue(cardValue);
-
-        if (!isDiscussion) {
-            session.setStatus(SessionStatus.VOTING);
-            sessionRepository.save(session);
-        }
-
-        return voteRepository.save(vote);
-    }
-
-    // ====================================
-    // Karten aufdecken
-    // ====================================
-
-    @Transactional
-    public List<Vote> revealCards(String roomCode) {
-        Session session = getSessionByRoomCode(roomCode);
-        session.setStatus(SessionStatus.REVEALED);
-        sessionRepository.save(session);
-
-        List<Vote> votes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
-
-        // Durchschnitt berechnen und in aktivem Ticket speichern
-        if (session.getCurrentTicketId() != null) {
-            ticketRepository.findById(session.getCurrentTicketId()).ifPresent(ticket -> {
-                OptionalDouble avg = votes.stream()
-                        .map(Vote::getCardValue)
-                        .filter(v -> v.matches("-?\\d+(\\.\\d+)?"))
-                        .mapToDouble(Double::parseDouble)
-                        .average();
-
-                if (avg.isPresent()) {
-                    double result = avg.getAsDouble();
-                    ticket.setFinalEstimate(
-                            result == Math.floor(result)
-                                    ? String.valueOf((int) result)
-                                    : String.format("%.1f", result)
-                    );
-                } else {
-                    ticket.setFinalEstimate("–");
-                }
-
-                ticket.setStatus(TicketStatus.VOTED);
-                ticketRepository.save(ticket);
-            });
-        }
-
-        return votes;
-    }
-
-    // ====================================
-    // Neue Runde
-    // ====================================
-
-    @Transactional
-    public void resetRound(String roomCode) {
-        Session session = getSessionByRoomCode(roomCode);
-        session.setStatus(SessionStatus.WAITING);
-        sessionRepository.save(session);
-        voteRepository.deleteBySessionRoomCode(roomCode);
-    }
-
-    // ====================================
-    // Ticket hinzufügen
-    // ====================================
-
-    @Transactional
-    public Ticket addTicket(String roomCode, String title) {
-        Session session = getSessionByRoomCode(roomCode);
-
-        int nextIndex = ticketRepository.countBySessionRoomCode(roomCode);
-
-        Ticket ticket = new Ticket();
-        ticket.setTitle(title);
-        ticket.setSession(session);
-        ticket.setOrderIndex(nextIndex);
-
-        return ticketRepository.save(ticket);
-    }
-
-    // ====================================
-    // Ticket auswählen
-    // ====================================
-
-    @Transactional
-    public Ticket selectTicket(String roomCode, Long ticketId) {
-        Session session = getSessionByRoomCode(roomCode);
-
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new NoSuchElementException("Ticket nicht gefunden."));
-
-        session.setCurrentTicketId(ticketId);
-        session.setStatus(SessionStatus.WAITING);
-        sessionRepository.save(session);
-
-        voteRepository.deleteBySessionRoomCode(roomCode);
-
-        return ticket;
-    }
-
-    // ====================================
-    // Tickets abrufen
-    // ====================================
-
-    public List<Ticket> getTickets(String roomCode) {
-        return ticketRepository.findBySessionRoomCodeOrderByOrderIndex(roomCode);
-    }
-
-    // ====================================
-    // Topic aktualisieren
-    // ====================================
-
-    @Transactional
-    public void updateTopic(String roomCode, String topic) {
-        Session session = getSessionByRoomCode(roomCode);
-        // topic wird jetzt über Tickets verwaltet – diese Methode bleibt
-        // als Fallback für den WebSocket-Handler erhalten
-    }
-
-    // ====================================
-    // Session beenden
-    // ====================================
-
-    @Transactional
-    public void endSession(String roomCode) {
-        Session session = getSessionByRoomCode(roomCode);
-        session.setStatus(SessionStatus.FINISHED);
-        sessionRepository.save(session);
-    }
-
-    // ====================================
-    // Einstellungen updaten
-    // ====================================
-
-    @Transactional
-    public void updateSettings(String roomCode, boolean showTopic, boolean moderatorCanVote, boolean autoReveal) {
+    public void updateSettings(String roomCode, boolean showTopic,
+                               boolean moderatorCanVote, boolean autoReveal) {
         Session session = getSessionByRoomCode(roomCode);
         session.setShowTopic(showTopic);
         session.setModeratorCanVote(moderatorCanVote);
         session.setAutoReveal(autoReveal);
         sessionRepository.save(session);
     }
-
-    // ====================================
-    // User zu Moderator promoten
-    // ====================================
 
     @Transactional
     public Participant promoteToModerator(String roomCode, Long participantId) {
@@ -275,21 +126,16 @@ public class SessionService {
         return participantRepository.save(participant);
     }
 
-    // ====================================
-    // Moderator zu User demoten
-    // ====================================
-
     @Transactional
     public Participant demoteFromModerator(String roomCode, Long participantId) {
-        List<Participant> participants = participantRepository.findBySessionRoomCode(roomCode);
-
-        // Moderatoren sind: alle mit moderator=true ODER der Session-Ersteller (erste Participant)
-        long moderatorCount = participants.stream()
-                .filter(p -> p.isModerator())
+        long moderatorCount = participantRepository.findBySessionRoomCode(roomCode)
+                .stream()
+                .filter(Participant::isModerator)
                 .count();
 
         if (moderatorCount <= 1) {
-            throw new IllegalStateException("Der letzte Moderator kann nicht demoted werden.");
+            throw new IllegalStateException(
+                    "Der letzte Moderator kann nicht demoted werden.");
         }
 
         Participant participant = participantRepository.findById(participantId)
@@ -299,7 +145,7 @@ public class SessionService {
     }
 
     // ====================================
-    // Hilfsmethoden
+    // Query Methods
     // ====================================
 
     public Session getSessionByRoomCode(String roomCode) {
@@ -312,9 +158,9 @@ public class SessionService {
         return participantRepository.findBySessionRoomCode(roomCode);
     }
 
-    public List<Vote> getVotes(String roomCode) {
-        return voteRepository.findBySessionRoomCode(roomCode);
-    }
+    // ====================================
+    // Utility Methods
+    // ====================================
 
     private String generateUniqueRoomCode() {
         String code;

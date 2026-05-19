@@ -9,8 +9,18 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository für den Datenbankzugriff auf Vote-Entitäten.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Repository
 public interface VoteRepository extends JpaRepository<Vote, Long> {
+
+    // ====================================
+    // Query Methods
+    // ====================================
 
     List<Vote> findBySessionRoomCode(String roomCode);
 

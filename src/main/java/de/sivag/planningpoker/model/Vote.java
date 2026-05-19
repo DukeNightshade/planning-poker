@@ -3,8 +3,15 @@ package de.sivag.planningpoker.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 
+/**
+ * Entity für eine abgegebene Kartenwahl eines Teilnehmers.
+ *
+ * @author Nico Hoffmann
+ * @version 1.0
+ */
 @Entity
 @Table(
         name = "votes",
@@ -18,6 +25,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class Vote {
+
+    // ====================================
+    // Instance Variables
+    // ====================================
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,6 +47,10 @@ public class Vote {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "participant_id", nullable = false)
     private Participant participant;
+
+    // ====================================
+    // Lifecycle Callbacks
+    // ====================================
 
     @PrePersist
     protected void onCreate() {

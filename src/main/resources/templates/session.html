@@ -37,20 +37,23 @@
         <div class="settings-panel__body">
             <label class="settings__toggle">
                 <span>Ticket-Modul anzeigen</span>
-                <input type="checkbox" id="settingShowTopic" th:checked="${showTopic}" onchange="saveSettings()">
+                <input type="checkbox" id="settingShowTopic"
+                       th:checked="${showTopic}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle">
                 <span>Moderator darf mitwählen</span>
-                <input type="checkbox" id="settingModeratorCanVote" th:checked="${moderatorCanVote}" onchange="saveSettings()">
+                <input type="checkbox" id="settingModeratorCanVote"
+                       th:checked="${moderatorCanVote}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle">
                 <span>Automatisch aufdecken</span>
-                <input type="checkbox" id="settingAutoReveal" th:checked="${autoReveal}" onchange="saveSettings()">
+                <input type="checkbox" id="settingAutoReveal"
+                       th:checked="${autoReveal}" onchange="saveSettings()">
             </label>
         </div>
     </div>
 
-    <!-- Ticket-Liste (links) -->
+    <!-- Ticket-Sidebar (links) -->
     <aside class="ticket-sidebar" id="ticketSidebar" style="display:none;">
         <h3 class="sidebar__title">Tickets</h3>
         <ul class="ticket-sidebar__list" id="ticketSidebarList">
@@ -62,12 +65,14 @@
                        placeholder="Ticket-Titel" style="font-size: 0.85rem;">
                 <button class="btn--remove" onclick="cancelAddTicket()">✕</button>
             </div>
-            <button class="btn btn--primary" style="width:100%; margin-top: 0.5rem; font-size: 0.85rem;"
+            <button class="btn btn--primary"
+                    style="width:100%; margin-top: 0.5rem; font-size: 0.85rem;"
                     onclick="submitNewTicket()">
                 Hinzufügen
             </button>
         </div>
-        <button class="btn btn--outline" id="addTicketBtn" style="display:none; width:100%; margin-top: 0.75rem; font-size: 0.85rem;"
+        <button class="btn btn--outline" id="addTicketBtn"
+                style="display:none; width:100%; margin-top: 0.75rem; font-size: 0.85rem;"
                 onclick="showAddTicketForm()">
             + Ticket hinzufügen
         </button>
@@ -83,7 +88,8 @@
         </div>
 
         <!-- Diskussionsmodus Label -->
-        <div id="discussionLabel" style="display:none;" class="poker-pane__discussion-label">
+        <div id="discussionLabel" style="display:none;"
+             class="poker-pane__discussion-label">
             💬 Diskussionsmodus
         </div>
 
@@ -92,7 +98,8 @@
 
         <!-- Karten zum Wählen -->
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
-            <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'FIBONACCI'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,0,0.5,1,2,3,5,8,13,20,40,100'.split(',')}"
                         th:text="${v}"
@@ -100,7 +107,8 @@
                         onclick="selectCard(this)">
                 </button>
             </div>
-            <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'T_SHIRT'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,XS,S,M,L,XL,XXL'.split(',')}"
                         th:text="${v}"
@@ -108,7 +116,8 @@
                         onclick="selectCard(this)">
                 </button>
             </div>
-            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,1,2,4,8,16,32,64'.split(',')}"
                         th:text="${v}"
@@ -118,6 +127,7 @@
             </div>
         </div>
 
+        <!-- State-Tracking für JS -->
         <div id="resultsArea" style="display:none;"></div>
         <ul id="resultsList" style="display:none;"></ul>
 
@@ -144,7 +154,8 @@
             <div class="sidebar__method-label">Methode</div>
             <div class="sidebar__method-value"
                  th:text="${estimationMethod == 'FIBONACCI' ? 'Fibonacci' :
-                           (estimationMethod == 'T_SHIRT' ? 'T-Shirt Größen' : 'Zweierpotenzen')}">
+                           (estimationMethod == 'T_SHIRT'   ? 'T-Shirt Größen' :
+                                                              'Zweierpotenzen')}">
             </div>
         </div>
     </aside>
@@ -178,8 +189,14 @@
     </span>
 </div>
 
+<!-- Scripts — Reihenfolge beachten -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script th:src="@{/js/utils.js}"></script>
+<script th:src="@{/js/stats.js}"></script>
+<script th:src="@{/js/tickets.js}"></script>
+<script th:src="@{/js/render.js}"></script>
+<script th:src="@{/js/actions.js}"></script>
 <script th:src="@{/js/poker.js}"></script>
 
 </body>
