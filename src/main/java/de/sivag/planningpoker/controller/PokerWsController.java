@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -44,12 +45,19 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/vote")
     public void submitVote(
             @DestinationVariable String roomCode,
-            @Payload Map<String, String> payload) {
+            @Payload Map<String, String> payload,
+            SimpMessageHeaderAccessor headerAccessor) {
 
         Long participantId = Long.parseLong(payload.get("participantId"));
         String cardValue = payload.get("cardValue");
         boolean isDiscussion = Boolean.parseBoolean(
                 payload.getOrDefault("isDiscussion", "false"));
+
+        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            sessionAttributes.put("roomCode",      roomCode);
+            sessionAttributes.put("participantId", participantId);
+        }
 
         voteService.submitVote(roomCode, participantId, cardValue, isDiscussion);
 

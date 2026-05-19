@@ -109,6 +109,17 @@ public class SessionService {
     }
 
     @Transactional
+    public String removeParticipant(String roomCode, Long participantId) {
+        Participant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Teilnehmer nicht gefunden."));
+
+        String name = participant.getName();
+        participantRepository.delete(participant);
+        return name;
+    }
+
+    @Transactional
     public void updateSettings(String roomCode, boolean showTopic,
                                boolean moderatorCanVote, boolean autoReveal) {
         Session session = getSessionByRoomCode(roomCode);
