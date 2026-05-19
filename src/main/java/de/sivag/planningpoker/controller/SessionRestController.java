@@ -6,6 +6,7 @@ import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
+import de.sivag.planningpoker.utility.RoleParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,7 +43,7 @@ public class SessionRestController {
         try {
             String moderatorName = (String) body.get("moderatorName");
             EstimationMethod method = EstimationMethod.valueOf((String) body.get("method"));
-            ParticipantRole moderatorRole = parseModeratorRole(
+            ParticipantRole moderatorRole = RoleParser.parseModeratorRole(
                     (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
 
             @SuppressWarnings("unchecked")
@@ -97,18 +98,6 @@ public class SessionRestController {
     // ====================================
     // Utility Methods
     // ====================================
-
-    private ParticipantRole parseModeratorRole(String roleStr) {
-        try {
-            ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            if (role == ParticipantRole.MODERATOR || role == ParticipantRole.PRODUCT_OWNER) {
-                return ParticipantRole.DEVELOPER;
-            }
-            return role;
-        } catch (IllegalArgumentException e) {
-            return ParticipantRole.DEVELOPER;
-        }
-    }
 
     private String resolveCurrentTicketTitle(Session session) {
         if (session.getCurrentTicketId() == null) return "";

@@ -3,6 +3,7 @@ package de.sivag.planningpoker.controller;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
+import de.sivag.planningpoker.utility.RoleParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -40,7 +41,8 @@ public class ParticipantRestController {
             @RequestBody Map<String, String> body) {
         try {
             String name = body.get("name");
-            ParticipantRole role = parseRole(body.getOrDefault("role", "DEVELOPER"));
+            ParticipantRole role = RoleParser.parseParticipantRole(
+                    body.getOrDefault("role", "DEVELOPER"));
 
             Participant participant = sessionService.joinSession(roomCode, name, role);
 
@@ -115,19 +117,6 @@ public class ParticipantRestController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
-        }
-    }
-
-    // ====================================
-    // Utility Methods
-    // ====================================
-
-    private ParticipantRole parseRole(String roleStr) {
-        try {
-            ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            return role == ParticipantRole.MODERATOR ? ParticipantRole.DEVELOPER : role;
-        } catch (IllegalArgumentException e) {
-            return ParticipantRole.DEVELOPER;
         }
     }
 }
