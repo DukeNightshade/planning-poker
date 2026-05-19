@@ -103,7 +103,7 @@ public class SessionRestController {
                 .stream()
                 .filter(t -> t.getId().equals(session.getCurrentTicketId()))
                 .findFirst()
-                .map(Participant -> Participant.getTitle())
+                .map(t -> t.getTitle())
                 .orElse("");
     }
 }

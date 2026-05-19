@@ -19,8 +19,6 @@ import java.util.Map;
 
 /**
  * WebSocket-Controller für Echtzeit-Kommunikation.
- * Verantwortlich ausschließlich für das Routing von WebSocket-Nachrichten.
- * Geschäftslogik wird an die jeweiligen Services delegiert.
  *
  * @author Nico Hoffmann
  * @version 1.0
