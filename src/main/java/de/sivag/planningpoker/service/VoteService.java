@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.OptionalDouble;
 
@@ -124,7 +125,7 @@ public class VoteService {
     private String formatDouble(double value) {
         return value == Math.floor(value)
                 ? String.valueOf((int) value)
-                : String.format("%.1f", value);
+                : String.format(Locale.US, "%.1f", value);
     }
 
     private Session getSessionByRoomCode(String roomCode) {
