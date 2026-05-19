@@ -248,4 +248,31 @@ class SessionServiceTest {
                 .isInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("UNKNOWN");
     }
+
+    // ====================================
+    // removeParticipant()
+    // ====================================
+
+    @Test
+    @DisplayName("removeParticipant: Teilnehmer wird erfolgreich entfernt und Name zurückgegeben")
+    void removeParticipant_success() {
+        when(participantRepository.findById(1L))
+                .thenReturn(Optional.of(testModerator));
+
+        String name = sessionService.removeParticipant("ABCD1234", 1L);
+
+        assertThat(name).isEqualTo("Max");
+        verify(participantRepository, times(1)).delete(testModerator);
+    }
+
+    @Test
+    @DisplayName("removeParticipant: Wirft NoSuchElementException bei unbekannter ID")
+    void removeParticipant_unknownId_throwsException() {
+        when(participantRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                sessionService.removeParticipant("ABCD1234", 99L))
+                .isInstanceOf(NoSuchElementException.class);
+    }
 }

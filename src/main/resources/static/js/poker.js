@@ -143,6 +143,11 @@ function handleMessage(data) {
             renderTable();
             renderSidebar();
             break;
+        case 'PLAYER_LEFT':
+            delete players[data.participantId];
+            renderTable();
+            renderSidebar();
+            break;
         case 'MODERATOR_PROMOTED':
             if (players[data.participantId]) {
                 players[data.participantId].moderator = true;
