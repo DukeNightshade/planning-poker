@@ -4,6 +4,7 @@ import de.sivag.planningpoker.model.*;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
+import de.sivag.planningpoker.model.enums.TicketStatus;
 import de.sivag.planningpoker.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.OptionalDouble;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final ParticipantRepository participantRepository;
     private final VoteRepository voteRepository;
+    private final TicketRepository ticketRepository;
 
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 8;
@@ -42,6 +45,32 @@ public class SessionService {
         moderator.setRole(ParticipantRole.MODERATOR);
         moderator.setSession(session);
         participantRepository.save(moderator);
+
+        return session;
+    }
+
+    // ====================================
+    // Session erstellen mit Tickets
+    // ====================================
+
+    @Transactional
+    public Session createSessionWithTickets(String moderatorName, EstimationMethod method, List<String> ticketTitles) {
+        Session session = createSession(moderatorName, method);
+
+        Ticket firstTicket = null;
+        for (int i = 0; i < ticketTitles.size(); i++) {
+            Ticket ticket = new Ticket();
+            ticket.setTitle(ticketTitles.get(i));
+            ticket.setSession(session);
+            ticket.setOrderIndex(i);
+            Ticket saved = ticketRepository.save(ticket);
+            if (i == 0) firstTicket = saved;
+        }
+
+        if (firstTicket != null) {
+            session.setCurrentTicketId(firstTicket.getId());
+            sessionRepository.save(session);
+        }
 
         return session;
     }
@@ -84,7 +113,7 @@ public class SessionService {
         voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
                 .ifPresent(existing -> {
                     voteRepository.delete(existing);
-                    voteRepository.flush(); // Sicherstellen dass Delete vor Insert kommt
+                    voteRepository.flush();
                 });
 
         Vote vote = new Vote();
@@ -109,7 +138,35 @@ public class SessionService {
         Session session = getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.REVEALED);
         sessionRepository.save(session);
-        return voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
+
+        List<Vote> votes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
+
+        // Durchschnitt berechnen und in aktivem Ticket speichern
+        if (session.getCurrentTicketId() != null) {
+            ticketRepository.findById(session.getCurrentTicketId()).ifPresent(ticket -> {
+                OptionalDouble avg = votes.stream()
+                        .map(Vote::getCardValue)
+                        .filter(v -> v.matches("-?\\d+(\\.\\d+)?"))
+                        .mapToDouble(Double::parseDouble)
+                        .average();
+
+                if (avg.isPresent()) {
+                    double result = avg.getAsDouble();
+                    ticket.setFinalEstimate(
+                            result == Math.floor(result)
+                                    ? String.valueOf((int) result)
+                                    : String.format("%.1f", result)
+                    );
+                } else {
+                    ticket.setFinalEstimate("–");
+                }
+
+                ticket.setStatus(TicketStatus.VOTED);
+                ticketRepository.save(ticket);
+            });
+        }
+
+        return votes;
     }
 
     // ====================================
@@ -120,9 +177,54 @@ public class SessionService {
     public void resetRound(String roomCode) {
         Session session = getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.WAITING);
-        session.setTopic(null);
         sessionRepository.save(session);
         voteRepository.deleteBySessionRoomCode(roomCode);
+    }
+
+    // ====================================
+    // Ticket hinzufügen
+    // ====================================
+
+    @Transactional
+    public Ticket addTicket(String roomCode, String title) {
+        Session session = getSessionByRoomCode(roomCode);
+
+        int nextIndex = ticketRepository.countBySessionRoomCode(roomCode);
+
+        Ticket ticket = new Ticket();
+        ticket.setTitle(title);
+        ticket.setSession(session);
+        ticket.setOrderIndex(nextIndex);
+
+        return ticketRepository.save(ticket);
+    }
+
+    // ====================================
+    // Ticket auswählen
+    // ====================================
+
+    @Transactional
+    public Ticket selectTicket(String roomCode, Long ticketId) {
+        Session session = getSessionByRoomCode(roomCode);
+
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new NoSuchElementException("Ticket nicht gefunden."));
+
+        session.setCurrentTicketId(ticketId);
+        session.setStatus(SessionStatus.WAITING);
+        sessionRepository.save(session);
+
+        voteRepository.deleteBySessionRoomCode(roomCode);
+
+        return ticket;
+    }
+
+    // ====================================
+    // Tickets abrufen
+    // ====================================
+
+    public List<Ticket> getTickets(String roomCode) {
+        return ticketRepository.findBySessionRoomCodeOrderByOrderIndex(roomCode);
     }
 
     // ====================================
@@ -132,8 +234,8 @@ public class SessionService {
     @Transactional
     public void updateTopic(String roomCode, String topic) {
         Session session = getSessionByRoomCode(roomCode);
-        session.setTopic(topic);
-        sessionRepository.save(session);
+        // topic wird jetzt über Tickets verwaltet – diese Methode bleibt
+        // als Fallback für den WebSocket-Handler erhalten
     }
 
     // ====================================

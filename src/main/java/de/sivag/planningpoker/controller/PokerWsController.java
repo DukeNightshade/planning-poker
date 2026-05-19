@@ -1,6 +1,7 @@
 package de.sivag.planningpoker.controller;
 
 import de.sivag.planningpoker.model.Session;
+import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.Vote;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +56,6 @@ public class PokerWsController {
         }
 
         if (isDiscussion) {
-            // Diskussions-Update mit Name und neuem Wert
             String participantName = sessionService.getParticipants(roomCode).stream()
                     .filter(p -> p.getId().equals(participantId))
                     .findFirst()
@@ -120,27 +120,6 @@ public class PokerWsController {
     }
 
     // ====================================
-    // Topic aktualisieren
-    // ====================================
-
-    @MessageMapping("/session/{roomCode}/topic")
-    public void updateTopic(
-            @DestinationVariable String roomCode,
-            @Payload Map<String, String> payload) {
-
-        String topic = payload.get("topic");
-        sessionService.updateTopic(roomCode, topic);
-
-        messagingTemplate.convertAndSend(
-                "/topic/session/" + roomCode,
-                Map.of(
-                        "type", "TOPIC_UPDATE",
-                        "topic", topic
-                )
-        );
-    }
-
-    // ====================================
     // Einstellungen aktualisieren
     // ====================================
 
@@ -162,6 +141,52 @@ public class PokerWsController {
                         "showTopic", showTopic,
                         "moderatorCanVote", moderatorCanVote,
                         "autoReveal", autoReveal
+                )
+        );
+    }
+
+    // ====================================
+    // Ticket hinzufügen (live)
+    // ====================================
+
+    @MessageMapping("/session/{roomCode}/ticket/add")
+    public void addTicket(
+            @DestinationVariable String roomCode,
+            @Payload Map<String, String> payload) {
+
+        String title = payload.get("title");
+        Ticket ticket = sessionService.addTicket(roomCode, title);
+
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type", "TICKET_ADDED",
+                        "id", ticket.getId().toString(),
+                        "title", ticket.getTitle(),
+                        "status", ticket.getStatus().name(),
+                        "orderIndex", ticket.getOrderIndex()
+                )
+        );
+    }
+
+    // ====================================
+    // Ticket auswählen
+    // ====================================
+
+    @MessageMapping("/session/{roomCode}/ticket/select")
+    public void selectTicket(
+            @DestinationVariable String roomCode,
+            @Payload Map<String, String> payload) {
+
+        Long ticketId = Long.parseLong(payload.get("ticketId"));
+        Ticket ticket = sessionService.selectTicket(roomCode, ticketId);
+
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode,
+                Map.of(
+                        "type", "TICKET_SELECTED",
+                        "id", ticket.getId().toString(),
+                        "title", ticket.getTitle()
                 )
         );
     }
