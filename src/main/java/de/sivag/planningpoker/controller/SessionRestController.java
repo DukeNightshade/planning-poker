@@ -26,17 +26,30 @@ public class SessionRestController {
         try {
             String moderatorName = (String) body.get("moderatorName");
             EstimationMethod method = EstimationMethod.valueOf((String) body.get("method"));
+            String moderatorRoleStr = (String) body.getOrDefault("moderatorRole", "DEVELOPER");
+            ParticipantRole moderatorRole;
+            try {
+                moderatorRole = ParticipantRole.valueOf(moderatorRoleStr);
+                if (moderatorRole == ParticipantRole.MODERATOR ||
+                        moderatorRole == ParticipantRole.PRODUCT_OWNER) {
+                    moderatorRole = ParticipantRole.DEVELOPER;
+                }
+            } catch (IllegalArgumentException e) {
+                moderatorRole = ParticipantRole.DEVELOPER;
+            }
+
+            final ParticipantRole finalModeratorRole = moderatorRole;
 
             @SuppressWarnings("unchecked")
             List<String> ticketTitles = (List<String>) body.getOrDefault("tickets", List.of());
 
             Session session = ticketTitles.isEmpty()
-                    ? sessionService.createSession(moderatorName, method)
-                    : sessionService.createSessionWithTickets(moderatorName, method, ticketTitles);
+                    ? sessionService.createSession(moderatorName, method, finalModeratorRole)
+                    : sessionService.createSessionWithTickets(moderatorName, method, finalModeratorRole, ticketTitles);
 
             List<Participant> participants = sessionService.getParticipants(session.getRoomCode());
             Long moderatorId = participants.stream()
-                    .filter(p -> p.getRole() == ParticipantRole.MODERATOR)
+                    .filter(p -> p.getRole() == finalModeratorRole)
                     .findFirst()
                     .map(Participant::getId)
                     .orElse(null);
@@ -45,7 +58,8 @@ public class SessionRestController {
                     "roomCode", session.getRoomCode(),
                     "method", session.getEstimationMethod().name(),
                     "status", session.getStatus().name(),
-                    "participantId", moderatorId
+                    "participantId", moderatorId,
+                    "moderatorRole", finalModeratorRole.name()
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -59,15 +73,24 @@ public class SessionRestController {
             @RequestBody Map<String, String> body) {
         try {
             String name = body.get("name");
-            Participant participant = sessionService.joinSession(roomCode, name);
+            String roleStr = body.getOrDefault("role", "DEVELOPER");
+            ParticipantRole role;
+            try {
+                role = ParticipantRole.valueOf(roleStr);
+                if (role == ParticipantRole.MODERATOR) role = ParticipantRole.DEVELOPER;
+            } catch (IllegalArgumentException e) {
+                role = ParticipantRole.DEVELOPER;
+            }
 
-            // Alle informieren dass jemand beigetreten ist
+            Participant participant = sessionService.joinSession(roomCode, name, role);
+
             messagingTemplate.convertAndSend(
                     "/topic/session/" + roomCode,
                     Map.of(
                             "type", "PLAYER_JOINED",
                             "participantId", participant.getId().toString(),
-                            "participantName", participant.getName()
+                            "participantName", participant.getName(),
+                            "participantRole", participant.getRole().name()
                     )
             );
 

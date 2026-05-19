@@ -48,6 +48,7 @@ public class PokerWsController {
                             "type", "REVEAL",
                             "votes", votes.stream().map(v -> Map.of(
                                     "participantName", v.getParticipant().getName(),
+                                    "participantRole", v.getParticipant().getRole().name(),
                                     "cardValue", v.getCardValue()
                             )).toList()
                     )
@@ -99,6 +100,7 @@ public class PokerWsController {
                         "type", "REVEAL",
                         "votes", votes.stream().map(v -> Map.of(
                                 "participantName", v.getParticipant().getName(),
+                                "participantRole", v.getParticipant().getRole().name(),
                                 "cardValue", v.getCardValue()
                         )).toList()
                 )
