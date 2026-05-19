@@ -347,7 +347,7 @@ function _buildSidebarItem(id, player, activeModerators) {
         </div>
         <div class="player-info">
             <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
-                ${player.name}${isSelfEntry ? ' (Sie)' : ''}
+                ${escapeHtml(player.name)}${isSelfEntry ? ' (Sie)' : ''}
             </span>
             <span class="player-info__role" style="color:${roleColor};">
                 ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · Moderator' : ''}
@@ -399,4 +399,19 @@ function syncStatusToSvg() {
         const htmlStatus = document.getElementById('voteStatus');
         if (svgStatus && htmlStatus) svgStatus.textContent = htmlStatus.textContent;
     }
+
+// ====================================
+// Utility Methods (in utils.js ergänzen)
+// ====================================
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g,  '&amp;')
+            .replace(/</g,  '&lt;')
+            .replace(/>/g,  '&gt;')
+            .replace(/"/g,  '&quot;')
+            .replace(/'/g,  '&#x27;');
+    }
+
 }

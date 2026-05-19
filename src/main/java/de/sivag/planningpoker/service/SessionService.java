@@ -9,6 +9,7 @@ import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
 import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
+import de.sivag.planningpoker.utility.StringUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,7 +59,7 @@ public class SessionService {
         sessionRepository.save(session);
 
         Participant moderator = new Participant();
-        moderator.setName(moderatorName);
+        moderator.setName(StringUtils.sanitize(moderatorName));
         moderator.setRole(moderatorRole);
         moderator.setModerator(true);
         moderator.setSession(session);
@@ -101,7 +102,7 @@ public class SessionService {
         }
 
         Participant participant = new Participant();
-        participant.setName(participantName);
+        participant.setName(StringUtils.sanitize(participantName));
         participant.setRole(role);
         participant.setSession(session);
 
@@ -187,5 +188,15 @@ public class SessionService {
             sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
         return sb.toString();
+    }
+
+    private String sanitize(String input) {
+        if (input == null) return "";
+        return input
+                .replace("&",  "&amp;")
+                .replace("<",  "&lt;")
+                .replace(">",  "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'",  "&#x27;");
     }
 }
