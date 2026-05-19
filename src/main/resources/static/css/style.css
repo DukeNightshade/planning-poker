@@ -42,8 +42,10 @@ body {
 .header {
     background: var(--color-primary);
     color: var(--color-white);
-    text-align: center;
-    padding: 2.5rem 1rem 2rem;
+    display: flex;
+    align-items: center;
+    padding: 1rem 2rem;
+    position: relative;
 }
 
 .header__logo {
@@ -54,10 +56,24 @@ body {
     margin-bottom: 0.5rem;
 }
 
+.header__logo-img {
+    height: clamp(28px, 4vw, 48px);
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .header__title {
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 0.25rem;
+}
+
+.header__title-block {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
 }
 
 .header__subtitle {
@@ -72,6 +88,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 0;
+    width: 100%;
 }
 
 .header__top {
@@ -79,13 +96,20 @@ body {
     color: var(--color-white);
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 2rem;
+    gap: 1rem;
+    padding: 0.5rem 2rem;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
 }
 
 .header__app-title {
     font-size: 1.1rem;
     font-weight: 700;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-white);
 }
 
 .header__bottom {
@@ -97,6 +121,8 @@ body {
     padding: 0.6rem 2rem;
     border-bottom: 1px solid var(--color-border);
     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header__left {
@@ -785,4 +811,134 @@ body {
     color: var(--color-text-light);
     background: var(--color-white);
     border-top: 1px solid var(--color-border);
+}
+
+/* ================================
+   Dark Mode (System-Präferenz) Media Query nach WCAG-Richtlinien.
+   ================================ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-primary:    #4a9ede;
+        --color-accent:     #5baee8;
+        --color-ice:        #1e3a52;
+        --color-dark:       #e0e0e0;
+        --color-white:      #1e1e2e;
+        --color-grey:       #151520;
+        --color-border:     #2e3a4a;
+        --color-text:       #e8eaf0;
+        --color-text-light: #9aa5b4;
+    }
+
+    .header__title {
+        color: #e8eaf0;
+    }
+
+    .header__app-title {
+        color: #e8eaf0;
+    }
+
+    .header,
+    .header--session {
+        background: #0f1923;
+    }
+
+    .header__top {
+        background: #0f1923;
+        width: 100%;
+    }
+
+    .header__subtitle {
+        color: #9aa5b4;
+        opacity: 1;
+    }
+
+    .header__bottom {
+        background: #1e1e2e;
+        border-bottom-color: var(--color-border);
+        width: 100%;
+    }
+
+    .header__roomcode {
+        background: #1e3a52;
+        color: #4a9ede;
+    }
+
+    .header__back {
+        color: var(--color-text);
+    }
+
+    .card,
+    .session__poker,
+    .session__sidebar,
+    .ticket-sidebar,
+    .settings-panel {
+        background: #1e1e2e;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    .card-btn {
+        background: #252535;
+        border-color: var(--color-border);
+        color: #4a9ede;
+    }
+
+    .card-btn:hover {
+        background: #1e3a52;
+        border-color: #4a9ede;
+    }
+
+    .card-btn.selected {
+        background: #4a9ede;
+        color: #1e1e2e;
+    }
+
+    .settings-panel__header {
+        background: #1e3a52;
+    }
+
+    .sidebar__method-block {
+        background: #252535;
+    }
+
+    .ticket-sidebar__item {
+        background: #252535;
+        border-color: var(--color-border);
+    }
+
+    .ticket-sidebar__item--active {
+        background: #1e3a52;
+        border-color: #4a9ede;
+    }
+
+    .ticket-sidebar__item--voted {
+        background: #1a2e1a;
+        border-color: #22c55e;
+    }
+
+    .footer {
+        background: #1e1e2e;
+        border-top-color: var(--color-border);
+    }
+
+    .form__input,
+    .form__select {
+        background: #252535;
+        color: var(--color-text);
+        border-color: var(--color-border);
+    }
+
+    .form__input:focus,
+    .form__select:focus {
+        border-color: #4a9ede;
+    }
+
+    .session__topic {
+        background: #1e3a52;
+        border-left-color: #4a9ede;
+    }
+
+    .poker-pane__discussion-label {
+        background: #1a2e1a;
+        border-color: #22c55e;
+    }
 }
