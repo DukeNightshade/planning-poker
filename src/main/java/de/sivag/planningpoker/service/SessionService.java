@@ -73,6 +73,7 @@ public class SessionService {
                                             ParticipantRole moderatorRole,
                                             List<String> ticketTitles) {
         Session session = createSession(moderatorName, method, moderatorRole);
+        session.setShowTopic(true);
 
         Ticket firstTicket = null;
         for (int i = 0; i < ticketTitles.size(); i++) {

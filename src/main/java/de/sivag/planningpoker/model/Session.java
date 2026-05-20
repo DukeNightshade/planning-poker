@@ -48,7 +48,7 @@ public class Session {
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    private boolean showTopic = true;
+    private boolean showTopic = false;
 
     @Column(nullable = false)
     private boolean moderatorCanVote = true;

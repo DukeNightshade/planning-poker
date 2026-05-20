@@ -110,10 +110,6 @@ async function loadInitialData() {
         ticketList.forEach(t => {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
-
-        const hasTickets = ticketList.length > 0;
-        document.getElementById('ticketSidebar').style.display = hasTickets ? 'flex' : 'none';
-        document.querySelector('.session').classList.toggle('session--with-tickets', hasTickets);
         renderTicketSidebar();
     }
 
@@ -224,8 +220,6 @@ function handleMessage(data) {
             break;
         case 'TICKET_ADDED':
             tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
-            document.getElementById('ticketSidebar').style.display = 'flex';
-            document.querySelector('.session').classList.add('session--with-tickets');
             renderTicketSidebar();
             showToast(`Ticket hinzugefügt: ${escapeHtml(data.title)}`, 'success', '', 3000);
             break;

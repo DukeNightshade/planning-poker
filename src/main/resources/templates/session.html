@@ -18,7 +18,7 @@
 
 <header class="header header--session">
     <div class="header__top">
-        <img th:src="@{/images/siv-logo.png}"
+        <img th:src="@{/images/siv-logo-weiß.png}"
              alt="SIV.AG"
              class="header__logo-img">
         <span class="header__app-title">Planning Poker</span>
@@ -104,7 +104,7 @@
         </div>
 
         <!-- SVG wird hier von JS eingefügt -->
-        <div id="pokerTable" style="width:100%; min-height:500px;"></div>
+        <div id="pokerTable" style="width:100%; min-height:380px;"></div>
 
         <!-- Karten zum Wählen -->
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
@@ -142,8 +142,7 @@
         <ul id="resultsList" style="display:none;"></ul>
 
         <!-- Moderator Aktionen -->
-        <div class="session__actions" id="moderatorActions"
-             style="display:none; justify-content:center; padding: 0 1rem 1rem;">
+        <div class="session__actions" id="moderatorActions" style="display:none;">
             <button class="btn btn--primary" onclick="revealCards()">
                 Karten aufdecken
             </button>

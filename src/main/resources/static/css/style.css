@@ -57,7 +57,7 @@ body {
 }
 
 .header__logo-img {
-    height: clamp(28px, 4vw, 48px);
+    height: clamp(28px, 4vw, 44px);
     width: auto;
     object-fit: contain;
     flex-shrink: 0;
@@ -117,14 +117,14 @@ body {
 }
 
 .header__bottom {
-    background: var(--color-white);
+    background: linear-gradient(135deg, #e8f0f8 0%, #f0f5fb 100%);
     color: var(--color-text);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 2rem;
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    padding: 0.55rem 2rem;
+    border-top: 1px solid rgba(0,65,120,0.12);
+    border-bottom: 2px solid #c8d8ea;
     width: 100%;
     box-sizing: border-box;
 }
@@ -141,11 +141,11 @@ body {
 }
 
 .header__back {
-    color: var(--color-text);
+    color: var(--color-primary);
     text-decoration: none;
     font-size: 0.95rem;
     font-weight: 600;
-    opacity: 0.75;
+    opacity: 0.8;
     transition: opacity var(--transition);
 }
 
@@ -153,7 +153,8 @@ body {
 
 .header__roomcode-label {
     font-size: 0.85rem;
-    color: var(--color-text-light);
+    color: var(--color-primary);
+    opacity: 0.7;
 }
 
 .header__roomcode {
@@ -640,6 +641,12 @@ body {
 /* ================================
    Karten – neues Design
    ================================ */
+.cards {
+    justify-content: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+}
+
 .cards__grid {
     display: flex;
     flex-wrap: wrap;
@@ -649,9 +656,9 @@ body {
 .card-btn {
     width: 62px;
     height: 86px;
-    border: 2px solid var(--color-border);
+    border: 2px solid #c8d8ea;
     border-radius: var(--radius);
-    background: var(--color-white);
+    background: linear-gradient(160deg, #ffffff 60%, #eef5fb 100%);
     font-family: var(--font-main);
     font-size: 1.1rem;
     font-weight: 700;
@@ -663,7 +670,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 2px;
-    box-shadow: 0 2px 6px rgba(0,65,120,0.07);
+    box-shadow: 0 2px 8px rgba(0,65,120,0.1), inset 0 1px 0 rgba(255,255,255,0.8);
     transition: border-color var(--transition), transform var(--spring), box-shadow var(--spring), background var(--transition), color var(--transition);
     overflow: hidden;
 }
@@ -721,12 +728,16 @@ body {
    ================================ */
 .session__actions {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding-top: 1rem;
-    border-top: 2px solid var(--color-ice);
+    flex-direction: row;
+    justify-content: center;
+    gap: 1.5rem;
     width: 100%;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
     align-items: center;
+    flex-wrap: wrap;
+    box-sizing: border-box;
 }
 
 /* ================================
@@ -1116,7 +1127,8 @@ body {
     }
 
     .header__logo-img {
-        opacity: 0.9;
+        opacity: 0.95;
+        content: url('../images/siv-logo.png');
     }
 
     .header--session { background: transparent; }
@@ -1126,8 +1138,20 @@ body {
     }
 
     .header__bottom {
-        background: #1a1a2a;
-        border-bottom-color: var(--color-border);
+        background: linear-gradient(135deg, #0f1d30 0%, #141e2e 100%);
+        border-top: 1px solid rgba(74,158,222,0.15);
+        border-bottom-color: #1e3a52;
+        box-shadow: none;
+    }
+
+    .header__back {
+        color: #7ab8e8;
+        opacity: 0.85;
+    }
+
+    .header__roomcode-label {
+        color: #7ab8e8;
+        opacity: 0.7;
     }
 
     .header__title,

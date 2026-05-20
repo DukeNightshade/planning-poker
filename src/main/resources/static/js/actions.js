@@ -280,7 +280,11 @@ function saveSettings() {
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = showTopic ? 'flex' : 'none';
-
+    const ticketSidebar = document.getElementById('ticketSidebar');
+    if (ticketSidebar) {
+        ticketSidebar.style.display = showTopic ? 'flex' : 'none';
+        document.querySelector('.session').classList.toggle('session--with-tickets', showTopic);
+    }
     const canVote = participantRole !== 'PRODUCT_OWNER' &&
         !(isModerator && !moderatorCanVote);
     document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';

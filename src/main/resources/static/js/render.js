@@ -67,6 +67,8 @@ function renderTable() {
 // ====================================
 
 function _appendDefs(svg) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const patternColor = dark ? 'rgba(74,158,222,0.07)' : 'rgba(0,65,120,0.06)';
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
         <radialGradient id="tableGrad" cx="40%" cy="35%" r="60%">
@@ -77,6 +79,10 @@ function _appendDefs(svg) {
             <feDropShadow dx="0" dy="8" stdDeviation="12"
                           flood-color="rgba(0,48,96,0.4)"/>
         </filter>
+        <pattern id="cardPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill="none"/>
+            <circle cx="4" cy="4" r="0.8" fill="${patternColor}"/>
+        </pattern>
     `;
     svg.appendChild(defs);
 }
@@ -239,6 +245,40 @@ function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) 
     cardRect.setAttribute('id', `card-${id}`);
     g.appendChild(cardRect);
 
+    // Dezentes Punkt-Muster auf leeren Karten (nicht abgestimmt)
+    if (!showValue && !hasVoted) {
+        const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        pattern.setAttribute('x', px - cardW / 2 + 2);
+        pattern.setAttribute('y', py - cardH / 2 + 2);
+        pattern.setAttribute('width', cardW - 4);
+        pattern.setAttribute('height', cardH - 4);
+        pattern.setAttribute('rx', rx - 2);
+        pattern.setAttribute('fill', 'url(#cardPattern)');
+        g.appendChild(pattern);
+
+        // SIV-Blau Akzent-Linie oben
+        const accentLine = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        accentLine.setAttribute('x', px - cardW / 2 + 8);
+        accentLine.setAttribute('y', py - cardH / 2 + 7);
+        accentLine.setAttribute('width', cardW - 16);
+        accentLine.setAttribute('height', 2);
+        accentLine.setAttribute('rx', 1);
+        accentLine.setAttribute('fill', cfg.stroke);
+        accentLine.setAttribute('opacity', '0.25');
+        g.appendChild(accentLine);
+
+        // Gleiche Linie unten
+        const accentBottom = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        accentBottom.setAttribute('x', px - cardW / 2 + 8);
+        accentBottom.setAttribute('y', py + cardH / 2 - 9);
+        accentBottom.setAttribute('width', cardW - 16);
+        accentBottom.setAttribute('height', 2);
+        accentBottom.setAttribute('rx', 1);
+        accentBottom.setAttribute('fill', cfg.stroke);
+        accentBottom.setAttribute('opacity', '0.25');
+        g.appendChild(accentBottom);
+    }
+
     if (showValue) {
         // Innerer Rahmen
         const inner = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -282,39 +322,51 @@ function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) 
 }
 
 function _resolveCardConfig(player, isSelf, hasVoted) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
     if (isRevealed && player.cardValue) {
         if (player.changed) {
             return { cfg: {
-                    fill: '#1a0a00', stroke: '#f97316',
-                    textFill: '#fb923c', cornerColor: 'rgba(251,146,60,0.5)',
-                    innerBorder: 'rgba(249,115,22,0.3)'
+                    fill:        dark ? '#1a0a00'               : '#fff7ed',
+                    stroke:      '#f97316',
+                    textFill:    dark ? '#fb923c'               : '#c2410c',
+                    cornerColor: dark ? 'rgba(251,146,60,0.5)'  : 'rgba(194,65,12,0.4)',
+                    innerBorder: dark ? 'rgba(249,115,22,0.3)'  : 'rgba(249,115,22,0.2)'
                 }};
         }
         return { cfg: {
-                fill: '#0d1f35', stroke: '#4a9ede',
-                textFill: '#e2f0ff', cornerColor: 'rgba(226,240,255,0.4)',
-                innerBorder: 'rgba(74,158,222,0.25)'
+                fill:        dark ? '#0d1f35'                : '#eaf3fc',
+                stroke:      dark ? '#4a9ede'                : '#004178',
+                textFill:    dark ? '#e2f0ff'                : '#004178',
+                cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
+                innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.12)'
             }};
     }
     if (hasVoted) {
         return { cfg: {
-                fill: '#7f0010', stroke: '#E1001A',
-                textFill: '#ffffff', cornerColor: 'rgba(255,255,255,0.4)',
-                innerBorder: 'rgba(255,255,255,0.15)'
+                fill:        dark ? '#7f0010' : '#E1001A',
+                stroke:      dark ? '#E1001A' : '#a50013',
+                textFill:    '#ffffff',
+                cornerColor: 'rgba(255,255,255,0.45)',
+                innerBorder: 'rgba(255,255,255,0.2)'
             }};
     }
     if (isSelf) {
         return { cfg: {
-                fill: '#0d1f35', stroke: '#4a9ede',
-                textFill: '#e2f0ff', cornerColor: 'rgba(226,240,255,0.4)',
-                innerBorder: 'rgba(74,158,222,0.25)'
+                fill:        dark ? '#0d1f35'                : '#ffffff',
+                stroke:      dark ? '#4a9ede'                : '#004178',
+                textFill:    dark ? '#e2f0ff'                : '#004178',
+                cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
+                innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.1)'
             }};
     }
     // Andere Spieler — noch nicht abgestimmt
     return { cfg: {
-            fill: '#152030', stroke: '#2e4a6a',
-            textFill: 'transparent', cornerColor: 'transparent',
-            innerBorder: 'rgba(74,158,222,0.1)'
+            fill:        dark ? '#152030' : '#f0f6fc',
+            stroke:      dark ? '#2e4a6a' : '#a0bcd8',
+            textFill:    'transparent',
+            cornerColor: 'transparent',
+            innerBorder: dark ? 'rgba(74,158,222,0.1)' : 'rgba(0,65,120,0.08)'
         }};
 }
 
@@ -327,6 +379,8 @@ function _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColo
     const nameH   = nameFontSize + 10;
     const badgeRx = (nameH / 2);
 
+    const darkBadge = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
     // Badge-Hintergrund — passt zur Rollfarbe
     const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     badgeBg.setAttribute('x', px - nameW / 2);
@@ -334,7 +388,7 @@ function _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColo
     badgeBg.setAttribute('width', nameW);
     badgeBg.setAttribute('height', nameH);
     badgeBg.setAttribute('rx', badgeRx);
-    badgeBg.setAttribute('fill', '#0d1f35');
+    badgeBg.setAttribute('fill', darkBadge ? '#0d1f35' : '#ffffff');
     badgeBg.setAttribute('stroke', roleColor);
     badgeBg.setAttribute('stroke-width', '1.5');
     svg.appendChild(badgeBg);
@@ -345,7 +399,9 @@ function _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColo
     nameText.setAttribute('y', nameY + nameH / 2 + 1);
     nameText.setAttribute('text-anchor', 'middle');
     nameText.setAttribute('dominant-baseline', 'middle');
-    nameText.setAttribute('fill', isSelf ? '#7dd3fc' : '#cbd5e1');
+    nameText.setAttribute('fill', darkBadge
+        ? (isSelf ? '#7dd3fc' : '#cbd5e1')
+        : (isSelf ? '#004178' : '#1a1a2e'));
     nameText.setAttribute('font-size', nameFontSize);
     nameText.setAttribute('font-weight', isSelf ? '700' : '500');
     nameText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
