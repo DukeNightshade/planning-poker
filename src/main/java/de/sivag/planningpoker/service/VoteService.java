@@ -21,7 +21,6 @@ import java.util.OptionalDouble;
 
 /**
  * Service für die Abstimmungslogik.
- * Verantwortlich für Kartenwahl, Aufdecken und Rundenreset.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -32,16 +31,16 @@ import java.util.OptionalDouble;
 public class VoteService {
 
     // ====================================
-    // Dependencies
+    // Abhängigkeiten
     // ====================================
 
-    private final SessionService sessionService; // SoC: Von Repository auf delegierenden Service umgestellt
+    private final SessionService sessionService;
     private final ParticipantRepository participantRepository;
     private final VoteRepository        voteRepository;
     private final TicketRepository      ticketRepository;
 
     // ====================================
-    // Business Logic Methods
+    // Business Logik Methoden
     // ====================================
 
     @Transactional
@@ -106,7 +105,7 @@ public class VoteService {
     }
 
     // ====================================
-    // Utility Methods
+    // Utility Methoden
     // ====================================
 
     private void saveEstimateToTicket(Ticket ticket, List<Vote> votes) {

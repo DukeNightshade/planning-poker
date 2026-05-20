@@ -20,7 +20,7 @@ const ROLE_COLORS = {
 // ====================================
 
 function getRoleLabel(role) {
-    if (window.i18n?.roles?.[role]) return window.i18n.roles[role];
+    if (globalThis.i18n?.roles?.[role]) return globalThis.i18n.roles[role];
     const labels = {
         DEVELOPER:     'Entwickler',
         TESTER:        'Tester',
@@ -33,7 +33,7 @@ function getRoleLabel(role) {
 function getAvatarColor(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        hash = name.codePointAt(i) + ((hash << 5) - hash);
     }
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
@@ -45,11 +45,11 @@ function formatNumber(value) {
 function escapeHtml(str) {
     if (!str) return '';
     return str
-        .replace(/&/g,  '&amp;')
-        .replace(/</g,  '&lt;')
-        .replace(/>/g,  '&gt;')
-        .replace(/"/g,  '&quot;')
-        .replace(/'/g,  '&#x27;');
+        .replaceAll('&',  '&amp;')
+        .replaceAll('<',  '&lt;')
+        .replaceAll('>',  '&gt;')
+        .replaceAll('"',  '&quot;')
+        .replaceAll("'",  '&#x27;');
 }
 
 // ====================================
@@ -57,8 +57,6 @@ function escapeHtml(str) {
 // ====================================
 
 /**
- * Zeigt eine Toast-Benachrichtigung oben rechts an.
- *
  * @param {string} message   - Haupttext der Benachrichtigung
  * @param {'success'|'error'|'warning'|'info'} type - Typ (Standard: 'info')
  * @param {string} [sub]     - Optionaler Untertext
@@ -81,6 +79,12 @@ function showToast(message, type = 'info', sub = '', duration = 3500) {
 
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
+    if (type === 'error') {
+        toast.setAttribute('role', 'alert');
+        container.setAttribute('aria-live', 'assertive');
+    } else {
+        container.setAttribute('aria-live', 'polite');
+    }
     toast.innerHTML = `
         <div class="toast__icon" aria-hidden="true">${icons[type] || 'i'}</div>
         <div class="toast__body">

@@ -166,7 +166,7 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        Participant result = sessionService.promoteToModerator("ABCD1234", 2L);
+        Participant result = sessionService.promoteToModerator(2L);
 
         assertThat(result.isModerator()).isTrue();
     }
@@ -178,7 +178,7 @@ class SessionServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                sessionService.promoteToModerator("ABCD1234", 99L))
+                sessionService.promoteToModerator(99L))
                 .isInstanceOf(NoSuchElementException.class);
     }
 
@@ -255,7 +255,7 @@ class SessionServiceTest {
         when(participantRepository.findById(1L))
                 .thenReturn(Optional.of(testModerator));
 
-        String name = sessionService.removeParticipant("ABCD1234", 1L);
+        String name = sessionService.removeParticipant( 1L);
 
         assertThat(name).isEqualTo("Max");
         verify(participantRepository, times(1)).delete(testModerator);
@@ -268,7 +268,7 @@ class SessionServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                sessionService.removeParticipant("ABCD1234", 99L))
+                sessionService.removeParticipant(99L))
                 .isInstanceOf(NoSuchElementException.class);
     }
 }

@@ -16,7 +16,7 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     // ====================================
-    // Query Methods
+    // Query Methoden
     // ====================================
 
     List<Ticket> findBySessionRoomCodeOrderByOrderIndex(String roomCode);

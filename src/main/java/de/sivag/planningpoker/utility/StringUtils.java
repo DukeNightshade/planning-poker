@@ -9,7 +9,7 @@ package de.sivag.planningpoker.utility;
 public final class StringUtils {
 
     // ====================================
-    // Konstruktor (Utility-Klasse)
+    // Konstruktor
     // ====================================
 
     private StringUtils() {
@@ -17,7 +17,7 @@ public final class StringUtils {
     }
 
     // ====================================
-    // Utility Methods
+    // Utility Methoden
     // ====================================
 
     /**

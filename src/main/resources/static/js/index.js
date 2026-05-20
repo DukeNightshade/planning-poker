@@ -1,4 +1,15 @@
 // ====================================
+// Hilfsfunktionen
+// ====================================
+
+function handleSessionCreated(data) {
+    sessionStorage.setItem('participantId',   data.participantId);
+    sessionStorage.setItem('isModerator',     'true');
+    sessionStorage.setItem('participantRole', data.moderatorRole);
+    globalThis.location.href = '/session/' + data.roomCode;
+}
+
+// ====================================
 // Session erstellen (ohne Tickets)
 // ====================================
 
@@ -19,12 +30,9 @@ document.getElementById('createForm').addEventListener('submit', async function 
 
     if (response.ok) {
         const data = await response.json();
-        sessionStorage.setItem('participantId',   data.participantId);
-        sessionStorage.setItem('isModerator',     'true');
-        sessionStorage.setItem('participantRole', data.moderatorRole);
-        window.location.href = '/session/' + data.roomCode;
+        handleSessionCreated(data);
     } else {
-        showToast(window.i18n.toast.errorCreate, 'error');
+        showToast(globalThis.i18n.toast.errorCreate, 'error');
     }
 });
 
@@ -43,7 +51,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         .filter(title => title.length > 0);
 
     if (!moderatorName || tickets.length === 0) {
-        showToast(window.i18n.toast.errorTickets, 'warning');
+        showToast(globalThis.i18n.toast.errorTickets, 'warning');
         return;
     }
 
@@ -55,12 +63,9 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
 
     if (response.ok) {
         const data = await response.json();
-        sessionStorage.setItem('participantId',   data.participantId);
-        sessionStorage.setItem('isModerator',     'true');
-        sessionStorage.setItem('participantRole', data.moderatorRole);
-        window.location.href = '/session/' + data.roomCode;
+        handleSessionCreated(data);
     } else {
-        showToast(window.i18n.toast.errorCreate, 'error');
+        showToast(globalThis.i18n.toast.errorCreate, 'error');
     }
 });
 
@@ -88,9 +93,9 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('participantId',   data.participantId);
         sessionStorage.setItem('isModerator',     'false');
         sessionStorage.setItem('participantRole', data.role);
-        window.location.href = '/session/' + roomCode;
+        globalThis.location.href = '/session/' + roomCode;
     } else {
-        showToast(window.i18n.toast.errorJoin, 'error');
+        showToast(globalThis.i18n.toast.errorJoin, 'error');
     }
 });
 

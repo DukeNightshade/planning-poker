@@ -5,7 +5,6 @@ import de.sivag.planningpoker.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.Map;
 
 /**
  * REST-Controller für Ticket-Operationen.
- * Verantwortlich für Hinzufügen, Auswählen und Abrufen von Tickets.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -25,23 +23,31 @@ import java.util.Map;
 public class TicketRestController {
 
     // ====================================
-    // Dependencies
+    // Konstanten
+    // ====================================
+
+    private static final String TITLE  = "title";
+    private static final String STATUS = "status";
+
+    // ====================================
+    // Abhängigkeiten
     // ====================================
 
     private final TicketService ticketService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     // ====================================
-    // Endpoints
+    // Endpunkte
     // ====================================
 
     @GetMapping("/{roomCode}/tickets")
-    public ResponseEntity<?> getTickets(@PathVariable String roomCode) {
+    public ResponseEntity<List<Map<String, Object>>> getTickets(
+            @PathVariable String roomCode) {
+
         List<Ticket> tickets = ticketService.getTickets(roomCode);
-        return ResponseEntity.ok(tickets.stream().map(t -> Map.of(
+        return ResponseEntity.ok(tickets.stream().map(t -> Map.<String, Object>of(
                 "id",            t.getId(),
-                "title",         t.getTitle(),
-                "status",        t.getStatus().name(),
+                TITLE,           t.getTitle(),
+                STATUS,          t.getStatus().name(),
                 "finalEstimate", t.getFinalEstimate() != null
                         ? t.getFinalEstimate() : "",
                 "orderIndex",    t.getOrderIndex()
@@ -49,25 +55,25 @@ public class TicketRestController {
     }
 
     @PostMapping("/{roomCode}/tickets")
-    public ResponseEntity<?> addTicket(
+    public ResponseEntity<Map<String, Object>> addTicket(
             @PathVariable String roomCode,
             @RequestBody Map<String, String> body) {
 
-        Ticket ticket = ticketService.addTicket(roomCode, body.get("title"));
+        Ticket ticket = ticketService.addTicket(roomCode, body.get(TITLE));
 
         log.info("Ticket hinzugefügt: title='{}', roomCode={}",
                 ticket.getTitle(), roomCode);
 
         return ResponseEntity.ok(Map.of(
                 "id",         ticket.getId(),
-                "title",      ticket.getTitle(),
-                "status",     ticket.getStatus().name(),
+                TITLE,        ticket.getTitle(),
+                STATUS,       ticket.getStatus().name(),
                 "orderIndex", ticket.getOrderIndex()
         ));
     }
 
     @PostMapping("/{roomCode}/tickets/{ticketId}/select")
-    public ResponseEntity<?> selectTicket(
+    public ResponseEntity<Map<String, Object>> selectTicket(
             @PathVariable String roomCode,
             @PathVariable Long ticketId) {
 
@@ -77,9 +83,9 @@ public class TicketRestController {
                 ticket.getTitle(), roomCode);
 
         return ResponseEntity.ok(Map.of(
-                "id",     ticket.getId(),
-                "title",  ticket.getTitle(),
-                "status", ticket.getStatus().name()
+                "id",    ticket.getId(),
+                TITLE,   ticket.getTitle(),
+                STATUS,  ticket.getStatus().name()
         ));
     }
 }

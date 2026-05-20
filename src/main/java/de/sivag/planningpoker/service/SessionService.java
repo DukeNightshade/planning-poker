@@ -20,8 +20,6 @@ import java.util.NoSuchElementException;
 
 /**
  * Service für den Session-Lifecycle.
- * Verantwortlich für Erstellung, Beitritt, Einstellungen
- * und Moderator-Verwaltung.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -31,7 +29,13 @@ import java.util.NoSuchElementException;
 public class SessionService {
 
     // ====================================
-    // Static Variables
+    // Konstanten
+    // ====================================
+
+    private static final String PARTICIPANT_NOT_FOUND = "Teilnehmer nicht gefunden.";
+
+    // ====================================
+    // Statische Variablen
     // ====================================
 
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -39,7 +43,7 @@ public class SessionService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     // ====================================
-    // Dependencies
+    // Abhängigkeiten
     // ====================================
 
     private final SessionRepository sessionRepository;
@@ -47,7 +51,7 @@ public class SessionService {
     private final TicketRepository ticketRepository;
 
     // ====================================
-    // Business Logic Methods
+    // Business Logik Methoden
     // ====================================
 
     @Transactional
@@ -111,10 +115,10 @@ public class SessionService {
     }
 
     @Transactional
-    public String removeParticipant(String roomCode, Long participantId) {
+    public String removeParticipant(Long participantId) {
         Participant participant = participantRepository.findById(participantId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        "Teilnehmer nicht gefunden."));
+                        PARTICIPANT_NOT_FOUND));
 
         String name = participant.getName();
         participantRepository.delete(participant);
@@ -132,9 +136,9 @@ public class SessionService {
     }
 
     @Transactional
-    public Participant promoteToModerator(String roomCode, Long participantId) {
+    public Participant promoteToModerator(Long participantId) {
         Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
+                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
         participant.setModerator(true);
         return participantRepository.save(participant);
     }
@@ -152,13 +156,13 @@ public class SessionService {
         }
 
         Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
+                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
         participant.setModerator(false);
         return participantRepository.save(participant);
     }
 
     // ====================================
-    // Query Methods
+    // Query Methoden
     // ====================================
 
     public Session getSessionByRoomCode(String roomCode) {
@@ -172,7 +176,7 @@ public class SessionService {
     }
 
     // ====================================
-    // Utility Methods
+    // Utility Methoden
     // ====================================
 
     private String generateUniqueRoomCode() {

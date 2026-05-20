@@ -11,7 +11,7 @@
     --color-grey:       #f4f6f9;
     --color-border:     #d0d8e4;
     --color-text:       #1a1a2e;
-    --color-text-light: #6b7280;
+    --color-text-light: #595f6e;
     --font-main:        'Fira Sans', 'Lucida Sans', sans-serif;
     --radius:           10px;
     --radius-sm:        6px;
@@ -34,7 +34,7 @@
 }
 
 body {
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     background: var(--color-grey);
     color: var(--color-text);
     min-height: 100vh;
@@ -68,7 +68,7 @@ body {
     font-weight: 700;
     margin-bottom: 0.15rem;
     color: var(--color-white);
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .header__title-block {
@@ -80,7 +80,7 @@ body {
 
 .header__subtitle {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 300;
 }
 
@@ -165,15 +165,15 @@ body {
     padding: 0.25rem 0.75rem;
     border-radius: var(--radius);
     letter-spacing: 1px;
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
 }
 
 .header__copy-btn {
     background: var(--color-primary);
-    border: 1.5px solid var(--color-primary);
+    border: 2px solid var(--color-primary);
     color: #ffffff;
     font-size: 0.85rem;
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     font-weight: 600;
     padding: 0.25rem 0.75rem;
     border-radius: var(--radius);
@@ -207,7 +207,7 @@ body {
     color: var(--color-primary);
     font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     padding: 0.3rem 0.9rem;
     border-radius: 20px;
@@ -239,7 +239,7 @@ body {
 
 .hero__pill {
     background: var(--color-white);
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
     border-radius: 20px;
     padding: 0.3rem 0.9rem;
     font-size: 0.78rem;
@@ -270,7 +270,7 @@ body {
     border-radius: var(--radius);
     font-size: 1rem;
     font-weight: 600;
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     cursor: pointer;
     transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
 }
@@ -283,9 +283,10 @@ body {
     transform: none;
 }
 
-.btn--promote {
+.btn--promote,
+.btn--demote {
     background: transparent;
-    border: 1.5px solid var(--color-border);
+    border: 1px solid var(--color-border);
     color: var(--color-text-light);
     border-radius: var(--radius-sm);
     width: 28px;
@@ -299,23 +300,23 @@ body {
 
 .btn--promote:hover {
     background: #fefce8;
-    border-color: #eab308;
-    color: #eab308;
+    border-color: #a16207;
+    color: #a16207;
 }
 
-.btn--demote {
-    background: transparent;
-    border: 1.5px solid var(--color-border);
-    color: var(--color-text-light);
-    border-radius: var(--radius-sm);
-    width: 28px;
-    height: 28px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all var(--transition);
-    flex-shrink: 0;
-    padding: 0;
+.btn--demote:hover {
+    background: #fef2f2;
+    border-color: var(--color-red);
+    color: var(--color-red);
 }
+
+.btn--promote:hover {
+    background: #fefce8;
+    border-color: #a16207;
+    color: #a16207;
+}
+
+
 
 .btn--demote:hover {
     background: #fef2f2;
@@ -371,7 +372,7 @@ body {
 
 .btn--remove {
     background: transparent;
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
     color: var(--color-text-light);
     border-radius: var(--radius-sm);
     width: 32px;
@@ -406,10 +407,10 @@ body {
 .form__input,
 .form__select {
     padding: 0.625rem 0.875rem;
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
     border-radius: var(--radius);
     font-size: 1rem;
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     color: var(--color-text);
     background: var(--color-white);
     transition: border-color var(--transition), box-shadow var(--transition);
@@ -622,7 +623,7 @@ body {
 }
 
 .session__poker--discussion {
-    border: 2.5px solid #22c55e;
+    border: 3px solid #22c55e;
     box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
 }
 
@@ -630,9 +631,9 @@ body {
     align-self: flex-start;
     font-size: 0.85rem;
     font-weight: 700;
-    color: #16a34a;
+    color: #15803d;
     background: #f0fdf4;
-    border: 1.5px solid #22c55e;
+    border: 2px solid #22c55e;
     border-radius: var(--radius);
     padding: 0.3rem 0.75rem;
     animation: fadeIn 0.3s ease;
@@ -659,7 +660,7 @@ body {
     border: 2px solid #c8d8ea;
     border-radius: var(--radius);
     background: linear-gradient(160deg, #ffffff 60%, #eef5fb 100%);
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--color-primary);
@@ -802,7 +803,7 @@ body {
     font-weight: 700;
     color: var(--color-primary);
     background: var(--color-ice);
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
     padding: 0.15rem 0.5rem;
     min-width: 32px;
@@ -908,7 +909,7 @@ body {
     align-items: center;
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--color-border);
+    border: 2px solid var(--color-border);
     background: var(--color-grey);
     font-size: 0.85rem;
     transition: all var(--transition);
@@ -941,7 +942,7 @@ body {
 
 .ticket-sidebar__estimate {
     font-weight: 700;
-    color: #16a34a;
+    color: #15803d;
     background: #dcfce7;
     border-radius: 4px;
     padding: 0.1rem 0.5rem;
@@ -979,7 +980,7 @@ body {
     pointer-events: all;
     cursor: default;
     font-size: 0.875rem;
-    font-family: var(--font-main);
+    font-family: var(--font-main), sans-serif;
     animation: toastIn 0.35s cubic-bezier(.34,1.4,.64,1) forwards;
     will-change: transform, opacity;
 }
@@ -1001,7 +1002,7 @@ body {
     font-weight: 700;
 }
 
-.toast--success .toast__icon { background: #f0fdf4; color: #16a34a; }
+.toast--success .toast__icon { background: #f0fdf4; color: #15803d; }
 .toast--error   .toast__icon { background: #fef2f2; color: var(--color-red); }
 .toast--warning .toast__icon { background: #fff7ed; color: #c2410c; }
 .toast--info    .toast__icon { background: var(--color-ice); color: var(--color-primary); }
@@ -1121,7 +1122,6 @@ body {
         --header-bg:        linear-gradient(135deg, #0a1628 0%, #0f2240 100%);
     }
 
-    /* Header */
     .header {
         border-bottom-color: var(--color-red);
     }
@@ -1145,26 +1145,22 @@ body {
     }
 
     .header__back {
-        color: #7ab8e8;
-        opacity: 0.85;
+        color: #a8d0f0;
     }
 
     .header__roomcode-label {
         color: #7ab8e8;
-        opacity: 0.7;
     }
 
     .header__title,
     .header__app-title { color: #e8eaf0; }
 
-    .header__subtitle { color: rgba(255,255,255,0.6); }
+    .header__subtitle { color: rgba(255, 255, 255, 0.82); }
 
     .header__roomcode {
         background: #1e3a52;
-        color: #4a9ede;
+        color: #7dbfef;
     }
-
-    .header__back { color: var(--color-text); }
 
     .header__copy-btn {
         background: #4a9ede;
@@ -1177,16 +1173,15 @@ body {
         border-color: #5baee8;
     }
 
-    /* Hero */
     .hero {
         background: linear-gradient(160deg, #1a2a3a 0%, #151520 100%);
         border-bottom-color: var(--color-border);
     }
 
     .hero__tag {
-        background: rgba(74,158,222,0.15);
-        color: #4a9ede;
-        border-color: rgba(74,158,222,0.25);
+        background: rgba(74,158,222,0.25);
+        color: #ffffff; //NOSAR
+        border-color: rgba(74,158,222,0.4);
     }
 
     .hero__headline { color: #e8eaf0; }
@@ -1202,7 +1197,7 @@ body {
         background: #1e3a52;
     }
 
-    /* Cards */
+
     .card,
     .session__poker,
     .session__sidebar,
@@ -1225,7 +1220,7 @@ body {
         background: #4a9ede;
     }
 
-    /* Karten */
+
     .card-btn {
         background: #252535;
         border-color: var(--color-border);
@@ -1246,7 +1241,6 @@ body {
         box-shadow: 0 12px 32px rgba(74,158,222,0.3);
     }
 
-    /* Settings */
     .settings-panel__header {
         background: #1e3a52;
         border-bottom-color: var(--color-border);
@@ -1254,12 +1248,11 @@ body {
 
     .settings-panel__header h3 { color: #4a9ede; }
 
-    /* Sidebar */
     .sidebar__method-block { background: #252535; }
 
     .sidebar__card-value {
         background: #1e3a52;
-        color: #4a9ede;
+        color: #7dbfef;
         border-color: var(--color-border);
     }
 
@@ -1269,7 +1262,6 @@ body {
         color: #f97316;
     }
 
-    /* Tickets */
     .ticket-sidebar__item {
         background: #252535;
         border-color: var(--color-border);
@@ -1290,7 +1282,6 @@ body {
         color: #4ade80;
     }
 
-    /* Session topic */
     .session__topic {
         background: #1e3a52;
         border-left-color: #4a9ede;
@@ -1298,19 +1289,16 @@ body {
 
     .session__topic-text { color: #4a9ede; }
 
-    /* Discussion */
     .poker-pane__discussion-label {
         background: #0f1f0f;
         border-color: #22c55e;
         color: #4ade80;
     }
 
-    /* Avatare: Ring anpassen */
     .player-avatar--moderator {
         box-shadow: 0 0 0 2px #1e1e2e, 0 0 0 4px #eab308;
     }
 
-    /* Toast */
     .toast {
         background: #1e1e2e;
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
@@ -1321,11 +1309,10 @@ body {
     .toast--success .toast__icon { background: #0f1f0f; color: #4ade80; }
     .toast--error   .toast__icon { background: #1f0a0a; color: #f87171; }
     .toast--warning .toast__icon { background: #1f120a; color: #fb923c; }
-    .toast--info    .toast__icon { background: #1e3a52; color: #4a9ede; }
+    .toast--info .toast__icon { background: #1e3a52; color: #7dbfef; }
 
     .toast__close:hover { background: #252535; }
 
-    /* Forms */
     .form__input,
     .form__select {
         background: #252535;
@@ -1339,13 +1326,11 @@ body {
         box-shadow: 0 0 0 3px rgba(74,158,222,0.15);
     }
 
-    /* Footer */
     .footer {
         background: #1e1e2e;
         border-top-color: var(--color-border);
     }
 
-    /* Buttons */
     .btn--primary {
         background: #4a9ede;
         color: #0a1628;

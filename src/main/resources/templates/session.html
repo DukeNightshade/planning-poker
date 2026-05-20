@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<html xmlns:th="http://www.thymeleaf.org" lang="de" th:lang="${#locale.language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +9,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .skip-link { position: absolute; top: -48px; left: 1rem; background: var(--color-primary, #004178); color: #ffffff; padding: 0.5rem 1rem; border-radius: 0 0 6px 6px; font-family: var(--font-main, sans-serif), sans-serif; font-size: 0.9rem; font-weight: 600; text-decoration: none; z-index: 10000; transition: top 0.15s ease; }
+        .skip-link:focus { top: 0; outline: 3px solid #ffffff; outline-offset: 2px; }
+        .lang-btn { color: rgba(255,255,255,0.7); font-size: 0.85rem; font-weight: 600; text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px; border: 2px solid rgba(255,255,255,0.25); font-family: var(--font-main, sans-serif), sans-serif; transition: all 0.2s; }
+        a.lang-btn:hover, a.lang-btn[aria-current="true"] { color: #ffffff !important; border-color: rgba(255,255,255,0.7) !important; background: #1a5fa0; }
+    </style>
 </head>
 <body>
 
+<a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
 <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
-<!-- i18n für JavaScript -->
 <script th:inline="javascript">
-    window.i18n = {
+    globalThis.i18n = {
         toast: {
             revealed:          /*[[#{toast.revealed}]]*/ '',
             newround:          /*[[#{toast.newround}]]*/ '',
@@ -48,32 +55,35 @@
             MODERATOR:     /*[[#{role.moderator}]]*/ ''
         },
         labels: {
-            moderator:   /*[[#{role.moderator}]]*/ '',
+            moderator:    /*[[#{role.moderator}]]*/ '',
             moderatorStar: /*[[#{session.moderator.star}]]*/ '',
-            you:         /*[[${'(' + #messages.msg('role.moderator').substring(0,0) + ')'}]]*/ '(Sie)',
-            waiting:     /*[[#{session.waiting}]]*/ '',
-            method:      /*[[#{session.sidebar.method}]]*/ '',
-            participants:/*[[#{session.sidebar.participants}]]*/ '',
-            ticketsAdd:  /*[[#{tickets.add}]]*/ '',
-            ticketsInput:/*[[#{tickets.input.placeholder}]]*/ '',
+            you:          /*[[${'(' + #messages.msg('role.moderator').substring(0,0) + ')'}]]*/ '(Sie)',
+            waiting:      /*[[#{session.waiting}]]*/ '',
+            method:       /*[[#{session.sidebar.method}]]*/ '',
+            participants: /*[[#{session.sidebar.participants}]]*/ '',
+            ticketsAdd:   /*[[#{tickets.add}]]*/ '',
+            ticketsInput: /*[[#{tickets.input.placeholder}]]*/ '',
             ticketsSubmit:/*[[#{tickets.submit}]]*/ ''
         }
     };
 </script>
 
-<style>
-    .lang-btn { color:rgba(255,255,255,0.7); font-size:0.85rem; font-weight:600; text-decoration:none; padding:0.2rem 0.5rem; border-radius:4px; border:1.5px solid rgba(255,255,255,0.25); font-family:var(--font-main); transition:all 0.2s; }
-    .lang-btn:hover, .lang-active { color:#ffffff !important; border-color:rgba(255,255,255,0.7) !important; background:rgba(255,255,255,0.12); }
-</style>
-
 <header class="header header--session">
     <div class="header__top">
         <img th:src="@{/images/siv-logo-weiss.png}" alt="SIV.AG" class="header__logo-img">
         <span class="header__app-title" th:text="#{app.title}">Planning Poker</span>
-        <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
-            <a th:href="@{/session/__${roomCode}__(lang=de)}" class="lang-btn" th:classappend="${#locale.language == 'de'} ? ' lang-active'" th:text="#{nav.lang.de}">DE</a>
-            <a th:href="@{/session/__${roomCode}__(lang=en)}" class="lang-btn" th:classappend="${#locale.language == 'en'} ? ' lang-active'" th:text="#{nav.lang.en}">EN</a>
-        </div>
+        <nav aria-label="Sprachauswahl" style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+            <a th:href="@{/session/__${roomCode}__(lang=de)}"
+               class="lang-btn"
+               th:attr="aria-current=${#locale.language == 'de'} ? 'true' : null"
+               th:text="#{nav.lang.de}"
+               aria-label="Sprache: Deutsch">DE</a>
+            <a th:href="@{/session/__${roomCode}__(lang=en)}"
+               class="lang-btn"
+               th:attr="aria-current=${#locale.language == 'en'} ? 'true' : null"
+               th:text="#{nav.lang.en}"
+               aria-label="Sprache: Englisch">EN</a>
+        </nav>
     </div>
     <div class="header__bottom">
         <div class="header__left">
@@ -83,42 +93,44 @@
             <span class="header__roomcode-label" th:text="#{nav.roomcode}">Raumcode:</span>
             <span class="header__roomcode" id="roomCodeDisplay" th:text="${roomCode}"></span>
             <button class="header__copy-btn" id="copyBtn" onclick="copyRoomCode()" th:text="#{nav.copy}">Kopieren</button>
-            <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()">&#9881;&#65039;</button>
+            <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()"
+                    aria-label="Einstellungen öffnen" aria-expanded="false">&#9881;&#65039;</button>
         </div>
     </div>
 </header>
 
-<main class="session">
+<main id="main-content" class="session">
 
     <div class="settings-panel" id="settingsPanel" style="display:none; grid-column: 1 / -1;">
         <div class="settings-panel__header">
             <h3 th:text="#{settings.title}">Einstellungen</h3>
-            <button class="btn--icon" onclick="toggleSettings()">&#x2715;</button>
+            <button class="btn--icon" onclick="toggleSettings()" aria-label="Einstellungen schließen">&#x2715;</button>
         </div>
         <div class="settings-panel__body">
-            <label class="settings__toggle">
+            <label class="settings__toggle" for="settingShowTopic">
                 <span th:text="#{settings.show_topic}">Ticket-Modul anzeigen</span>
                 <input type="checkbox" id="settingShowTopic" th:checked="${showTopic}" onchange="saveSettings()">
             </label>
-            <label class="settings__toggle">
+            <label class="settings__toggle" for="settingModeratorCanVote">
                 <span th:text="#{settings.moderator_vote}">Moderator darf mitwählen</span>
                 <input type="checkbox" id="settingModeratorCanVote" th:checked="${moderatorCanVote}" onchange="saveSettings()">
             </label>
-            <label class="settings__toggle">
+            <label class="settings__toggle" for="settingAutoReveal">
                 <span th:text="#{settings.auto_reveal}">Automatisch aufdecken</span>
                 <input type="checkbox" id="settingAutoReveal" th:checked="${autoReveal}" onchange="saveSettings()">
             </label>
         </div>
     </div>
 
-    <aside class="ticket-sidebar" id="ticketSidebar" style="display:none;">
+    <aside class="ticket-sidebar" id="ticketSidebar" style="display:none;" aria-label="Ticket-Liste">
         <h3 class="sidebar__title" th:text="#{tickets.title}">Tickets</h3>
         <ul class="ticket-sidebar__list" id="ticketSidebarList"></ul>
         <div id="addTicketForm" style="display:none; margin-top: 0.75rem;">
             <div class="ticket-entry">
+                <label for="newTicketInput" class="sr-only" th:text="#{tickets.input.placeholder}">Ticket-Titel</label>
                 <input class="form__input" type="text" id="newTicketInput"
                        th:placeholder="#{tickets.input.placeholder}" style="font-size: 0.85rem;">
-                <button class="btn--remove" onclick="cancelAddTicket()">&#x2715;</button>
+                <button class="btn--remove" onclick="cancelAddTicket()" aria-label="Abbrechen">&#x2715;</button>
             </div>
             <button class="btn btn--primary"
                     style="width:100%; margin-top: 0.5rem; font-size: 0.85rem;"
@@ -129,7 +141,7 @@
                 onclick="showAddTicketForm()" th:text="#{tickets.add}">+ Ticket hinzufügen</button>
     </aside>
 
-    <section class="session__poker" id="pokerPane">
+    <section class="session__poker" id="pokerPane" aria-label="Poker-Tisch">
 
         <div class="session__topic" id="topicBar">
             <span class="session__topic-title" th:text="#{session.topic.label}">Aktuelles Ticket:</span>
@@ -137,9 +149,9 @@
         </div>
 
         <div id="discussionLabel" style="display:none;" class="poker-pane__discussion-label"
-             th:text="#{session.discussion.label}">&#x1F4AC; Diskussionsmodus</div>
+             th:text="#{session.discussion.label}" aria-live="polite">&#x1F4AC; Diskussionsmodus</div>
 
-        <div id="pokerTable" style="width:100%; min-height:380px;"></div>
+        <div id="pokerTable" style="width:100%; min-height:380px;" aria-label="Pokertisch"></div>
 
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
             <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid" style="justify-content:center;">
@@ -159,7 +171,7 @@
             </div>
         </div>
 
-        <div id="resultsArea" style="display:none;"></div>
+        <div id="resultsArea" style="display:none;" aria-live="polite"></div>
         <ul id="resultsList" style="display:none;"></ul>
 
         <div class="session__actions" id="moderatorActions" style="display:none;">
@@ -169,9 +181,9 @@
 
     </section>
 
-    <aside class="session__sidebar">
+    <aside class="session__sidebar" aria-label="Teilnehmer-Übersicht">
         <h3 class="sidebar__title" id="sidebarTitle" th:text="#{session.sidebar.participants}">Teilnehmer</h3>
-        <ul class="sidebar__list" id="participantList"></ul>
+        <ul class="sidebar__list" id="participantList" aria-label="Teilnehmerliste"></ul>
         <div class="sidebar__method-block">
             <div class="sidebar__method-label" th:text="#{session.sidebar.method}">Methode</div>
             <div class="sidebar__method-value"

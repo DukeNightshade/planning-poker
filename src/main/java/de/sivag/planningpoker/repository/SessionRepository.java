@@ -20,7 +20,7 @@ import java.util.Optional;
 public interface SessionRepository extends JpaRepository<Session, Long> {
 
     // ====================================
-    // Query Methods
+    // Query Methoden
     // ====================================
 
     Optional<Session> findByRoomCode(String roomCode);

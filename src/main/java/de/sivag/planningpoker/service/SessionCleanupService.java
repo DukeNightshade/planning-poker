@@ -22,19 +22,19 @@ import java.util.List;
 public class SessionCleanupService {
 
     // ====================================
-    // Static Variables
+    // Statische Variablen
     // ====================================
 
     private static final int SESSION_MAX_AGE_HOURS = 24;
 
     // ====================================
-    // Dependencies
+    // Abhängigkeiten
     // ====================================
 
     private final SessionRepository sessionRepository;
 
     // ====================================
-    // Scheduled Jobs
+    // Geplante Aufgaben
     // ====================================
 
     /**

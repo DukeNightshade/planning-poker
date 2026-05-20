@@ -1,10 +1,49 @@
+/* global participantId, isModerator, isRevealed, players, tickets, currentTicketId,
+          ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
+          selectTicket, promoteMyself, demoteParticipant */
+
+// ====================================
+// Hilfsfunktionen — Auflösung
+// ====================================
+
+function _resolveCardWidth(total) {
+    if (total <= 6)  return 44;
+    if (total <= 10) return 38;
+    if (total <= 15) return 32;
+    return 26;
+}
+
+function _resolveNameFontSize(total) {
+    if (total <= 8)  return 12;
+    if (total <= 14) return 10;
+    return 9;
+}
+
+function _resolveDisplayName(name, isSelf) {
+    if (name.length > 10) return name.substring(0, 9) + '…';
+    return name + (isSelf ? ' (Du)' : '');
+}
+
+function _resolveNameColor(darkBadge, isSelf) {
+    if (darkBadge) return isSelf ? '#7dd3fc' : '#cbd5e1';
+    return isSelf ? '#004178' : '#1a1a2e';
+}
+
+function _resolveStatusColor(role, hasVoted) {
+    if (role === 'PRODUCT_OWNER') return 'transparent';
+    return hasVoted ? '#22c55e' : '#9ca3af';
+}
+
+function _resolveStatusClass(changed, hasVoted) {
+    if (changed)  return 'player-status--changed';
+    if (hasVoted) return 'player-status--voted';
+    return 'player-status--waiting';
+}
+
 // ====================================
 // SVG Poker-Tisch
 // ====================================
 
-/**
- * Rendert den SVG Poker-Tisch vollständig neu.
- */
 function renderTable() {
     const container = document.getElementById('pokerTable');
     container.innerHTML = '';
@@ -12,8 +51,8 @@ function renderTable() {
     const playerList = Object.entries(players);
     const total      = playerList.length;
 
-    const tableRx    = 200;
-    const tableRy    = 110;
+    const tableRx     = 200;
+    const tableRy     = 110;
     const baseOrbitRx = tableRx + 110;
     const baseOrbitRy = tableRy + 100;
     const minSpacing  = 65;
@@ -29,15 +68,26 @@ function renderTable() {
     const cx = W / 2;
     const cy = H / 2;
 
-    const cardW        = total <= 6 ? 44 : total <= 10 ? 38 : total <= 15 ? 32 : 26;
+    const cardW        = _resolveCardWidth(total);
     const cardH        = Math.round(cardW * 1.4);
-    const nameFontSize = total <= 8 ? 12 : total <= 14 ? 10 : 9;
+    const nameFontSize = _resolveNameFontSize(total);
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
     svg.style.overflow = 'visible';
+    svg.setAttribute('role', 'img');
+
+    const svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    svgTitle.textContent = `Pokertisch mit ${total} Teilnehmer${total === 1 ? '' : 'n'}`;
+    svg.appendChild(svgTitle);
+
+    const svgDesc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
+    svgDesc.textContent = isRevealed
+        ? 'Abstimmungsergebnis: Karten wurden aufgedeckt.'
+        : `Laufende Abstimmung. ${Object.values(players).filter(p => p.voted).length} von ${total} haben abgestimmt.`;
+    svg.appendChild(svgDesc);
 
     _appendDefs(svg);
     _appendTableEllipse(svg, cx, cy, tableRx, tableRy);
@@ -54,7 +104,7 @@ function renderTable() {
             const angle = (2 * Math.PI * index / total) - Math.PI / 2;
             const px    = cx + orbitRx * Math.cos(angle);
             const py    = cy + orbitRy * Math.sin(angle);
-            _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize);
+            _appendPlayerCard(svg, id, player, { px, py }, { cardW, cardH, nameFontSize });
         });
     }
 
@@ -67,7 +117,7 @@ function renderTable() {
 // ====================================
 
 function _appendDefs(svg) {
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
     const patternColor = dark ? 'rgba(74,158,222,0.07)' : 'rgba(0,65,120,0.06)';
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
@@ -114,20 +164,20 @@ function _appendVoteStatus(svg, cx, cy) {
 
 function _appendProgressBar(svg, cx, cy) {
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('x', cx - 70);
-    bg.setAttribute('y', cy + 20);
-    bg.setAttribute('width', 140);
-    bg.setAttribute('height', 5);
-    bg.setAttribute('rx', 3);
+    bg.setAttribute('x',  String(cx - 70));
+    bg.setAttribute('y',  String(cy + 20));
+    bg.setAttribute('width',  String(140));
+    bg.setAttribute('height',  String(5));
+    bg.setAttribute('rx',  String(3));
     bg.setAttribute('fill', 'rgba(255,255,255,0.2)');
     svg.appendChild(bg);
 
     const fill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    fill.setAttribute('x', cx - 70);
+    fill.setAttribute('x',  String(cx - 70));
     fill.setAttribute('y', cy + 20);
-    fill.setAttribute('width', 0);
-    fill.setAttribute('height', 5);
-    fill.setAttribute('rx', 3);
+    fill.setAttribute('width',  String(0));
+    fill.setAttribute('height',  String(5));
+    fill.setAttribute('rx',  String(3));
     fill.setAttribute('fill', '#E1001A');
     fill.setAttribute('id', 'svgProgressBar');
     svg.appendChild(fill);
@@ -152,26 +202,20 @@ function _renderTableStats(svg, cx, cy, stats) {
     }
 
     const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    divider.setAttribute('x1', cx); divider.setAttribute('y1', cy - 28);
+    divider.setAttribute('x1', cx); divider.setAttribute('y1',  String(cy - 28));
     divider.setAttribute('x2', cx); divider.setAttribute('y2', cy + 28);
     divider.setAttribute('stroke', 'rgba(255,255,255,0.2)');
     divider.setAttribute('stroke-width', '1');
     svg.appendChild(divider);
 
-    if (stats.devAvg) {
-        _renderStatBlock(svg, cx - 55, cy, '⚙ Dev',
-            stats.devAvg, stats.devSpread, '#60a5fa');
-    }
-    if (stats.testerAvg) {
-        _renderStatBlock(svg, cx + 55, cy, '✓ Test',
-            stats.testerAvg, stats.testerSpread, '#4ade80');
-    }
+    if (stats.devAvg)    _renderStatBlock(svg, cx - 55, cy, '⚙ Dev',  stats.devAvg,    stats.devSpread,    '#60a5fa');
+    if (stats.testerAvg) _renderStatBlock(svg, cx + 55, cy, '✓ Test', stats.testerAvg, stats.testerSpread, '#4ade80');
 }
 
 function _renderStatBlock(svg, x, y, label, avg, spread, color) {
     const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     labelText.setAttribute('x', x);
-    labelText.setAttribute('y', y - 18);
+    labelText.setAttribute('y',  String(y - 18));
     labelText.setAttribute('text-anchor', 'middle');
     labelText.setAttribute('fill', color);
     labelText.setAttribute('font-size', '11');
@@ -208,7 +252,9 @@ function _renderStatBlock(svg, x, y, label, avg, spread, color) {
 // SVG Hilfsfunktionen — Spielerkarten
 // ====================================
 
-function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) {
+function _appendPlayerCard(svg, id, player, pos, cardSize) {
+    const { px, py }                    = pos;
+    const { cardW, cardH, nameFontSize } = cardSize;
     const isSelf    = id === participantId;
     const hasVoted  = player.voted;
     const roleColor = ROLE_COLORS[player.role] || '#004178';
@@ -216,101 +262,92 @@ function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) 
     const { cfg }   = _resolveCardConfig(player, isSelf, hasVoted);
     const rx = 8;
 
-    // Alles in eine <g> Gruppe — Transform auf Gruppe funktioniert zuverlässig
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('id', `card-group-${id}`);
     g.style.transformOrigin = `${px}px ${py}px`;
     g.style.transformBox    = 'view-box';
 
-    // Schatten — innerhalb der Gruppe damit er mitmacht
     const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    shadow.setAttribute('x', px - cardW / 2 + 2);
-    shadow.setAttribute('y', py - cardH / 2 + 4);
+    shadow.setAttribute('x',  String(px - cardW / 2 + 2));
+    shadow.setAttribute('y',  String(py - cardH / 2 + 4));
     shadow.setAttribute('width', cardW);
     shadow.setAttribute('height', cardH);
-    shadow.setAttribute('rx', rx);
+    shadow.setAttribute('rx',  String(rx));
     shadow.setAttribute('fill', 'rgba(0,0,0,0.4)');
     g.appendChild(shadow);
 
-    // Karten-Rect
     const cardRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    cardRect.setAttribute('x', px - cardW / 2);
-    cardRect.setAttribute('y', py - cardH / 2);
+    cardRect.setAttribute('x',  String(px - cardW / 2));
+    cardRect.setAttribute('y',  String(py - cardH / 2));
     cardRect.setAttribute('width', cardW);
     cardRect.setAttribute('height', cardH);
-    cardRect.setAttribute('rx', rx);
+    cardRect.setAttribute('rx',  String(rx));
     cardRect.setAttribute('fill', cfg.fill);
     cardRect.setAttribute('stroke', cfg.stroke);
     cardRect.setAttribute('stroke-width', '2');
     cardRect.setAttribute('id', `card-${id}`);
     g.appendChild(cardRect);
 
-    // Dezentes Punkt-Muster auf leeren Karten (nicht abgestimmt)
     if (!showValue && !hasVoted) {
         const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        pattern.setAttribute('x', px - cardW / 2 + 2);
-        pattern.setAttribute('y', py - cardH / 2 + 2);
-        pattern.setAttribute('width', cardW - 4);
-        pattern.setAttribute('height', cardH - 4);
-        pattern.setAttribute('rx', rx - 2);
+        pattern.setAttribute('x',  String(px - cardW / 2 + 2));
+        pattern.setAttribute('y',  String(py - cardH / 2 + 2));
+        pattern.setAttribute('width',  String(cardW - 4));
+        pattern.setAttribute('height',  String(cardH - 4));
+        pattern.setAttribute('rx',  String(rx - 2));
         pattern.setAttribute('fill', 'url(#cardPattern)');
         g.appendChild(pattern);
 
-        // SIV-Blau Akzent-Linie oben
         const accentLine = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        accentLine.setAttribute('x', px - cardW / 2 + 8);
-        accentLine.setAttribute('y', py - cardH / 2 + 7);
-        accentLine.setAttribute('width', cardW - 16);
-        accentLine.setAttribute('height', 2);
-        accentLine.setAttribute('rx', 1);
+        accentLine.setAttribute('x',  String(px - cardW / 2 + 8));
+        accentLine.setAttribute('y',  String(py - cardH / 2 + 7));
+        accentLine.setAttribute('width',  String(cardW - 16));
+        accentLine.setAttribute('height',  String(2));
+        accentLine.setAttribute('rx',  String(1));
         accentLine.setAttribute('fill', cfg.stroke);
         accentLine.setAttribute('opacity', '0.25');
         g.appendChild(accentLine);
 
-        // Gleiche Linie unten
         const accentBottom = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        accentBottom.setAttribute('x', px - cardW / 2 + 8);
-        accentBottom.setAttribute('y', py + cardH / 2 - 9);
-        accentBottom.setAttribute('width', cardW - 16);
-        accentBottom.setAttribute('height', 2);
-        accentBottom.setAttribute('rx', 1);
+        accentBottom.setAttribute('x',  String(px - cardW / 2 + 8));
+        accentBottom.setAttribute('y',  String(py + cardH / 2 - 9));
+        accentBottom.setAttribute('width',  String(cardW - 16));
+        accentBottom.setAttribute('height',  String(2));
+        accentBottom.setAttribute('rx',  String(1));
         accentBottom.setAttribute('fill', cfg.stroke);
         accentBottom.setAttribute('opacity', '0.25');
         g.appendChild(accentBottom);
     }
 
     if (showValue) {
-        // Innerer Rahmen
         const inner = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        inner.setAttribute('x', px - cardW / 2 + 4);
-        inner.setAttribute('y', py - cardH / 2 + 4);
-        inner.setAttribute('width', cardW - 8);
-        inner.setAttribute('height', cardH - 8);
-        inner.setAttribute('rx', rx - 3);
+        inner.setAttribute('x',  String(px - cardW / 2 + 4));
+        inner.setAttribute('y',  String(py - cardH / 2 + 4));
+        inner.setAttribute('width',  String(cardW - 8));
+        inner.setAttribute('height',  String(cardH - 8));
+        inner.setAttribute('rx',  String(rx - 3));
         inner.setAttribute('fill', 'none');
         inner.setAttribute('stroke', cfg.innerBorder);
         inner.setAttribute('stroke-width', '1');
         g.appendChild(inner);
 
-        // Eckzahl
         const corner = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        corner.setAttribute('x', px - cardW / 2 + 7);
-        corner.setAttribute('y', py - cardH / 2 + 13);
+        corner.setAttribute('x',  String(px - cardW / 2 + 7));
+        corner.setAttribute('y',  String(py - cardH / 2 + 13));
         corner.setAttribute('fill', cfg.cornerColor);
-        corner.setAttribute('font-size', Math.max(Math.round(cardW * 0.2), 7));
+        corner.setAttribute('font-size', String(Math.max(Math.round(cardW * 0.2), 7)));
         corner.setAttribute('font-weight', '700');
         corner.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
         corner.textContent = player.cardValue;
         g.appendChild(corner);
 
-        // Hauptwert
         const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         cardText.setAttribute('x', px);
         cardText.setAttribute('y', py + 1);
         cardText.setAttribute('text-anchor', 'middle');
         cardText.setAttribute('dominant-baseline', 'middle');
         cardText.setAttribute('fill', cfg.textFill);
-        cardText.setAttribute('font-size', cardW > 36 ? 16 : 13);
+        cardText.setAttribute('font-size',  String(cardW > 36 ? 16 : 13));
         cardText.setAttribute('font-weight', '700');
         cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
         cardText.textContent = player.cardValue;
@@ -318,49 +355,49 @@ function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) 
     }
 
     svg.appendChild(g);
-    _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColor, isSelf);
+    _appendNameBadge(svg, player, { px, py }, cardH, nameFontSize, { roleColor, isSelf });
 }
 
-function _resolveCardConfig(player, isSelf, hasVoted) {
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+function _revealedCardConfig(changed, dark) {
+    if (changed) {
+        return { cfg: {
+                fill:        dark ? '#1a0a00'              : '#fff7ed',
+                stroke:      '#f97316',
+                textFill:    dark ? '#fb923c'              : '#c2410c',
+                cornerColor: dark ? 'rgba(251,146,60,0.5)' : 'rgba(194,65,12,0.4)',
+                innerBorder: dark ? 'rgba(249,115,22,0.3)' : 'rgba(249,115,22,0.2)'
+            }};
+    }
+    return { cfg: {
+            fill:        dark ? '#0d1f35'               : '#eaf3fc',
+            stroke:      dark ? '#4a9ede'               : '#004178',
+            textFill:    dark ? '#e2f0ff'               : '#004178',
+            cornerColor: dark ? 'rgba(226,240,255,0.4)' : 'rgba(0,65,120,0.3)',
+            innerBorder: dark ? 'rgba(74,158,222,0.25)' : 'rgba(0,65,120,0.12)'
+        }};
+}
 
-    if (isRevealed && player.cardValue) {
-        if (player.changed) {
-            return { cfg: {
-                    fill:        dark ? '#1a0a00'               : '#fff7ed',
-                    stroke:      '#f97316',
-                    textFill:    dark ? '#fb923c'               : '#c2410c',
-                    cornerColor: dark ? 'rgba(251,146,60,0.5)'  : 'rgba(194,65,12,0.4)',
-                    innerBorder: dark ? 'rgba(249,115,22,0.3)'  : 'rgba(249,115,22,0.2)'
-                }};
-        }
-        return { cfg: {
-                fill:        dark ? '#0d1f35'                : '#eaf3fc',
-                stroke:      dark ? '#4a9ede'                : '#004178',
-                textFill:    dark ? '#e2f0ff'                : '#004178',
-                cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
-                innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.12)'
-            }};
-    }
-    if (hasVoted) {
-        return { cfg: {
-                fill:        dark ? '#7f0010' : '#E1001A',
-                stroke:      dark ? '#E1001A' : '#a50013',
-                textFill:    '#ffffff',
-                cornerColor: 'rgba(255,255,255,0.45)',
-                innerBorder: 'rgba(255,255,255,0.2)'
-            }};
-    }
-    if (isSelf) {
-        return { cfg: {
-                fill:        dark ? '#0d1f35'                : '#ffffff',
-                stroke:      dark ? '#4a9ede'                : '#004178',
-                textFill:    dark ? '#e2f0ff'                : '#004178',
-                cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
-                innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.1)'
-            }};
-    }
-    // Andere Spieler — noch nicht abgestimmt
+function _votedCardConfig(dark) {
+    return { cfg: {
+            fill:        dark ? '#7f0010' : '#E1001A',
+            stroke:      dark ? '#E1001A' : '#a50013',
+            textFill:    '#ffffff',
+            cornerColor: 'rgba(255,255,255,0.45)',
+            innerBorder: 'rgba(255,255,255,0.2)'
+        }};
+}
+
+function _selfCardConfig(dark) {
+    return { cfg: {
+            fill:        dark ? '#0d1f35'               : '#ffffff',
+            stroke:      dark ? '#4a9ede'               : '#004178',
+            textFill:    dark ? '#e2f0ff'               : '#004178',
+            cornerColor: dark ? 'rgba(226,240,255,0.4)' : 'rgba(0,65,120,0.3)',
+            innerBorder: dark ? 'rgba(74,158,222,0.25)' : 'rgba(0,65,120,0.1)'
+        }};
+}
+
+function _otherCardConfig(dark) {
     return { cfg: {
             fill:        dark ? '#152030' : '#f0f6fc',
             stroke:      dark ? '#2e4a6a' : '#a0bcd8',
@@ -370,52 +407,52 @@ function _resolveCardConfig(player, isSelf, hasVoted) {
         }};
 }
 
-function _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColor, isSelf) {
+function _resolveCardConfig(player, isSelf, hasVoted) {
+    const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isRevealed && player.cardValue) return _revealedCardConfig(player.changed, dark);
+    if (hasVoted)                        return _votedCardConfig(dark);
+    if (isSelf)                          return _selfCardConfig(dark);
+    return _otherCardConfig(dark);
+}
+
+function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
+    const { px, py }         = pos;
+    const { roleColor, isSelf } = style;
     const nameY       = py + cardH / 2 + 4;
-    const displayName = player.name.length > 10
-        ? player.name.substring(0, 9) + '…'
-        : player.name + (isSelf ? ' (Du)' : '');
-    const nameW   = Math.min(displayName.length * 7 + 16, 120);
-    const nameH   = nameFontSize + 10;
-    const badgeRx = (nameH / 2);
+    const displayName = _resolveDisplayName(player.name, isSelf);
+    const nameW       = Math.min(displayName.length * 7 + 16, 120);
+    const nameH       = nameFontSize + 10;
+    const badgeRx     = nameH / 2;
+    const darkBadge   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    const darkBadge = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    // Badge-Hintergrund — passt zur Rollfarbe
     const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    badgeBg.setAttribute('x', px - nameW / 2);
+    badgeBg.setAttribute('x',  String(px - nameW / 2));
     badgeBg.setAttribute('y', nameY);
-    badgeBg.setAttribute('width', nameW);
+    badgeBg.setAttribute('width',  String(nameW));
     badgeBg.setAttribute('height', nameH);
-    badgeBg.setAttribute('rx', badgeRx);
+    badgeBg.setAttribute('rx',  String(badgeRx));
     badgeBg.setAttribute('fill', darkBadge ? '#0d1f35' : '#ffffff');
     badgeBg.setAttribute('stroke', roleColor);
     badgeBg.setAttribute('stroke-width', '1.5');
     svg.appendChild(badgeBg);
 
-    // Name
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     nameText.setAttribute('x', px);
     nameText.setAttribute('y', nameY + nameH / 2 + 1);
     nameText.setAttribute('text-anchor', 'middle');
     nameText.setAttribute('dominant-baseline', 'middle');
-    nameText.setAttribute('fill', darkBadge
-        ? (isSelf ? '#7dd3fc' : '#cbd5e1')
-        : (isSelf ? '#004178' : '#1a1a2e'));
+    nameText.setAttribute('fill', _resolveNameColor(darkBadge, isSelf));
     nameText.setAttribute('font-size', nameFontSize);
     nameText.setAttribute('font-weight', isSelf ? '700' : '500');
     nameText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
     nameText.textContent = displayName;
     svg.appendChild(nameText);
 }
+
 // ====================================
-// Teilnehmer-Sidebar mit verbesserten Avataren
+// Teilnehmer-Sidebar
 // ====================================
 
-/**
- * Rendert die Teilnehmer-Sidebar neu.
- * Avatare: farbiger Außenring nach Rolle, Status-Badge unten rechts.
- */
 function renderSidebar() {
     const playerList = Object.entries(players);
     document.getElementById('sidebarTitle').textContent =
@@ -452,16 +489,11 @@ function _buildSidebarItem(id, player, activeModerators) {
     const roleColor          = ROLE_COLORS[player.role] || '#004178';
     const isAlreadyModerator = player.moderator || (isSelfEntry && isModerator);
     const canDemote          = isAlreadyModerator && activeModerators > 1;
-
-    // Status-Badge: Farbe + Symbol
-    const statusColor  = player.role === 'PRODUCT_OWNER' ? 'transparent'
-        : hasVoted   ? '#22c55e'
-            : '#9ca3af';
-    const statusSymbol = hasVoted ? '✓' : '';
-
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const bgBorder = isDark ? '#1e1e2e' : '#ffffff';
-    const outlineColor = isAlreadyModerator ? '#eab308' : roleColor;
+    const statusColor        = _resolveStatusColor(player.role, hasVoted);
+    const statusSymbol       = hasVoted ? '✓' : '';
+    const isDark             = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    const bgBorder           = isDark ? '#1e1e2e' : '#ffffff';
+    const outlineColor       = isAlreadyModerator ? '#eab308' : roleColor;
 
     const li = document.createElement('li');
     li.className = 'sidebar__item';
@@ -477,7 +509,7 @@ function _buildSidebarItem(id, player, activeModerators) {
             ">
                 ${escapeHtml(player.name.charAt(0).toUpperCase())}
             </div>
-            ${player.role !== 'PRODUCT_OWNER' ? `
+            ${player.role === 'PRODUCT_OWNER' ? '' : `
             <div style="
                 position:absolute; bottom:1px; right:1px;
                 width:14px; height:14px; border-radius:50%;
@@ -486,43 +518,41 @@ function _buildSidebarItem(id, player, activeModerators) {
                 display:flex; align-items:center; justify-content:center;
                 font-size:8px; font-weight:700; color:#ffffff; line-height:1;
                 z-index:1;
-            ">${statusSymbol}</div>` : ''}
+            ">${statusSymbol}</div>`}
         </div>
         <div class="player-info">
             <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
-                ${escapeHtml(player.name)}${isSelfEntry ? ' (' + (window.i18n?.labels?.you || 'Sie') + ')' : ''}
+                ${escapeHtml(player.name)}${isSelfEntry ? ' (' + (globalThis.i18n?.labels?.you || 'Sie') + ')' : ''}
             </span>
             <span class="player-info__role" style="color:${roleColor};">
-                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · ' + (window.i18n?.labels?.moderator || 'Moderator') + ' ⭐' : ''}
+                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · ' + (globalThis.i18n?.labels?.moderator || 'Moderator') + ' ⭐' : ''}
             </span>
         </div>
         ${_buildStatusOrValue(player, hasVoted)}
         ${isSelfEntry && !isAlreadyModerator
         ? `<button class="btn--promote" onclick="promoteMyself()"
-                       title="Zum Moderator werden">↑</button>` : ''}
+                   title="Zum Moderator werden"
+                   aria-label="Zum Moderator werden">↑</button>` : ''}
         ${isSelfEntry && canDemote
         ? `<button class="btn--demote" onclick="demoteParticipant('${id}')"
-                       title="Moderator-Rechte abgeben">↓</button>` : ''}
+                   title="Moderator-Rechte abgeben"
+                   aria-label="Moderator-Rechte abgeben">↓</button>` : ''}
         ${!isSelfEntry && isModerator && isAlreadyModerator && canDemote
         ? `<button class="btn--demote" onclick="demoteParticipant('${id}')"
-                       title="Moderator-Rechte entziehen">↓</button>` : ''}
+                   title="Moderator-Rechte entziehen"
+                   aria-label="Moderator-Rechte entziehen">↓</button>` : ''}
     `;
     return li;
 }
 
 function _buildStatusOrValue(player, hasVoted) {
     if (isRevealed && player.cardValue) {
-        return `<span class="sidebar__card-value
-                    ${player.changed ? 'sidebar__card-value--changed' : ''}">
+        return `<span class="sidebar__card-value ${player.changed ? 'sidebar__card-value--changed' : ''}">
                     ${escapeHtml(player.cardValue)}
                 </span>`;
     }
     if (player.role === 'PRODUCT_OWNER') return '';
-    return `<div class="player-status
-                ${player.changed ? 'player-status--changed'  :
-        hasVoted       ? 'player-status--voted'    :
-            'player-status--waiting'}">
-            </div>`;
+    return `<div class="player-status ${_resolveStatusClass(player.changed, hasVoted)}"></div>`;
 }
 
 // ====================================
@@ -566,7 +596,7 @@ function syncStatusToSvg() {
     const svgProgress  = document.getElementById('svgProgressBar');
     const htmlProgress = document.getElementById('progressBar');
     if (svgProgress && htmlProgress) {
-        const pct = parseFloat(htmlProgress.style.width) || 0;
+        const pct = Number.parseFloat(htmlProgress.style.width) || 0;
         svgProgress.setAttribute('width', (140 * pct / 100).toString());
     }
 

@@ -17,7 +17,6 @@ import java.util.Map;
 
 /**
  * REST-Controller für Session-Operationen.
- * Verantwortlich für Erstellen und Statusabfrage von Sessions.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -29,21 +28,29 @@ import java.util.Map;
 public class SessionRestController {
 
     // ====================================
-    // Dependencies
+    // Konstanten
+    // ====================================
+
+    private static final String METHOD = "method";
+
+    // ====================================
+    // Abhängigkeiten
     // ====================================
 
     private final SessionService sessionService;
-    private final TicketService ticketService;
+    private final TicketService  ticketService;
 
     // ====================================
-    // Endpoints
+    // Endpunkte
     // ====================================
 
     @PostMapping
-    public ResponseEntity<?> createSession(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> createSession(
+            @RequestBody Map<String, Object> body) {
+
         String moderatorName = (String) body.get("moderatorName");
         EstimationMethod method = EstimationMethod.valueOf(
-                (String) body.get("method"));
+                (String) body.get(METHOD));
         ParticipantRole moderatorRole = RoleParser.parseModeratorRole(
                 (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
 
@@ -66,11 +73,12 @@ public class SessionRestController {
                 .filter(p -> p.getRole() == moderatorRole)
                 .findFirst()
                 .map(Participant::getId)
-                .orElse(null);
+                .orElseThrow(() -> new IllegalStateException(
+                        "Moderator wurde nicht gefunden nach Session-Erstellung."));
 
         return ResponseEntity.ok(Map.of(
                 "roomCode",      session.getRoomCode(),
-                "method",        session.getEstimationMethod().name(),
+                METHOD,        session.getEstimationMethod().name(),
                 "status",        session.getStatus().name(),
                 "participantId", moderatorId,
                 "moderatorRole", moderatorRole.name()
@@ -78,7 +86,9 @@ public class SessionRestController {
     }
 
     @GetMapping("/{roomCode}/state")
-    public ResponseEntity<?> getState(@PathVariable String roomCode) {
+    public ResponseEntity<Map<String, Object>> getState(
+            @PathVariable String roomCode) {
+
         Session session = sessionService.getSessionByRoomCode(roomCode);
         String currentTicketTitle = ticketService.getCurrentTicketTitle(
                 roomCode, session.getCurrentTicketId());
@@ -88,7 +98,7 @@ public class SessionRestController {
                 "currentTicketId",    session.getCurrentTicketId() != null
                         ? session.getCurrentTicketId() : "",
                 "currentTicketTitle", currentTicketTitle,
-                "method",             session.getEstimationMethod().name(),
+                METHOD,             session.getEstimationMethod().name(),
                 "status",             session.getStatus().name(),
                 "participantCount",   sessionService.getParticipants(roomCode).size()
         ));

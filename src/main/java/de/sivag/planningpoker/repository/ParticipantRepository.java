@@ -16,7 +16,7 @@ import java.util.List;
 public interface ParticipantRepository extends JpaRepository<Participant, Long> {
 
     // ====================================
-    // Query Methods
+    // Query Methoden
     // ====================================
 
     List<Participant> findBySessionRoomCode(String roomCode);

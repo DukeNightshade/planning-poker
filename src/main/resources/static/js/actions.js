@@ -1,3 +1,8 @@
+/* global selectedCard, averageValue, isRevealed, players, participantId,
+          participantRole, roomCode, stompClient, currentTicketId, tickets,
+          isModerator, renderTable, renderSidebar, renderTicketSidebar,
+          recalculateStats, showToast */
+
 // ====================================
 // Kartenwahl
 // ====================================
@@ -28,8 +33,15 @@ function selectCard(button) {
     renderTable();
     renderSidebar();
 
-    stompClient.send('/app/session/' + roomCode + '/vote', {},
-        JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion }));
+    if (stompClient !== null && stompClient.connected) {
+        stompClient.send('/app/session/' + roomCode + '/vote', {},
+            JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion }));
+    } else {
+        console.warn("WebSocket ist nicht verbunden! Abstimmung wurde nicht gesendet.");
+        if (typeof showToast === 'function') {
+            showToast(globalThis.i18n.toast.disconnected || "Keine Verbindung", 'warning');
+        }
+    }
 }
 
 // ====================================
@@ -37,7 +49,6 @@ function selectCard(button) {
 // ====================================
 
 function revealCards() {
-    // Karten-Gruppen drehen sich um Y-Achse weg (echtes Flip)
     const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
     groups.forEach((g, i) => {
         g.style.transition = `transform ${180}ms ease-in ${i * 35}ms`;
@@ -50,7 +61,6 @@ function revealCards() {
 }
 
 function resetRound() {
-    // Karten fliegen zur Tischmitte (Poker-Wurf), dann neue Runde
     const svg = document.querySelector('#pokerTable svg');
     if (!svg) {
         stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
@@ -66,11 +76,11 @@ function resetRound() {
         const origin = g.style.transformOrigin || '0px 0px';
         const parts  = origin.match(/([\d.]+)px\s+([\d.]+)px/);
         if (!parts) return;
-        const ox = parseFloat(parts[1]);
-        const oy = parseFloat(parts[2]);
+        const ox = Number.parseFloat(parts[1]);
+        const oy = Number.parseFloat(parts[2]);
         const dx = cx - ox;
         const dy = cy - oy;
-        const angle = (Math.random() - 0.5) * 40; // leichte Rotation
+        const angle = (Math.random() - 0.5) * 40;
 
         const delay = i * 30;
         g.style.transition = `transform ${280}ms cubic-bezier(.4,0,.6,1) ${delay}ms, opacity ${200}ms ease ${delay + 150}ms`;
@@ -125,7 +135,7 @@ function showResults(votes) {
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
 
-    showToast(window.i18n.toast.revealed, 'success', '', 3000);
+    showToast(globalThis.i18n.toast.revealed, 'success', '', 3000);
 }
 
 function resetUI() {
@@ -153,15 +163,21 @@ function resetUI() {
     renderTable();
     renderSidebar();
 
-    // Karten werden ausgeteilt — jede kommt einzeln mit Versatz
     _dealCardsIn();
 }
 
+function _animateDeal(groups) {
+    groups.forEach((g, i) => {
+        const delay = i * 80;
+        g.style.transition = `transform 350ms cubic-bezier(.2,.8,.3,1.2) ${delay}ms, opacity 200ms ease ${delay}ms`;
+        g.style.transform  = 'translate(0,0) scale(1) rotate(0deg)';
+        g.style.opacity    = '1';
+    });
+}
+
 function _dealCardsIn() {
-    // Kurz warten bis renderTable() das SVG neu aufgebaut hat
     setTimeout(() => {
         const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
-        // Alle sofort unsichtbar und klein in der Tischmitte
         const svg = document.querySelector('#pokerTable svg');
         let cx = 450, cy = 250;
         if (svg) {
@@ -173,25 +189,16 @@ function _dealCardsIn() {
             const origin = g.style.transformOrigin || '';
             const parts  = origin.match(/([\d.]+)px\s+([\d.]+)px/);
             if (!parts) return;
-            const ox = parseFloat(parts[1]);
-            const oy = parseFloat(parts[2]);
+            const ox = Number.parseFloat(parts[1]);
+            const oy = Number.parseFloat(parts[2]);
             const dx = cx - ox;
             const dy = cy - oy;
             g.style.transition = 'none';
             g.style.transform  = `translate(${dx}px, ${dy}px) scale(0.15) rotate(${(Math.random()-0.5)*30}deg)`;
             g.style.opacity    = '0';
         });
-
-        // Jede Karte wird einzeln ausgeteilt
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                groups.forEach((g, i) => {
-                    const delay = i * 80; // 80ms zwischen jeder Karte — echter Deal-Rhythmus
-                    g.style.transition = `transform 350ms cubic-bezier(.2,.8,.3,1.2) ${delay}ms, opacity 200ms ease ${delay}ms`;
-                    g.style.transform  = 'translate(0,0) scale(1) rotate(0deg)';
-                    g.style.opacity    = '1';
-                });
-            });
+            requestAnimationFrame(() => _animateDeal(groups));
         });
     }, 50);
 }
@@ -202,7 +209,7 @@ function _dealCardsIn() {
 
 function updateVoteStatus(votedCount, totalCount, voterId) {
     document.getElementById('voteStatus').textContent =
-        window.i18n.session.voted.replace('{0}', votedCount).replace('{1}', totalCount);
+        globalThis.i18n.session.voted.replace('{0}', votedCount).replace('{1}', totalCount);
 
     const pct = totalCount > 0 ? (votedCount / totalCount * 100) : 0;
     document.getElementById('progressBar').style.width = pct + '%';
@@ -240,9 +247,9 @@ async function promoteMyself() {
     );
     if (response.ok) {
         sessionStorage.setItem('isModerator', 'true');
-        showToast(window.i18n.toast.promotedSelf, 'success', '', 3000);
+        showToast(globalThis.i18n.toast.promotedSelf, 'success', '', 3000);
     } else {
-        showToast(window.i18n.toast.errorPromote, 'error');
+        showToast(globalThis.i18n.toast.errorPromote, 'error');
     }
 }
 
@@ -253,10 +260,10 @@ async function demoteParticipant(targetParticipantId) {
     );
     if (!response.ok) {
         const data = await response.json();
-        showToast(data.error || window.i18n.toast.errorAction, 'error');
+        showToast(data.error || globalThis.i18n.toast.errorAction, 'error');
     } else if (targetParticipantId === participantId) {
         sessionStorage.setItem('isModerator', 'false');
-        showToast(window.i18n.toast.demotedSelf, 'info', '', 3000);
+        showToast(globalThis.i18n.toast.demotedSelf, 'info', '', 3000);
     }
 }
 
@@ -266,7 +273,10 @@ async function demoteParticipant(targetParticipantId) {
 
 function toggleSettings() {
     const panel = document.getElementById('settingsPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const btn   = document.getElementById('settingsBtn');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (btn) btn.setAttribute('aria-expanded', String(!isOpen));
 }
 
 function saveSettings() {
@@ -297,11 +307,12 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
 function copyRoomCode() {
     navigator.clipboard.writeText(roomCode).then(() => {
         const btn = document.getElementById('copyBtn');
-        btn.textContent = window.i18n.nav.copied;
-        setTimeout(() => btn.textContent = document.getElementById('copyBtn').dataset.label || 'Kopieren', 2000);
-        showToast(window.i18n.toast.copied, 'success', roomCode, 2500);
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = globalThis.i18n.nav.copied;
+        setTimeout(() => btn.textContent = btn.dataset.label, 2000);
+        showToast(globalThis.i18n.toast.copied, 'success', roomCode, 2500);
     }).catch(() => {
-        showToast(window.i18n.toast.errorCopy, 'error');
+        showToast(globalThis.i18n.toast.errorCopy, 'error');
     });
 }
 
@@ -309,9 +320,14 @@ function copyRoomCode() {
 // Interne Hilfsfunktionen
 // ====================================
 
+function _animateFlip(groups) {
+    groups.forEach((g, i) => {
+        g.style.transition = `transform 320ms cubic-bezier(.34,1.4,.64,1) ${i * 55}ms`;
+        g.style.transform  = 'scaleX(1)';
+    });
+}
+
 function _flipCardsIn() {
-    // Nach Aufdecken: Karten flippen mit Versatz rein (scaleX 0→1)
-    // renderTable() wurde bereits aufgerufen — Gruppen sind neu im DOM
     setTimeout(() => {
         const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
         groups.forEach(g => {
@@ -320,12 +336,7 @@ function _flipCardsIn() {
             g.style.opacity    = '1';
         });
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                groups.forEach((g, i) => {
-                    g.style.transition = `transform 320ms cubic-bezier(.34,1.4,.64,1) ${i * 55}ms`;
-                    g.style.transform  = 'scaleX(1)';
-                });
-            });
+            requestAnimationFrame(() => _animateFlip(groups));
         });
     }, 30);
 }

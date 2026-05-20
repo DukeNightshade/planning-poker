@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Entity für einen Teilnehmer einer Planning-Poker-Session.
@@ -20,7 +22,7 @@ import java.time.LocalDateTime;
 public class Participant {
 
     // ====================================
-    // Instance Variables
+    // Instanz Variablen
     // ====================================
 
     @Id
@@ -43,6 +45,9 @@ public class Participant {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;
+
+    @OneToMany(mappedBy = "participant", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Vote> votes = new ArrayList<>();
 
     // ====================================
     // Lifecycle Callbacks
