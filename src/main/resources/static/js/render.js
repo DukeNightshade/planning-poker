@@ -522,7 +522,7 @@ function _buildSidebarItem(id, player, activeModerators) {
         </div>
         <div class="player-info">
             <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
-                ${escapeHtml(player.name)}${isSelfEntry ? ' (' + (globalThis.i18n?.labels?.you || 'Sie') + ')' : ''}
+                ${escapeHtml(player.name)}${isSelfEntry ? ' (' + (globalThis.i18n?.labels?.you || 'Du') + ')' : ''}
             </span>
             <span class="player-info__role" style="color:${roleColor};">
                 ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · ' + (globalThis.i18n?.labels?.moderator || 'Moderator') + ' ⭐' : ''}
