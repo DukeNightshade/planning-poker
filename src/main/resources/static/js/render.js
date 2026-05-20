@@ -490,10 +490,10 @@ function _buildSidebarItem(id, player, activeModerators) {
         </div>
         <div class="player-info">
             <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
-                ${escapeHtml(player.name)}${isSelfEntry ? ' (Sie)' : ''}
+                ${escapeHtml(player.name)}${isSelfEntry ? ' (' + (window.i18n?.labels?.you || 'Sie') + ')' : ''}
             </span>
             <span class="player-info__role" style="color:${roleColor};">
-                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · Moderator ⭐' : ''}
+                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · ' + (window.i18n?.labels?.moderator || 'Moderator') + ' ⭐' : ''}
             </span>
         </div>
         ${_buildStatusOrValue(player, hasVoted)}

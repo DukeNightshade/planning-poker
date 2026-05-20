@@ -3,138 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Poker – SIV.AG</title>
+    <title th:text="#{app.title}">Planning Poker</title>
     <link rel="icon" type="image/png" th:href="@{/images/siv-logo.png}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap"
-          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 
-<!-- Toast Container -->
 <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+<!-- i18n für JavaScript -->
+<script th:inline="javascript">
+    window.i18n = {
+        toast: {
+            revealed:          /*[[#{toast.revealed}]]*/ '',
+            newround:          /*[[#{toast.newround}]]*/ '',
+            copied:            /*[[#{toast.copied}]]*/ '',
+            promotedSelf:      /*[[#{toast.promoted.self}]]*/ '',
+            demotedSelf:       /*[[#{toast.demoted.self}]]*/ '',
+            settings:          /*[[#{toast.settings}]]*/ '',
+            ticketAdded:       /*[[#{toast.ticket.added}]]*/ '',
+            ticketSelected:    /*[[#{toast.ticket.selected}]]*/ '',
+            joined:            /*[[#{toast.joined}]]*/ '',
+            left:              /*[[#{toast.left}]]*/ '',
+            moderatorPromoted: /*[[#{toast.moderator.promoted}]]*/ '',
+            reconnected:       /*[[#{toast.reconnected}]]*/ '',
+            errorCreate:       /*[[#{toast.error.create}]]*/ '',
+            errorJoin:         /*[[#{toast.error.join}]]*/ '',
+            errorTickets:      /*[[#{toast.error.tickets}]]*/ '',
+            errorCopy:         /*[[#{toast.error.copy}]]*/ '',
+            errorPromote:      /*[[#{toast.error.promote}]]*/ '',
+            errorAction:       /*[[#{toast.error.action}]]*/ '',
+            disconnected:      /*[[#{toast.warning.disconnected}]]*/ '',
+            disconnectedSub:   /*[[#{toast.warning.disconnected.sub}]]*/ ''
+        },
+        nav:     { copied: /*[[#{nav.copied}]]*/ '' },
+        session: { voted:  /*[[#{session.voted}]]*/ '' }
+    };
+</script>
+
 <header class="header">
-    <img th:src="@{/images/siv-logo-weiß.png}"
-         alt="SIV.AG"
-         class="header__logo-img">
+    <img th:src="@{/images/siv-logo-weiss.png}" alt="SIV.AG" class="header__logo-img">
     <div class="header__title-block">
-        <h1 class="header__title">Planning Poker</h1>
-        <p class="header__subtitle">Agile Aufwandsschätzung für Teams</p>
+        <h1 class="header__title"    th:text="#{app.title}">Planning Poker</h1>
+        <p  class="header__subtitle" th:text="#{app.subtitle}">Agile Aufwandsschätzung für Teams</p>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+        <a th:href="@{/(lang=de)}" class="lang-btn" th:classappend="${#locale.language == 'de'} ? ' lang-active'" th:text="#{nav.lang.de}">DE</a>
+        <a th:href="@{/(lang=en)}" class="lang-btn" th:classappend="${#locale.language == 'en'} ? ' lang-active'" th:text="#{nav.lang.en}">EN</a>
     </div>
 </header>
 
+<style>
+    .lang-btn { color:rgba(255,255,255,0.7); font-size:0.85rem; font-weight:600; text-decoration:none; padding:0.2rem 0.5rem; border-radius:4px; border:1.5px solid rgba(255,255,255,0.25); font-family:var(--font-main); transition:all 0.2s; }
+    .lang-btn:hover, .lang-active { color:#ffffff !important; border-color:rgba(255,255,255,0.7) !important; background:rgba(255,255,255,0.12); }
+</style>
 
 <main class="main">
-
     <div class="main__row">
 
-        <!-- Session erstellen -->
         <section class="card">
-            <h2 class="card__title">Neue Session erstellen</h2>
+            <h2 class="card__title" th:text="#{home.create.title}">Neue Session erstellen</h2>
             <form id="createForm" class="form">
-                <label class="form__label" for="moderatorName">Ihr Name</label>
-                <input class="form__input" type="text" id="moderatorName"
-                       placeholder="Name eingeben" required>
-
-                <label class="form__label" for="method">Schätzmethode</label>
+                <label class="form__label" for="moderatorName" th:text="#{home.create.name}">Ihr Name</label>
+                <input class="form__input" type="text" id="moderatorName" th:placeholder="#{home.create.name.placeholder}" required>
+                <label class="form__label" for="method" th:text="#{home.create.method}">Schätzmethode</label>
                 <select class="form__select" id="method">
-                    <option th:each="m : ${methods}"
-                            th:value="${m.name()}"
-                            th:text="${methodLabels[m.name()]}">
-                    </option>
+                    <option th:each="m : ${methods}" th:value="${m.name()}" th:text="${methodLabels[m.name()]}"></option>
                 </select>
-
-                <label class="form__label" for="moderatorRole">Ihre Rolle</label>
+                <label class="form__label" for="moderatorRole" th:text="#{home.create.role}">Ihre Rolle</label>
                 <select class="form__select" id="moderatorRole">
-                    <option value="DEVELOPER">Entwickler</option>
-                    <option value="TESTER">Tester</option>
+                    <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
+                    <option value="TESTER"    th:text="#{role.tester}">Tester</option>
                 </select>
-
-                <button class="btn btn--primary" type="submit">
-                    Session erstellen
-                </button>
+                <button class="btn btn--primary" type="submit" th:text="#{home.create.submit}">Session erstellen</button>
             </form>
         </section>
 
-        <!-- Session beitreten -->
         <section class="card">
-            <h2 class="card__title">Session beitreten</h2>
+            <h2 class="card__title" th:text="#{home.join.title}">Session beitreten</h2>
             <form id="joinForm" class="form">
-                <label class="form__label" for="participantName">Ihr Name</label>
-                <input class="form__input" type="text" id="participantName"
-                       placeholder="Name eingeben" required>
-
-                <label class="form__label" for="roomCode">Raumcode</label>
-                <input class="form__input" type="text" id="roomCode"
-                       placeholder="z.B. ABX93KLM" required>
-
-                <label class="form__label" for="participantRole">Ihre Rolle</label>
+                <label class="form__label" for="participantName" th:text="#{home.join.name}">Ihr Name</label>
+                <input class="form__input" type="text" id="participantName" th:placeholder="#{home.join.name.placeholder}" required>
+                <label class="form__label" for="roomCode" th:text="#{home.join.roomcode}">Raumcode</label>
+                <input class="form__input" type="text" id="roomCode" th:placeholder="#{home.join.roomcode.placeholder}" required>
+                <label class="form__label" for="participantRole" th:text="#{home.join.role}">Ihre Rolle</label>
                 <select class="form__select" id="participantRole">
-                    <option value="DEVELOPER">Entwickler</option>
-                    <option value="TESTER">Tester</option>
-                    <option value="PRODUCT_OWNER">Product Owner (Beobachter)</option>
+                    <option value="DEVELOPER"    th:text="#{role.developer}">Entwickler</option>
+                    <option value="TESTER"       th:text="#{role.tester}">Tester</option>
+                    <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
                 </select>
-
-                <button class="btn btn--secondary" type="submit">
-                    Beitreten
-                </button>
+                <button class="btn btn--secondary" type="submit" th:text="#{home.join.submit}">Beitreten</button>
             </form>
         </section>
 
     </div>
 
-    <!-- Session mit Tickets erstellen -->
     <section class="card card--wide">
-        <h2 class="card__title">Session mit Ticket-Liste erstellen</h2>
+        <h2 class="card__title" th:text="#{home.tickets.title}">Session mit Ticket-Liste erstellen</h2>
         <form id="createWithTicketsForm" class="form">
-            <label class="form__label" for="moderatorNameTickets">Ihr Name</label>
-            <input class="form__input" type="text" id="moderatorNameTickets"
-                   placeholder="Name eingeben" required>
-
-            <label class="form__label" for="methodTickets">Schätzmethode</label>
+            <label class="form__label" for="moderatorNameTickets" th:text="#{home.create.name}">Ihr Name</label>
+            <input class="form__input" type="text" id="moderatorNameTickets" th:placeholder="#{home.create.name.placeholder}" required>
+            <label class="form__label" for="methodTickets" th:text="#{home.create.method}">Schätzmethode</label>
             <select class="form__select" id="methodTickets">
-                <option th:each="m : ${methods}"
-                        th:value="${m.name()}"
-                        th:text="${methodLabels[m.name()]}">
-                </option>
+                <option th:each="m : ${methods}" th:value="${m.name()}" th:text="${methodLabels[m.name()]}"></option>
             </select>
-
-            <label class="form__label" for="moderatorRoleTickets">Ihre Rolle</label>
+            <label class="form__label" for="moderatorRoleTickets" th:text="#{home.create.role}">Ihre Rolle</label>
             <select class="form__select" id="moderatorRoleTickets">
-                <option value="DEVELOPER">Entwickler</option>
-                <option value="TESTER">Tester</option>
+                <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
+                <option value="TESTER"    th:text="#{role.tester}">Tester</option>
             </select>
-
-            <label class="form__label">Tickets</label>
+            <label class="form__label" th:text="#{home.tickets.label}">Tickets</label>
             <div id="ticketList" class="ticket-list">
                 <div class="ticket-entry">
-                    <input class="form__input ticket-input" type="text"
-                           placeholder="Ticket-Titel eingeben" required>
-                    <button type="button" class="btn--remove" onclick="removeTicket(this)">✕</button>
+                    <input class="form__input ticket-input" type="text" th:placeholder="#{home.tickets.placeholder}" required>
+                    <button type="button" class="btn--remove" onclick="removeTicket(this)">&#x2715;</button>
                 </div>
             </div>
-
-            <button type="button" class="btn btn--outline" onclick="addTicketField()">
-                + Ticket hinzufügen
-            </button>
-
-            <button class="btn btn--primary" type="submit">
-                Session erstellen
-            </button>
+            <button type="button" class="btn btn--outline" onclick="addTicketField()" th:text="#{home.tickets.add}">+ Ticket hinzufügen</button>
+            <button class="btn btn--primary" type="submit" th:text="#{home.tickets.submit}">Session erstellen</button>
         </form>
     </section>
-
 </main>
 
-<footer class="footer">
-    &copy; 2026 SIV.AG – Internes Tool
-</footer>
+<footer class="footer">&copy; 2026 <span th:text="#{app.footer}">SIV.AG &#8211; Internes Tool</span></footer>
+
+<!-- Placeholder für JS-dynamische Ticket-Felder -->
+<span id="ticketPlaceholder" th:text="#{home.tickets.placeholder}" style="display:none;"></span>
+<span id="ticketRemoveBtn" style="display:none;">&#x2715;</span>
 
 <script th:src="@{/js/utils.js}"></script>
 <script th:src="@{/js/index.js}"></script>
-
 </body>
 </html>

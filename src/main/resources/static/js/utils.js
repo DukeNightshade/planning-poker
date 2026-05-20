@@ -20,6 +20,7 @@ const ROLE_COLORS = {
 // ====================================
 
 function getRoleLabel(role) {
+    if (window.i18n?.roles?.[role]) return window.i18n.roles[role];
     const labels = {
         DEVELOPER:     'Entwickler',
         TESTER:        'Tester',

@@ -125,7 +125,7 @@ function showResults(votes) {
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
 
-    showToast('Karten aufgedeckt! Diskussionsmodus aktiv.', 'success', '', 3000);
+    showToast(window.i18n.toast.revealed, 'success', '', 3000);
 }
 
 function resetUI() {
@@ -202,7 +202,7 @@ function _dealCardsIn() {
 
 function updateVoteStatus(votedCount, totalCount, voterId) {
     document.getElementById('voteStatus').textContent =
-        `${votedCount} / ${totalCount} abgestimmt`;
+        window.i18n.session.voted.replace('{0}', votedCount).replace('{1}', totalCount);
 
     const pct = totalCount > 0 ? (votedCount / totalCount * 100) : 0;
     document.getElementById('progressBar').style.width = pct + '%';
@@ -240,9 +240,9 @@ async function promoteMyself() {
     );
     if (response.ok) {
         sessionStorage.setItem('isModerator', 'true');
-        showToast('Du bist jetzt Moderator.', 'success', '', 3000);
+        showToast(window.i18n.toast.promotedSelf, 'success', '', 3000);
     } else {
-        showToast('Beförderung fehlgeschlagen.', 'error');
+        showToast(window.i18n.toast.errorPromote, 'error');
     }
 }
 
@@ -253,10 +253,10 @@ async function demoteParticipant(targetParticipantId) {
     );
     if (!response.ok) {
         const data = await response.json();
-        showToast(data.error || 'Aktion fehlgeschlagen.', 'error');
+        showToast(data.error || window.i18n.toast.errorAction, 'error');
     } else if (targetParticipantId === participantId) {
         sessionStorage.setItem('isModerator', 'false');
-        showToast('Moderator-Rechte abgegeben.', 'info', '', 3000);
+        showToast(window.i18n.toast.demotedSelf, 'info', '', 3000);
     }
 }
 
@@ -280,11 +280,7 @@ function saveSettings() {
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = showTopic ? 'flex' : 'none';
-    const ticketSidebar = document.getElementById('ticketSidebar');
-    if (ticketSidebar) {
-        ticketSidebar.style.display = showTopic ? 'flex' : 'none';
-        document.querySelector('.session').classList.toggle('session--with-tickets', showTopic);
-    }
+
     const canVote = participantRole !== 'PRODUCT_OWNER' &&
         !(isModerator && !moderatorCanVote);
     document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
@@ -301,11 +297,11 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
 function copyRoomCode() {
     navigator.clipboard.writeText(roomCode).then(() => {
         const btn = document.getElementById('copyBtn');
-        btn.textContent = '✓ Kopiert';
-        setTimeout(() => btn.textContent = 'Kopieren', 2000);
-        showToast('Raumcode kopiert!', 'success', roomCode, 2500);
+        btn.textContent = window.i18n.nav.copied;
+        setTimeout(() => btn.textContent = document.getElementById('copyBtn').dataset.label || 'Kopieren', 2000);
+        showToast(window.i18n.toast.copied, 'success', roomCode, 2500);
     }).catch(() => {
-        showToast('Kopieren fehlgeschlagen.', 'error');
+        showToast(window.i18n.toast.errorCopy, 'error');
     });
 }
 

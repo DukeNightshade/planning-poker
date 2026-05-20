@@ -24,7 +24,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
-        showToast('Fehler beim Erstellen der Session.', 'error');
+        showToast(window.i18n.toast.errorCreate, 'error');
     }
 });
 
@@ -43,7 +43,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         .filter(title => title.length > 0);
 
     if (!moderatorName || tickets.length === 0) {
-        showToast('Bitte Name und mindestens ein Ticket eingeben.', 'warning');
+        showToast(window.i18n.toast.errorTickets, 'warning');
         return;
     }
 
@@ -60,7 +60,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
-        showToast('Fehler beim Erstellen der Session.', 'error');
+        showToast(window.i18n.toast.errorCreate, 'error');
     }
 });
 
@@ -90,7 +90,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('participantRole', data.role);
         window.location.href = '/session/' + roomCode;
     } else {
-        showToast('Session nicht gefunden oder bereits beendet.', 'error');
+        showToast(window.i18n.toast.errorJoin, 'error');
     }
 });
 
@@ -102,10 +102,10 @@ function addTicketField() {
     const list  = document.getElementById('ticketList');
     const entry = document.createElement('div');
     entry.className = 'ticket-entry';
+    const placeholder = document.getElementById('ticketPlaceholder')?.textContent || 'Ticket-Titel eingeben';
     entry.innerHTML = `
-        <input class="form__input ticket-input" type="text"
-               placeholder="Ticket-Titel eingeben">
-        <button type="button" class="btn--remove" onclick="removeTicket(this)">✕</button>
+        <input class="form__input ticket-input" type="text" placeholder="${placeholder}">
+        <button type="button" class="btn--remove" onclick="removeTicket(this)">&#x2715;</button>
     `;
     list.appendChild(entry);
     entry.querySelector('input').focus();

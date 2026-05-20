@@ -74,7 +74,7 @@ function connect() {
         _reconnectAttempts = 0;
 
         if (_wasDisconnected) {
-            showToast('Verbindung wiederhergestellt.', 'success', '', 3000);
+            showToast(window.i18n.toast.reconnected, 'success', '', 3000);
             _wasDisconnected = false;
         }
 
@@ -89,12 +89,7 @@ function connect() {
 
         const delay = Math.min(3000 * _reconnectAttempts, 15000);
         if (_reconnectAttempts === 1) {
-            showToast(
-                'Verbindung getrennt – wird wiederhergestellt...',
-                'warning',
-                'Bitte warten',
-                0
-            );
+            showToast(window.i18n.toast.disconnected, 'warning', window.i18n.toast.disconnectedSub, 0);
         }
         setTimeout(connect, delay);
     });
@@ -110,6 +105,10 @@ async function loadInitialData() {
         ticketList.forEach(t => {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
+
+        const hasTickets = ticketList.length > 0;
+        document.getElementById('ticketSidebar').style.display = hasTickets ? 'flex' : 'none';
+        document.querySelector('.session').classList.toggle('session--with-tickets', hasTickets);
         renderTicketSidebar();
     }
 
@@ -143,11 +142,11 @@ function handleMessage(data) {
             break;
         case 'RESET':
             resetUI();
-            showToast('Neue Runde gestartet.', 'info', '', 2500);
+            showToast(window.i18n.toast.newround, 'info', '', 2500);
             break;
         case 'SETTINGS_UPDATE':
             applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
-            showToast('Einstellungen aktualisiert.', 'info', '', 2500);
+            showToast(window.i18n.toast.settings, 'info', '', 2500);
             break;
         case 'PLAYER_JOINED':
             if (!players[data.participantId]) {
@@ -162,7 +161,7 @@ function handleMessage(data) {
                 };
                 if (data.participantId !== participantId) {
                     showToast(
-                        `${escapeHtml(data.participantName)} ist beigetreten`,
+                        window.i18n.toast.joined.replace('{0}', escapeHtml(data.participantName)),
                         'info',
                         getRoleLabel(data.participantRole),
                         3000
@@ -177,7 +176,7 @@ function handleMessage(data) {
                 const leftName = players[data.participantId].name;
                 delete players[data.participantId];
                 showToast(
-                    `${escapeHtml(leftName)} hat die Session verlassen`,
+                    window.i18n.toast.left.replace('{0}', escapeHtml(leftName)),
                     'warning',
                     '',
                     3000
@@ -197,7 +196,7 @@ function handleMessage(data) {
                 document.getElementById('addTicketBtn').style.display     = 'block';
             } else {
                 showToast(
-                    `${escapeHtml(data.participantName)} ist jetzt Moderator`,
+                    window.i18n.toast.moderatorPromoted.replace('{0}', escapeHtml(data.participantName)),
                     'info',
                     '',
                     3000
@@ -220,15 +219,17 @@ function handleMessage(data) {
             break;
         case 'TICKET_ADDED':
             tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
+            document.getElementById('ticketSidebar').style.display = 'flex';
+            document.querySelector('.session').classList.add('session--with-tickets');
             renderTicketSidebar();
-            showToast(`Ticket hinzugefügt: ${escapeHtml(data.title)}`, 'success', '', 3000);
+            showToast(window.i18n.toast.ticketAdded + ' ' + escapeHtml(data.title), 'success', '', 3000);
             break;
         case 'TICKET_SELECTED':
             currentTicketId = data.id;
             document.getElementById('topicText').textContent = data.title;
             resetUI();
             renderTicketSidebar();
-            showToast(`Ticket gewechselt: ${escapeHtml(data.title)}`, 'info', '', 2500);
+            showToast(window.i18n.toast.ticketSelected + ' ' + escapeHtml(data.title), 'info', '', 2500);
             break;
     }
 }
