@@ -21,6 +21,12 @@ import java.util.NoSuchElementException;
 public class GlobalExceptionHandler {
 
     // ====================================
+    // Konstanten
+    // ====================================
+
+    private static final String ERROR = "error";
+
+    // ====================================
     // 404 – Nicht gefunden
     // ====================================
 
@@ -30,7 +36,7 @@ public class GlobalExceptionHandler {
         log.warn("Ressource nicht gefunden: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of(ERROR, e.getMessage()));
     }
 
     // ====================================
@@ -43,7 +49,7 @@ public class GlobalExceptionHandler {
         log.warn("Ungültige Anfrage (IllegalState): {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of(ERROR, e.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -52,7 +58,7 @@ public class GlobalExceptionHandler {
         log.warn("Ungültige Anfrage (IllegalArgument): {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of(ERROR, e.getMessage()));
     }
 
     // ====================================
@@ -64,7 +70,7 @@ public class GlobalExceptionHandler {
         log.error("Unerwarteter Fehler: {}", e.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Ein interner Fehler ist aufgetreten."));
+                .body(Map.of(ERROR, "Ein interner Fehler ist aufgetreten."));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
@@ -73,6 +79,6 @@ public class GlobalExceptionHandler {
         log.warn("Statische Ressource nicht gefunden: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", "Ressource nicht gefunden."));
+                .body(Map.of(ERROR, "Ressource nicht gefunden."));
     }
 }

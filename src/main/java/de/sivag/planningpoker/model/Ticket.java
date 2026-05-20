@@ -18,14 +18,14 @@ import lombok.Setter;
 public class Ticket {
 
     // ====================================
-    // Instance Variables
+    // Instanz Variablen
     // ====================================
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String title;
 
     @Enumerated(EnumType.STRING)

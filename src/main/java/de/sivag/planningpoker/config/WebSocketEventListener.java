@@ -1,8 +1,8 @@
 package de.sivag.planningpoker.config;
 
 import de.sivag.planningpoker.service.SessionService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -19,15 +19,23 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class WebSocketEventListener {
 
     // ====================================
-    // Dependencies
+    // Abhängigkeiten
     // ====================================
 
     private final SessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    // ====================================
+    // Konstruktor
+    // ====================================
+
+    public WebSocketEventListener(@Lazy SessionService sessionService, SimpMessagingTemplate messagingTemplate) {
+        this.sessionService = sessionService;
+        this.messagingTemplate = messagingTemplate;
+    }
 
     // ====================================
     // Event Handlers
@@ -46,8 +54,7 @@ public class WebSocketEventListener {
         if (roomCode == null || participantId == null) return;
 
         try {
-            String participantName = sessionService.removeParticipant(
-                    roomCode, participantId);
+            String participantName = sessionService.removeParticipant(participantId);
 
             log.info("Teilnehmer getrennt und entfernt: name={}, roomCode={}",
                     participantName, roomCode);

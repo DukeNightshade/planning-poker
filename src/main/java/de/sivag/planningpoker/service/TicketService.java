@@ -15,7 +15,6 @@ import java.util.NoSuchElementException;
 
 /**
  * Service für die Ticket-Verwaltung.
- * Verantwortlich für Hinzufügen, Auswählen und Abrufen.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -25,15 +24,15 @@ import java.util.NoSuchElementException;
 public class TicketService {
 
     // ====================================
-    // Dependencies
+    // Abhängigkeiten
     // ====================================
 
-    private final SessionService sessionService; // SoC: Nutzt jetzt den dedizierten Service statt Repository
+    private final SessionService sessionService;
     private final TicketRepository ticketRepository;
     private final VoteRepository voteRepository;
 
     // ====================================
-    // Business Logic Methods
+    // Business Logik Methoden
     // ====================================
 
     @Transactional

@@ -1,3 +1,5 @@
+/* global SockJS, Stomp */
+
 // ====================================
 // Session-Daten aus DOM
 // ====================================
@@ -74,14 +76,15 @@ function connect() {
         _reconnectAttempts = 0;
 
         if (_wasDisconnected) {
-            showToast('Verbindung wiederhergestellt.', 'success', '', 3000);
+            showToast(globalThis.i18n.toast.reconnected, 'success', '', 3000);
             _wasDisconnected = false;
         }
 
         stompClient.subscribe('/topic/session/' + roomCode, function (message) {
             handleMessage(JSON.parse(message.body));
-        });
-        loadInitialData();
+        }, {}).then?.();
+        loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
+
     }, function (error) {
         console.error('WebSocket Verbindungsfehler:', error);
         _wasDisconnected = true;
@@ -89,12 +92,7 @@ function connect() {
 
         const delay = Math.min(3000 * _reconnectAttempts, 15000);
         if (_reconnectAttempts === 1) {
-            showToast(
-                'Verbindung getrennt – wird wiederhergestellt...',
-                'warning',
-                'Bitte warten',
-                0
-            );
+            showToast(globalThis.i18n.toast.disconnected, 'warning', globalThis.i18n.toast.disconnectedSub, 0);
         }
         setTimeout(connect, delay);
     });
@@ -110,6 +108,10 @@ async function loadInitialData() {
         ticketList.forEach(t => {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
+
+        const hasTickets = ticketList.length > 0;
+        document.getElementById('ticketSidebar').style.display = hasTickets ? 'flex' : 'none';
+        document.querySelector('.session').classList.toggle('session--with-tickets', hasTickets);
         renderTicketSidebar();
     }
 
@@ -118,7 +120,7 @@ async function loadInitialData() {
         const state = await stateResponse.json();
         if (state.currentTicketId) {
             currentTicketId = state.currentTicketId.toString();
-            document.getElementById('topicText').textContent = state.currentTicketTitle;
+            document.getElementById('topicText').textContent = state['currentTicketTitle'] ?? '';
         }
     }
 
@@ -132,105 +134,114 @@ async function loadInitialData() {
 
 function handleMessage(data) {
     switch (data.type) {
-        case 'VOTE_UPDATE':
-            updateVoteStatus(data.votedCount, data.totalCount, data.voterId);
-            break;
-        case 'REVEAL':
-            showResults(data.votes);
-            break;
-        case 'DISCUSSION_UPDATE':
-            updateDiscussion(data.participantId, data.participantName, data.cardValue);
-            break;
-        case 'RESET':
-            resetUI();
-            showToast('Neue Runde gestartet.', 'info', '', 2500);
-            break;
-        case 'SETTINGS_UPDATE':
-            applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
-            showToast('Einstellungen aktualisiert.', 'info', '', 2500);
-            break;
-        case 'PLAYER_JOINED':
-            if (!players[data.participantId]) {
-                players[data.participantId] = {
-                    name:              data.participantName,
-                    role:              data.participantRole || 'DEVELOPER',
-                    moderator:         false,
-                    voted:             false,
-                    cardValue:         null,
-                    originalCardValue: null,
-                    changed:           false
-                };
-                if (data.participantId !== participantId) {
-                    showToast(
-                        `${escapeHtml(data.participantName)} ist beigetreten`,
-                        'info',
-                        getRoleLabel(data.participantRole),
-                        3000
-                    );
-                }
-            }
-            renderTable();
-            renderSidebar();
-            break;
-        case 'PLAYER_LEFT':
-            if (players[data.participantId]) {
-                const leftName = players[data.participantId].name;
-                delete players[data.participantId];
-                showToast(
-                    `${escapeHtml(leftName)} hat die Session verlassen`,
-                    'warning',
-                    '',
-                    3000
-                );
-            }
-            renderTable();
-            renderSidebar();
-            break;
-        case 'MODERATOR_PROMOTED':
-            if (players[data.participantId]) {
-                players[data.participantId].moderator = true;
-            }
-            if (data.participantId === participantId) {
-                isModerator = true;
-                document.getElementById('moderatorActions').style.display = 'flex';
-                document.getElementById('settingsBtn').style.display      = 'block';
-                document.getElementById('addTicketBtn').style.display     = 'block';
-            } else {
-                showToast(
-                    `${escapeHtml(data.participantName)} ist jetzt Moderator`,
-                    'info',
-                    '',
-                    3000
-                );
-            }
-            renderSidebar();
-            break;
-        case 'MODERATOR_DEMOTED':
-            if (players[data.participantId]) {
-                players[data.participantId].moderator = false;
-            }
-            if (data.participantId === participantId) {
-                isModerator = false;
-                sessionStorage.setItem('isModerator', 'false');
-                document.getElementById('moderatorActions').style.display = 'none';
-                document.getElementById('settingsBtn').style.display      = 'none';
-                document.getElementById('addTicketBtn').style.display     = 'none';
-            }
-            renderSidebar();
-            break;
-        case 'TICKET_ADDED':
-            tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
-            renderTicketSidebar();
-            showToast(`Ticket hinzugefügt: ${escapeHtml(data.title)}`, 'success', '', 3000);
-            break;
-        case 'TICKET_SELECTED':
-            currentTicketId = data.id;
-            document.getElementById('topicText').textContent = data.title;
-            resetUI();
-            renderTicketSidebar();
-            showToast(`Ticket gewechselt: ${escapeHtml(data.title)}`, 'info', '', 2500);
-            break;
+        case 'VOTE_UPDATE':      handleVoteUpdate(data);      break;
+        case 'REVEAL':           showResults(data.votes);     break;
+        case 'DISCUSSION_UPDATE': updateDiscussion(data.participantId, data.participantName, data.cardValue); break;
+        case 'RESET':            handleReset();               break;
+        case 'SETTINGS_UPDATE':  handleSettingsUpdate(data);  break;
+        case 'PLAYER_JOINED':    handlePlayerJoined(data);    break;
+        case 'PLAYER_LEFT':      handlePlayerLeft(data);      break;
+        case 'MODERATOR_PROMOTED': handleModeratorPromoted(data); break;
+        case 'MODERATOR_DEMOTED':  handleModeratorDemoted(data);  break;
+        case 'TICKET_ADDED':     handleTicketAdded(data);     break;
+        case 'TICKET_SELECTED':  handleTicketSelected(data);  break;
     }
+}
+
+function handleReset() {
+    resetUI();
+    showToast(globalThis.i18n.toast.newround, 'info', '', 2500);
+}
+
+function handleSettingsUpdate(data) {
+    applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
+    showToast(globalThis.i18n.toast.settings, 'info', '', 2500);
+}
+
+function handleTicketAdded(data) {
+    tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
+    document.getElementById('ticketSidebar').style.display = 'flex';
+    document.querySelector('.session').classList.add('session--with-tickets');
+    renderTicketSidebar();
+    showToast(globalThis.i18n.toast.ticketAdded + ' ' + escapeHtml(data.title), 'success', '', 3000);
+}
+
+function handleTicketSelected(data) {
+    currentTicketId = data.id;
+    document.getElementById('topicText').textContent = data.title;
+    resetUI();
+    renderTicketSidebar();
+    showToast(globalThis.i18n.toast.ticketSelected + ' ' + escapeHtml(data.title), 'info', '', 2500);
+}
+function handleVoteUpdate(data) {
+    updateVoteStatus(data.votedCount, data.totalCount, data.voterId);
+}
+
+function handlePlayerJoined(data) {
+    if (!players[data.participantId]) {
+        players[data.participantId] = {
+            name:              data.participantName,
+            role:              data.participantRole || 'DEVELOPER',
+            moderator:         false,
+            voted:             false,
+            cardValue:         null,
+            originalCardValue: null,
+            changed:           false
+        };
+        if (data.participantId !== participantId) {
+            showToast(
+                globalThis.i18n.toast.joined.replace('{0}', escapeHtml(data.participantName)),
+                'info', getRoleLabel(data.participantRole), 3000
+            );
+        }
+    }
+    renderTable();
+    renderSidebar();
+}
+
+function handlePlayerLeft(data) {
+    if (players[data.participantId]) {
+        const leftName = players[data.participantId].name;
+        delete players[data.participantId];
+        showToast(
+            globalThis.i18n.toast.left.replace('{0}', escapeHtml(leftName)),
+            'warning', '', 3000
+        );
+    }
+    renderTable();
+    renderSidebar();
+}
+
+function handleModeratorPromoted(data) {
+    if (players[data.participantId]) {
+        players[data.participantId].moderator = true;
+    }
+    if (data.participantId === participantId) {
+        isModerator = true;
+        document.getElementById('moderatorActions').style.display = 'flex';
+        document.getElementById('settingsBtn').style.display      = 'block';
+        document.getElementById('addTicketBtn').style.display     = 'block';
+    } else {
+        showToast(
+            globalThis.i18n.toast.moderatorPromoted.replace('{0}', escapeHtml(data.participantName)),
+            'info', '', 3000
+        );
+    }
+    renderSidebar();
+}
+
+function handleModeratorDemoted(data) {
+    if (players[data.participantId]) {
+        players[data.participantId].moderator = false;
+    }
+    if (data.participantId === participantId) {
+        isModerator = false;
+        sessionStorage.setItem('isModerator', 'false');
+        document.getElementById('moderatorActions').style.display = 'none';
+        document.getElementById('settingsBtn').style.display      = 'none';
+        document.getElementById('addTicketBtn').style.display     = 'none';
+    }
+    renderSidebar();
 }
 
 // ====================================

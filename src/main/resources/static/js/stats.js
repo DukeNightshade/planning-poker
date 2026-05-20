@@ -2,10 +2,6 @@
 // Statistik-Berechnung
 // ====================================
 
-/**
- * Berechnet Durchschnitt und Spread getrennt für Entwickler und Tester
- * sowie Gesamtdurchschnitt aller Rollen.
- */
 function recalculateStats() {
     const devVotes   = extractNumericVotes('DEVELOPER');
     const testerVotes = extractNumericVotes('TESTER');
@@ -27,8 +23,8 @@ function recalculateStats() {
 function extractNumericVotes(role) {
     return Object.values(players)
         .filter(p => p.role === role && p.cardValue)
-        .map(p => parseFloat(p.cardValue))
-        .filter(v => !isNaN(v));
+        .map(p => Number.parseFloat(p.cardValue))
+        .filter(v => !Number.isNaN(v));
 }
 
 function average(votes) {

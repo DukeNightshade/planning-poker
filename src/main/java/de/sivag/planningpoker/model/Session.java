@@ -23,7 +23,7 @@ import java.util.List;
 public class Session {
 
     // ====================================
-    // Instance Variables
+    // Instanz Variablen
     // ====================================
 
     @Id

@@ -14,7 +14,6 @@ import java.util.Map;
 
 /**
  * REST-Controller für Teilnehmer-Operationen.
- * Verantwortlich für Beitritt, Promote und Demote.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -26,18 +25,26 @@ import java.util.Map;
 public class ParticipantRestController {
 
     // ====================================
-    // Dependencies
+    // Konstanten
+    // ====================================
+
+    private static final String TOPIC_SESSION    = "/topic/session/";
+    private static final String PARTICIPANT_ID   = "participantId";
+    private static final String PARTICIPANT_NAME = "participantName";
+
+    // ====================================
+    // Abhängigkeiten
     // ====================================
 
     private final SessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
 
     // ====================================
-    // Endpoints
+    // Endpunkte
     // ====================================
 
     @PostMapping("/{roomCode}/join")
-    public ResponseEntity<?> joinSession(
+    public ResponseEntity<Map<String, Object>> joinSession(
             @PathVariable String roomCode,
             @RequestBody Map<String, String> body) {
 
@@ -51,50 +58,50 @@ public class ParticipantRestController {
                 name, role.name(), roomCode);
 
         messagingTemplate.convertAndSend(
-                "/topic/session/" + roomCode,
+                TOPIC_SESSION + roomCode,
                 Map.of(
                         "type",            "PLAYER_JOINED",
-                        "participantId",   participant.getId().toString(),
-                        "participantName", participant.getName(),
+                        PARTICIPANT_ID,   participant.getId().toString(),
+                        PARTICIPANT_NAME, participant.getName(),
                         "participantRole", participant.getRole().name()
                 )
         );
 
         return ResponseEntity.ok(Map.of(
-                "participantId", participant.getId(),
+                PARTICIPANT_ID, participant.getId(),
                 "name",          participant.getName(),
                 "role",          participant.getRole().name()
         ));
     }
 
     @PostMapping("/{roomCode}/participants/{participantId}/promote")
-    public ResponseEntity<?> promoteToModerator(
+    public ResponseEntity<Map<String, Object>> promoteToModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId) {
 
         Participant participant =
-                sessionService.promoteToModerator(roomCode, participantId);
+                sessionService.promoteToModerator(participantId);
 
         log.info("Teilnehmer zum Moderator befördert: name={}, roomCode={}",
                 participant.getName(), roomCode);
 
         messagingTemplate.convertAndSend(
-                "/topic/session/" + roomCode,
+                TOPIC_SESSION + roomCode,
                 Map.of(
                         "type",            "MODERATOR_PROMOTED",
-                        "participantId",   participant.getId().toString(),
-                        "participantName", participant.getName()
+                        PARTICIPANT_ID,   participant.getId().toString(),
+                        PARTICIPANT_NAME, participant.getName()
                 )
         );
 
         return ResponseEntity.ok(Map.of(
-                "participantId", participant.getId(),
+                PARTICIPANT_ID, participant.getId(),
                 "moderator",     participant.isModerator()
         ));
     }
 
     @PostMapping("/{roomCode}/participants/{participantId}/demote")
-    public ResponseEntity<?> demoteFromModerator(
+    public ResponseEntity<Map<String, Object>> demoteFromModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId) {
 
@@ -105,16 +112,16 @@ public class ParticipantRestController {
                 participant.getName(), roomCode);
 
         messagingTemplate.convertAndSend(
-                "/topic/session/" + roomCode,
+                TOPIC_SESSION + roomCode,
                 Map.of(
                         "type",            "MODERATOR_DEMOTED",
-                        "participantId",   participant.getId().toString(),
-                        "participantName", participant.getName()
+                        PARTICIPANT_ID,   participant.getId().toString(),
+                        PARTICIPANT_NAME, participant.getName()
                 )
         );
 
         return ResponseEntity.ok(Map.of(
-                "participantId", participant.getId(),
+                PARTICIPANT_ID, participant.getId(),
                 "moderator",     participant.isModerator()
         ));
     }

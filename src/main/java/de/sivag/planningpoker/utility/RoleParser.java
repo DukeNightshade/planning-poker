@@ -4,7 +4,6 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 
 /**
  * Utility-Klasse zur sicheren Konvertierung von Rollen-Strings
- * in ParticipantRole-Enums mit Fallback-Verhalten.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -12,7 +11,7 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 public final class RoleParser {
 
     // ====================================
-    // Konstruktor (Utility-Klasse)
+    // Konstruktor
     // ====================================
 
     private RoleParser() {
@@ -20,7 +19,7 @@ public final class RoleParser {
     }
 
     // ====================================
-    // Utility Methods
+    // Utility Methoden
     // ====================================
 
     public static ParticipantRole parseParticipantRole(String roleStr) {
