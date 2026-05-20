@@ -73,6 +73,7 @@ public class SessionService {
                                             ParticipantRole moderatorRole,
                                             List<String> ticketTitles) {
         Session session = createSession(moderatorName, method, moderatorRole);
+        session.setShowTopic(true);
 
         Ticket firstTicket = null;
         for (int i = 0; i < ticketTitles.size(); i++) {
@@ -188,15 +189,5 @@ public class SessionService {
             sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
         return sb.toString();
-    }
-
-    private String sanitize(String input) {
-        if (input == null) return "";
-        return input
-                .replace("&",  "&amp;")
-                .replace("<",  "&lt;")
-                .replace(">",  "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'",  "&#x27;");
     }
 }

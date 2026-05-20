@@ -7,7 +7,6 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
 import de.sivag.planningpoker.repository.SessionRepository;
-import de.sivag.planningpoker.repository.TicketRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,9 +41,6 @@ class SessionServiceTest {
 
     @Mock
     private ParticipantRepository participantRepository;
-
-    @Mock
-    private TicketRepository ticketRepository;
 
     @InjectMocks
     private SessionService sessionService;

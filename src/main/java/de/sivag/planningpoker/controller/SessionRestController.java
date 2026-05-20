@@ -80,7 +80,8 @@ public class SessionRestController {
     @GetMapping("/{roomCode}/state")
     public ResponseEntity<?> getState(@PathVariable String roomCode) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
-        String currentTicketTitle = resolveCurrentTicketTitle(session);
+        String currentTicketTitle = ticketService.getCurrentTicketTitle(
+                roomCode, session.getCurrentTicketId());
 
         return ResponseEntity.ok(Map.of(
                 "roomCode",           session.getRoomCode(),
@@ -91,19 +92,5 @@ public class SessionRestController {
                 "status",             session.getStatus().name(),
                 "participantCount",   sessionService.getParticipants(roomCode).size()
         ));
-    }
-
-    // ====================================
-    // Utility Methods
-    // ====================================
-
-    private String resolveCurrentTicketTitle(Session session) {
-        if (session.getCurrentTicketId() == null) return "";
-        return ticketService.getTickets(session.getRoomCode())
-                .stream()
-                .filter(t -> t.getId().equals(session.getCurrentTicketId()))
-                .findFirst()
-                .map(t -> t.getTitle())
-                .orElse("");
     }
 }

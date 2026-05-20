@@ -37,21 +37,51 @@ function selectCard(button) {
 // ====================================
 
 function revealCards() {
-    document.querySelectorAll('#pokerTable rect').forEach(card => {
-        if (card.getAttribute('id')?.startsWith('card-')) {
-            card.style.transition    = 'transform 0.25s ease-in';
-            card.style.transformBox  = 'fill-box';
-            card.style.transformOrigin = 'center';
-            card.style.transform     = 'scaleX(0)';
-        }
+    // Karten-Gruppen drehen sich um Y-Achse weg (echtes Flip)
+    const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
+    groups.forEach((g, i) => {
+        g.style.transition = `transform ${180}ms ease-in ${i * 35}ms`;
+        g.style.transform  = 'scaleX(0)';
     });
+    const delay = groups.length * 35 + 200;
     setTimeout(() => {
         stompClient.send('/app/session/' + roomCode + '/reveal', {}, {});
-    }, 250);
+    }, delay);
 }
 
 function resetRound() {
-    stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
+    // Karten fliegen zur Tischmitte (Poker-Wurf), dann neue Runde
+    const svg = document.querySelector('#pokerTable svg');
+    if (!svg) {
+        stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
+        return;
+    }
+    const vb    = svg.viewBox.baseVal;
+    const cx    = vb.x + vb.width  / 2;
+    const cy    = vb.y + vb.height / 2;
+
+    const groups = [...svg.querySelectorAll('[id^="card-group-"]')];
+    groups.forEach((g, i) => {
+        // Aktuelle Position aus transform-origin auslesen
+        const origin = g.style.transformOrigin || '0px 0px';
+        const parts  = origin.match(/([\d.]+)px\s+([\d.]+)px/);
+        if (!parts) return;
+        const ox = parseFloat(parts[1]);
+        const oy = parseFloat(parts[2]);
+        const dx = cx - ox;
+        const dy = cy - oy;
+        const angle = (Math.random() - 0.5) * 40; // leichte Rotation
+
+        const delay = i * 30;
+        g.style.transition = `transform ${280}ms cubic-bezier(.4,0,.6,1) ${delay}ms, opacity ${200}ms ease ${delay + 150}ms`;
+        g.style.transform  = `translate(${dx}px, ${dy}px) rotate(${angle}deg) scale(0.5)`;
+        g.style.opacity    = '0';
+    });
+
+    const totalDelay = groups.length * 30 + 320;
+    setTimeout(() => {
+        stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
+    }, totalDelay);
 }
 
 // ====================================
@@ -94,6 +124,8 @@ function showResults(votes) {
     document.getElementById('pokerPane').classList.add('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
+
+    showToast('Karten aufgedeckt! Diskussionsmodus aktiv.', 'success', '', 3000);
 }
 
 function resetUI() {
@@ -120,6 +152,48 @@ function resetUI() {
 
     renderTable();
     renderSidebar();
+
+    // Karten werden ausgeteilt — jede kommt einzeln mit Versatz
+    _dealCardsIn();
+}
+
+function _dealCardsIn() {
+    // Kurz warten bis renderTable() das SVG neu aufgebaut hat
+    setTimeout(() => {
+        const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
+        // Alle sofort unsichtbar und klein in der Tischmitte
+        const svg = document.querySelector('#pokerTable svg');
+        let cx = 450, cy = 250;
+        if (svg) {
+            const vb = svg.viewBox.baseVal;
+            cx = vb.x + vb.width  / 2;
+            cy = vb.y + vb.height / 2;
+        }
+        groups.forEach(g => {
+            const origin = g.style.transformOrigin || '';
+            const parts  = origin.match(/([\d.]+)px\s+([\d.]+)px/);
+            if (!parts) return;
+            const ox = parseFloat(parts[1]);
+            const oy = parseFloat(parts[2]);
+            const dx = cx - ox;
+            const dy = cy - oy;
+            g.style.transition = 'none';
+            g.style.transform  = `translate(${dx}px, ${dy}px) scale(0.15) rotate(${(Math.random()-0.5)*30}deg)`;
+            g.style.opacity    = '0';
+        });
+
+        // Jede Karte wird einzeln ausgeteilt
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                groups.forEach((g, i) => {
+                    const delay = i * 80; // 80ms zwischen jeder Karte — echter Deal-Rhythmus
+                    g.style.transition = `transform 350ms cubic-bezier(.2,.8,.3,1.2) ${delay}ms, opacity 200ms ease ${delay}ms`;
+                    g.style.transform  = 'translate(0,0) scale(1) rotate(0deg)';
+                    g.style.opacity    = '1';
+                });
+            });
+        });
+    }, 50);
 }
 
 // ====================================
@@ -164,7 +238,12 @@ async function promoteMyself() {
         `/api/sessions/${roomCode}/participants/${participantId}/promote`,
         { method: 'POST' }
     );
-    if (response.ok) sessionStorage.setItem('isModerator', 'true');
+    if (response.ok) {
+        sessionStorage.setItem('isModerator', 'true');
+        showToast('Du bist jetzt Moderator.', 'success', '', 3000);
+    } else {
+        showToast('Beförderung fehlgeschlagen.', 'error');
+    }
 }
 
 async function demoteParticipant(targetParticipantId) {
@@ -174,9 +253,10 @@ async function demoteParticipant(targetParticipantId) {
     );
     if (!response.ok) {
         const data = await response.json();
-        alert(data.error || 'Demote fehlgeschlagen.');
+        showToast(data.error || 'Aktion fehlgeschlagen.', 'error');
     } else if (targetParticipantId === participantId) {
         sessionStorage.setItem('isModerator', 'false');
+        showToast('Moderator-Rechte abgegeben.', 'info', '', 3000);
     }
 }
 
@@ -190,9 +270,9 @@ function toggleSettings() {
 }
 
 function saveSettings() {
-    const showTopic       = document.getElementById('settingShowTopic').checked;
+    const showTopic        = document.getElementById('settingShowTopic').checked;
     const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
-    const autoReveal      = document.getElementById('settingAutoReveal').checked;
+    const autoReveal       = document.getElementById('settingAutoReveal').checked;
     stompClient.send('/app/session/' + roomCode + '/settings', {},
         JSON.stringify({ showTopic, moderatorCanVote, autoReveal }));
 }
@@ -200,7 +280,11 @@ function saveSettings() {
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = showTopic ? 'flex' : 'none';
-
+    const ticketSidebar = document.getElementById('ticketSidebar');
+    if (ticketSidebar) {
+        ticketSidebar.style.display = showTopic ? 'flex' : 'none';
+        document.querySelector('.session').classList.toggle('session--with-tickets', showTopic);
+    }
     const canVote = participantRole !== 'PRODUCT_OWNER' &&
         !(isModerator && !moderatorCanVote);
     document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
@@ -219,6 +303,9 @@ function copyRoomCode() {
         const btn = document.getElementById('copyBtn');
         btn.textContent = '✓ Kopiert';
         setTimeout(() => btn.textContent = 'Kopieren', 2000);
+        showToast('Raumcode kopiert!', 'success', roomCode, 2500);
+    }).catch(() => {
+        showToast('Kopieren fehlgeschlagen.', 'error');
     });
 }
 
@@ -227,20 +314,22 @@ function copyRoomCode() {
 // ====================================
 
 function _flipCardsIn() {
-    document.querySelectorAll('#pokerTable rect').forEach(card => {
-        if (card.getAttribute('id')?.startsWith('card-')) {
-            card.style.transition      = 'none';
-            card.style.transformBox    = 'fill-box';
-            card.style.transformOrigin = 'center';
-            card.style.transform       = 'scaleX(0)';
-        }
-    });
+    // Nach Aufdecken: Karten flippen mit Versatz rein (scaleX 0→1)
+    // renderTable() wurde bereits aufgerufen — Gruppen sind neu im DOM
     setTimeout(() => {
-        document.querySelectorAll('#pokerTable rect').forEach(card => {
-            if (card.getAttribute('id')?.startsWith('card-')) {
-                card.style.transition  = 'transform 0.3s ease-out';
-                card.style.transform   = 'scaleX(1)';
-            }
+        const groups = [...document.querySelectorAll('#pokerTable [id^="card-group-"]')];
+        groups.forEach(g => {
+            g.style.transition = 'none';
+            g.style.transform  = 'scaleX(0)';
+            g.style.opacity    = '1';
         });
-    }, 50);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                groups.forEach((g, i) => {
+                    g.style.transition = `transform 320ms cubic-bezier(.34,1.4,.64,1) ${i * 55}ms`;
+                    g.style.transform  = 'scaleX(1)';
+                });
+            });
+        });
+    }, 30);
 }

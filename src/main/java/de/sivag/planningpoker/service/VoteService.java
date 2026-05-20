@@ -7,16 +7,16 @@ import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.model.enums.TicketStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
-import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
@@ -26,6 +26,7 @@ import java.util.OptionalDouble;
  * @author Nico Hoffmann
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VoteService {
@@ -34,25 +35,31 @@ public class VoteService {
     // Dependencies
     // ====================================
 
-    private final SessionRepository sessionRepository;
+    private final SessionService sessionService; // SoC: Von Repository auf delegierenden Service umgestellt
     private final ParticipantRepository participantRepository;
-    private final VoteRepository voteRepository;
-    private final TicketRepository ticketRepository;
+    private final VoteRepository        voteRepository;
+    private final TicketRepository      ticketRepository;
 
     // ====================================
     // Business Logic Methods
     // ====================================
 
     @Transactional
-    public Vote submitVote(String roomCode, Long participantId, String cardValue, boolean isDiscussion) {
-        Session session = getSessionByRoomCode(roomCode);
-
+    public Vote submitVote(String roomCode, Long participantId,
+                           String cardValue, boolean isDiscussion) {
+        Session session = sessionService.getSessionByRoomCode(roomCode);
         if (!isDiscussion && session.getStatus() == SessionStatus.REVEALED) {
             throw new IllegalStateException("Karten bereits aufgedeckt.");
         }
 
-        Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException("Teilnehmer nicht gefunden."));
+        Optional<Participant> participantOpt =
+                participantRepository.findById(participantId);
+        if (participantOpt.isEmpty()) {
+            log.warn("Vote ignoriert – Teilnehmer {} nicht gefunden " +
+                    "(veraltete SessionStorage?)", participantId);
+            return null;
+        }
+        Participant participant = participantOpt.get();
 
         voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
                 .ifPresent(existing -> {
@@ -67,38 +74,32 @@ public class VoteService {
 
         if (!isDiscussion) {
             session.setStatus(SessionStatus.VOTING);
-            sessionRepository.save(session);
         }
 
         return voteRepository.save(vote);
     }
 
-
     @Transactional
     public List<Vote> revealCards(String roomCode) {
-        Session session = getSessionByRoomCode(roomCode);
+        Session session = sessionService.getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.REVEALED);
-        sessionRepository.save(session);
-
-        List<Vote> votes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
+        List<Vote> votes = voteRepository
+                .findBySessionRoomCodeWithParticipant(roomCode);
 
         if (session.getCurrentTicketId() != null) {
-            ticketRepository.findById(session.getCurrentTicketId()).ifPresent(ticket ->
-                    saveEstimateToTicket(ticket, votes));
+            ticketRepository.findById(session.getCurrentTicketId())
+                    .ifPresent(ticket -> saveEstimateToTicket(ticket, votes));
         }
 
         return votes;
     }
 
-
     @Transactional
     public void resetRound(String roomCode) {
-        Session session = getSessionByRoomCode(roomCode);
+        Session session = sessionService.getSessionByRoomCode(roomCode);
         session.setStatus(SessionStatus.WAITING);
-        sessionRepository.save(session);
         voteRepository.deleteBySessionRoomCode(roomCode);
     }
-
 
     public List<Vote> getVotes(String roomCode) {
         return voteRepository.findBySessionRoomCode(roomCode);
@@ -126,11 +127,5 @@ public class VoteService {
         return value == Math.floor(value)
                 ? String.valueOf((int) value)
                 : String.format(Locale.US, "%.1f", value);
-    }
-
-    private Session getSessionByRoomCode(String roomCode) {
-        return sessionRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Session mit Raumcode " + roomCode + " nicht gefunden."));
     }
 }
