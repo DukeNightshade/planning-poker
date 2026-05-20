@@ -44,8 +44,10 @@ body {
     color: var(--color-white);
     display: flex;
     align-items: center;
-    padding: 1rem 2rem;
+    padding: 1.25rem 2rem;
     position: relative;
+    min-height: 80px;
+    border-bottom: 3px solid var(--color-red);
 }
 
 .header__logo {
@@ -64,9 +66,11 @@ body {
 }
 
 .header__title {
-    font-size: 2rem;
+    font-size: 1.6rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
+    color: var(--color-white);
+    letter-spacing: 0.5px;
 }
 
 .header__title-block {
@@ -77,8 +81,10 @@ body {
 }
 
 .header__subtitle {
-    font-size: 1rem;
-    opacity: 0.75;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 300;
+    opacity: 1;
 }
 
 /* ================================
@@ -830,14 +836,18 @@ body {
     }
 
     .header__title {
-        color: #e8eaf0;
+        color: #ffffff;
     }
 
     .header__app-title {
         color: #e8eaf0;
     }
 
-    .header,
+    .header {
+        background: #0a1628;
+        border-bottom: 3px solid var(--color-red);
+    }
+
     .header--session {
         background: #0f1923;
     }
@@ -848,8 +858,7 @@ body {
     }
 
     .header__subtitle {
-        color: #9aa5b4;
-        opacity: 1;
+        color: rgba(255, 255, 255, 0.65);
     }
 
     .header__bottom {
