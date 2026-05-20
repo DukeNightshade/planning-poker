@@ -63,4 +63,13 @@ public class TicketService {
     public List<Ticket> getTickets(String roomCode) {
         return ticketRepository.findBySessionRoomCodeOrderByOrderIndex(roomCode);
     }
+
+    public String getCurrentTicketTitle(String roomCode, Long ticketId) {
+        if (ticketId == null) return "";
+        return getTickets(roomCode).stream()
+                .filter(t -> t.getId().equals(ticketId))
+                .findFirst()
+                .map(Ticket::getTitle)
+                .orElse("");
+    }
 }
