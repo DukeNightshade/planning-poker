@@ -3,7 +3,6 @@ package de.sivag.planningpoker.service;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.enums.SessionStatus;
-import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.repository.VoteRepository;
 import de.sivag.planningpoker.utility.StringUtils;
@@ -16,7 +15,7 @@ import java.util.NoSuchElementException;
 
 /**
  * Service für die Ticket-Verwaltung.
- * Verantwortlich für Hinzufügen, Auswählen und Abrufen
+ * Verantwortlich für Hinzufügen, Auswählen und Abrufen.
  *
  * @author Nico Hoffmann
  * @version 1.0
@@ -29,7 +28,7 @@ public class TicketService {
     // Dependencies
     // ====================================
 
-    private final SessionRepository sessionRepository;
+    private final SessionService sessionService; // SoC: Nutzt jetzt den dedizierten Service statt Repository
     private final TicketRepository ticketRepository;
     private final VoteRepository voteRepository;
 
@@ -39,7 +38,7 @@ public class TicketService {
 
     @Transactional
     public Ticket addTicket(String roomCode, String title) {
-        Session session = getSessionByRoomCode(roomCode);
+        Session session = sessionService.getSessionByRoomCode(roomCode);
 
         Ticket ticket = new Ticket();
         ticket.setTitle(StringUtils.sanitize(title));
@@ -51,14 +50,11 @@ public class TicketService {
 
     @Transactional
     public Ticket selectTicket(String roomCode, Long ticketId) {
-        Session session = getSessionByRoomCode(roomCode);
-
+        Session session = sessionService.getSessionByRoomCode(roomCode);
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new NoSuchElementException("Ticket nicht gefunden."));
-
         session.setCurrentTicketId(ticketId);
         session.setStatus(SessionStatus.WAITING);
-        sessionRepository.save(session);
         voteRepository.deleteBySessionRoomCode(roomCode);
 
         return ticket;
@@ -66,25 +62,5 @@ public class TicketService {
 
     public List<Ticket> getTickets(String roomCode) {
         return ticketRepository.findBySessionRoomCodeOrderByOrderIndex(roomCode);
-    }
-
-    // ====================================
-    // Utility Methods
-    // ====================================
-
-    private Session getSessionByRoomCode(String roomCode) {
-        return sessionRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Session mit Raumcode " + roomCode + " nicht gefunden."));
-    }
-
-    private String sanitize(String input) {
-        if (input == null) return "";
-        return input
-                .replace("&",  "&amp;")
-                .replace("<",  "&lt;")
-                .replace(">",  "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'",  "&#x27;");
     }
 }

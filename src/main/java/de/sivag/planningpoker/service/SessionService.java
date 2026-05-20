@@ -190,14 +190,4 @@ public class SessionService {
         }
         return sb.toString();
     }
-
-    private String sanitize(String input) {
-        if (input == null) return "";
-        return input
-                .replace("&",  "&amp;")
-                .replace("<",  "&lt;")
-                .replace(">",  "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'",  "&#x27;");
-    }
 }

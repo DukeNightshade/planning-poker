@@ -9,7 +9,6 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.model.enums.TicketStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
-import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.repository.VoteRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -41,7 +39,7 @@ class VoteServiceTest {
     // Mocks & Subject Under Test
     // ====================================
 
-    @Mock private SessionRepository    sessionRepository;
+    @Mock private SessionService        sessionService;
     @Mock private ParticipantRepository participantRepository;
     @Mock private VoteRepository        voteRepository;
     @Mock private TicketRepository      ticketRepository;
@@ -83,14 +81,12 @@ class VoteServiceTest {
     @Test
     @DisplayName("submitVote: Vote wird erfolgreich gespeichert")
     void submitVote_success() {
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(participantRepository.findById(1L))
                 .thenReturn(Optional.of(testParticipant));
         when(voteRepository.findBySessionRoomCodeAndParticipantId("ABCD1234", 1L))
                 .thenReturn(Optional.empty());
-        when(sessionRepository.save(any(Session.class)))
-                .thenReturn(testSession);
         when(voteRepository.save(any(Vote.class)))
                 .thenReturn(testVote);
 
@@ -103,13 +99,12 @@ class VoteServiceTest {
     @Test
     @DisplayName("submitVote: Vorhandener Vote wird überschrieben")
     void submitVote_existingVote_isReplaced() {
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(participantRepository.findById(1L))
                 .thenReturn(Optional.of(testParticipant));
         when(voteRepository.findBySessionRoomCodeAndParticipantId("ABCD1234", 1L))
                 .thenReturn(Optional.of(testVote));
-        when(sessionRepository.save(any())).thenReturn(testSession);
         when(voteRepository.save(any(Vote.class))).thenReturn(testVote);
 
         voteService.submitVote("ABCD1234", 1L, "8", false);
@@ -123,8 +118,8 @@ class VoteServiceTest {
     @DisplayName("submitVote: Wirft IllegalStateException wenn Karten bereits aufgedeckt")
     void submitVote_alreadyRevealed_throwsException() {
         testSession.setStatus(SessionStatus.REVEALED);
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
 
         assertThatThrownBy(() ->
                 voteService.submitVote("ABCD1234", 1L, "5", false))
@@ -136,8 +131,8 @@ class VoteServiceTest {
     @DisplayName("submitVote: Im Diskussionsmodus wird REVEALED-Status ignoriert")
     void submitVote_discussionMode_allowsVoteWhenRevealed() {
         testSession.setStatus(SessionStatus.REVEALED);
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(participantRepository.findById(1L))
                 .thenReturn(Optional.of(testParticipant));
         when(voteRepository.findBySessionRoomCodeAndParticipantId(any(), any()))
@@ -155,9 +150,8 @@ class VoteServiceTest {
     @Test
     @DisplayName("revealCards: Session-Status wird auf REVEALED gesetzt")
     void revealCards_setsStatusToRevealed() {
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
-        when(sessionRepository.save(any())).thenReturn(testSession);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
                 .thenReturn(List.of(testVote));
 
@@ -187,9 +181,8 @@ class VoteServiceTest {
         vote2.setCardValue("3");
         vote2.setParticipant(p2);
 
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
-        when(sessionRepository.save(any())).thenReturn(testSession);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
                 .thenReturn(List.of(vote1, vote2));
         when(ticketRepository.findById(1L))
@@ -221,9 +214,8 @@ class VoteServiceTest {
         vote2.setCardValue("8");
         vote2.setParticipant(p2);
 
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
-        when(sessionRepository.save(any())).thenReturn(testSession);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
                 .thenReturn(List.of(vote1, vote2));
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
@@ -253,9 +245,8 @@ class VoteServiceTest {
         voteCoffee.setCardValue("☕");
         voteCoffee.setParticipant(p2);
 
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
-        when(sessionRepository.save(any())).thenReturn(testSession);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
         when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
                 .thenReturn(List.of(voteQuestion, voteCoffee));
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
@@ -274,9 +265,8 @@ class VoteServiceTest {
     @DisplayName("resetRound: Status wird auf WAITING gesetzt und Votes gelöscht")
     void resetRound_resetsStatusAndDeletesVotes() {
         testSession.setStatus(SessionStatus.REVEALED);
-        when(sessionRepository.findByRoomCode("ABCD1234"))
-                .thenReturn(Optional.of(testSession));
-        when(sessionRepository.save(any())).thenReturn(testSession);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
 
         voteService.resetRound("ABCD1234");
 
