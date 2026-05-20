@@ -31,9 +31,9 @@ public class PokerWsController {
     // Dependencies
     // ====================================
 
-    private final SessionService sessionService;
-    private final VoteService voteService;
-    private final TicketService ticketService;
+    private final SessionService      sessionService;
+    private final VoteService         voteService;
+    private final TicketService       ticketService;
     private final SimpMessagingTemplate messagingTemplate;
 
     // ====================================
@@ -46,8 +46,8 @@ public class PokerWsController {
             @Payload Map<String, String> payload,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        Long participantId = Long.parseLong(payload.get("participantId"));
-        String cardValue = payload.get("cardValue");
+        Long   participantId = Long.parseLong(payload.get("participantId"));
+        String cardValue     = payload.get("cardValue");
         boolean isDiscussion = Boolean.parseBoolean(
                 payload.getOrDefault("isDiscussion", "false"));
 
@@ -57,27 +57,32 @@ public class PokerWsController {
             sessionAttributes.put("participantId", participantId);
         }
 
-        voteService.submitVote(roomCode, participantId, cardValue, isDiscussion);
+        Vote vote = voteService.submitVote(
+                roomCode, participantId, cardValue, isDiscussion);
+
+        // Teilnehmer nicht gefunden (z.B. veraltete SessionStorage) — ignorieren
+        if (vote == null) return;
 
         if (isDiscussion) {
-            String participantName = sessionService.getParticipants(roomCode).stream()
+            String participantName = sessionService.getParticipants(roomCode)
+                    .stream()
                     .filter(p -> p.getId().equals(participantId))
                     .findFirst()
                     .map(p -> p.getName())
                     .orElse("");
 
             broadcast(roomCode, Map.of(
-                    "type", "DISCUSSION_UPDATE",
-                    "participantId", participantId.toString(),
+                    "type",            "DISCUSSION_UPDATE",
+                    "participantId",   participantId.toString(),
                     "participantName", participantName,
-                    "cardValue", cardValue
+                    "cardValue",       cardValue
             ));
             return;
         }
 
         int totalParticipants = sessionService.getParticipants(roomCode).size();
-        int votedCount = voteService.getVotes(roomCode).size();
-        Session session = sessionService.getSessionByRoomCode(roomCode);
+        int votedCount        = voteService.getVotes(roomCode).size();
+        Session session       = sessionService.getSessionByRoomCode(roomCode);
 
         if (session.isAutoReveal() && votedCount >= totalParticipants) {
             broadcastReveal(roomCode, voteService.revealCards(roomCode));
@@ -85,10 +90,10 @@ public class PokerWsController {
         }
 
         broadcast(roomCode, Map.of(
-                "type", "VOTE_UPDATE",
+                "type",       "VOTE_UPDATE",
                 "votedCount", votedCount,
                 "totalCount", totalParticipants,
-                "voterId", participantId.toString()
+                "voterId",    participantId.toString()
         ));
     }
 
@@ -108,17 +113,17 @@ public class PokerWsController {
             @DestinationVariable String roomCode,
             @Payload Map<String, Object> payload) {
 
-        boolean showTopic = (boolean) payload.get("showTopic");
+        boolean showTopic       = (boolean) payload.get("showTopic");
         boolean moderatorCanVote = (boolean) payload.get("moderatorCanVote");
-        boolean autoReveal = (boolean) payload.get("autoReveal");
+        boolean autoReveal      = (boolean) payload.get("autoReveal");
 
         sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal);
 
         broadcast(roomCode, Map.of(
-                "type", "SETTINGS_UPDATE",
-                "showTopic", showTopic,
+                "type",             "SETTINGS_UPDATE",
+                "showTopic",        showTopic,
                 "moderatorCanVote", moderatorCanVote,
-                "autoReveal", autoReveal
+                "autoReveal",       autoReveal
         ));
     }
 
@@ -130,10 +135,10 @@ public class PokerWsController {
         Ticket ticket = ticketService.addTicket(roomCode, payload.get("title"));
 
         broadcast(roomCode, Map.of(
-                "type", "TICKET_ADDED",
-                "id", ticket.getId().toString(),
-                "title", ticket.getTitle(),
-                "status", ticket.getStatus().name(),
+                "type",       "TICKET_ADDED",
+                "id",         ticket.getId().toString(),
+                "title",      ticket.getTitle(),
+                "status",     ticket.getStatus().name(),
                 "orderIndex", ticket.getOrderIndex()
         ));
     }
@@ -147,8 +152,8 @@ public class PokerWsController {
                 roomCode, Long.parseLong(payload.get("ticketId")));
 
         broadcast(roomCode, Map.of(
-                "type", "TICKET_SELECTED",
-                "id", ticket.getId().toString(),
+                "type",  "TICKET_SELECTED",
+                "id",    ticket.getId().toString(),
                 "title", ticket.getTitle()
         ));
     }
@@ -158,16 +163,17 @@ public class PokerWsController {
     // ====================================
 
     private void broadcast(String roomCode, Map<String, ?> message) {
-        messagingTemplate.convertAndSend("/topic/session/" + roomCode, message);
+        messagingTemplate.convertAndSend(
+                "/topic/session/" + roomCode, message);
     }
 
     private void broadcastReveal(String roomCode, List<Vote> votes) {
         broadcast(roomCode, Map.of(
-                "type", "REVEAL",
+                "type",  "REVEAL",
                 "votes", votes.stream().map(v -> Map.of(
                         "participantName", v.getParticipant().getName(),
                         "participantRole", v.getParticipant().getRole().name(),
-                        "cardValue", v.getCardValue()
+                        "cardValue",       v.getCardValue()
                 )).toList()
         ));
     }

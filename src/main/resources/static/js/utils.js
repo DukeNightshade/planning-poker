@@ -50,3 +50,59 @@ function escapeHtml(str) {
         .replace(/"/g,  '&quot;')
         .replace(/'/g,  '&#x27;');
 }
+
+// ====================================
+// Toast Notification System
+// ====================================
+
+/**
+ * Zeigt eine Toast-Benachrichtigung oben rechts an.
+ *
+ * @param {string} message   - Haupttext der Benachrichtigung
+ * @param {'success'|'error'|'warning'|'info'} type - Typ (Standard: 'info')
+ * @param {string} [sub]     - Optionaler Untertext
+ * @param {number} [duration]- Anzeigedauer in ms (Standard: 3500, 0 = kein Auto-close)
+ */
+function showToast(message, type = 'info', sub = '', duration = 3500) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const icons = {
+        success: '✓',
+        error:   '!',
+        warning: '⚠',
+        info:    'i'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    toast.innerHTML = `
+        <div class="toast__icon" aria-hidden="true">${icons[type] || 'i'}</div>
+        <div class="toast__body">
+            <span class="toast__msg">${escapeHtml(message)}</span>
+            ${sub ? `<span class="toast__sub">${escapeHtml(sub)}</span>` : ''}
+        </div>
+        <button class="toast__close" aria-label="Schließen">✕</button>
+    `;
+
+    const dismiss = () => {
+        toast.classList.add('toast--out');
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        }, { once: true });
+    };
+
+    toast.querySelector('.toast__close').addEventListener('click', dismiss);
+
+    container.appendChild(toast);
+
+    if (duration > 0) {
+        setTimeout(dismiss, duration);
+    }
+
+    return toast;
+}

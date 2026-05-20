@@ -4,7 +4,6 @@
 
 /**
  * Rendert den SVG Poker-Tisch vollständig neu.
- * Beinhaltet Ellipse, Status-Anzeige, Fortschrittsbalken und Spielerkarten.
  */
 function renderTable() {
     const container = document.getElementById('pokerTable');
@@ -207,99 +206,159 @@ function _appendPlayerCard(svg, id, player, px, py, cardW, cardH, nameFontSize) 
     const isSelf    = id === participantId;
     const hasVoted  = player.voted;
     const roleColor = ROLE_COLORS[player.role] || '#004178';
+    const showValue = (isRevealed && player.cardValue) || (isSelf && player.cardValue);
+    const { cfg }   = _resolveCardConfig(player, isSelf, hasVoted);
+    const rx = 8;
 
-    const { cardFill, cardStroke, textFill } =
-        _resolveCardColors(player, isSelf, hasVoted);
+    // Alles in eine <g> Gruppe — Transform auf Gruppe funktioniert zuverlässig
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('id', `card-group-${id}`);
+    g.style.transformOrigin = `${px}px ${py}px`;
+    g.style.transformBox    = 'view-box';
 
+    // Schatten — innerhalb der Gruppe damit er mitmacht
+    const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    shadow.setAttribute('x', px - cardW / 2 + 2);
+    shadow.setAttribute('y', py - cardH / 2 + 4);
+    shadow.setAttribute('width', cardW);
+    shadow.setAttribute('height', cardH);
+    shadow.setAttribute('rx', rx);
+    shadow.setAttribute('fill', 'rgba(0,0,0,0.4)');
+    g.appendChild(shadow);
+
+    // Karten-Rect
     const cardRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     cardRect.setAttribute('x', px - cardW / 2);
     cardRect.setAttribute('y', py - cardH / 2);
     cardRect.setAttribute('width', cardW);
     cardRect.setAttribute('height', cardH);
-    cardRect.setAttribute('rx', 5);
-    cardRect.setAttribute('fill', cardFill);
-    cardRect.setAttribute('stroke', cardStroke);
+    cardRect.setAttribute('rx', rx);
+    cardRect.setAttribute('fill', cfg.fill);
+    cardRect.setAttribute('stroke', cfg.stroke);
     cardRect.setAttribute('stroke-width', '2');
     cardRect.setAttribute('id', `card-${id}`);
-    svg.appendChild(cardRect);
+    g.appendChild(cardRect);
 
-    if ((isRevealed && player.cardValue) || (isSelf && player.cardValue)) {
+    if (showValue) {
+        // Innerer Rahmen
+        const inner = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        inner.setAttribute('x', px - cardW / 2 + 4);
+        inner.setAttribute('y', py - cardH / 2 + 4);
+        inner.setAttribute('width', cardW - 8);
+        inner.setAttribute('height', cardH - 8);
+        inner.setAttribute('rx', rx - 3);
+        inner.setAttribute('fill', 'none');
+        inner.setAttribute('stroke', cfg.innerBorder);
+        inner.setAttribute('stroke-width', '1');
+        g.appendChild(inner);
+
+        // Eckzahl
+        const corner = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        corner.setAttribute('x', px - cardW / 2 + 7);
+        corner.setAttribute('y', py - cardH / 2 + 13);
+        corner.setAttribute('fill', cfg.cornerColor);
+        corner.setAttribute('font-size', Math.max(Math.round(cardW * 0.2), 7));
+        corner.setAttribute('font-weight', '700');
+        corner.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        corner.textContent = player.cardValue;
+        g.appendChild(corner);
+
+        // Hauptwert
         const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         cardText.setAttribute('x', px);
-        cardText.setAttribute('y', py + 5);
+        cardText.setAttribute('y', py + 1);
         cardText.setAttribute('text-anchor', 'middle');
-        cardText.setAttribute('fill', textFill);
-        cardText.setAttribute('font-size', cardW > 36 ? 14 : 11);
+        cardText.setAttribute('dominant-baseline', 'middle');
+        cardText.setAttribute('fill', cfg.textFill);
+        cardText.setAttribute('font-size', cardW > 36 ? 16 : 13);
         cardText.setAttribute('font-weight', '700');
         cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
         cardText.textContent = player.cardValue;
-        svg.appendChild(cardText);
+        g.appendChild(cardText);
     }
 
+    svg.appendChild(g);
     _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColor, isSelf);
 }
 
-function _resolveCardColors(player, isSelf, hasVoted) {
+function _resolveCardConfig(player, isSelf, hasVoted) {
     if (isRevealed && player.cardValue) {
         if (player.changed) {
-            return { cardFill: '#fff7ed', cardStroke: '#f97316', textFill: '#c2410c' };
+            return { cfg: {
+                    fill: '#1a0a00', stroke: '#f97316',
+                    textFill: '#fb923c', cornerColor: 'rgba(251,146,60,0.5)',
+                    innerBorder: 'rgba(249,115,22,0.3)'
+                }};
         }
-        return { cardFill: 'white', cardStroke: '#004178', textFill: '#004178' };
+        return { cfg: {
+                fill: '#0d1f35', stroke: '#4a9ede',
+                textFill: '#e2f0ff', cornerColor: 'rgba(226,240,255,0.4)',
+                innerBorder: 'rgba(74,158,222,0.25)'
+            }};
     }
     if (hasVoted) {
-        return { cardFill: '#E1001A', cardStroke: '#c0001a', textFill: 'white' };
+        return { cfg: {
+                fill: '#7f0010', stroke: '#E1001A',
+                textFill: '#ffffff', cornerColor: 'rgba(255,255,255,0.4)',
+                innerBorder: 'rgba(255,255,255,0.15)'
+            }};
     }
     if (isSelf) {
-        return { cardFill: 'white', cardStroke: '#004178', textFill: '#004178' };
+        return { cfg: {
+                fill: '#0d1f35', stroke: '#4a9ede',
+                textFill: '#e2f0ff', cornerColor: 'rgba(226,240,255,0.4)',
+                innerBorder: 'rgba(74,158,222,0.25)'
+            }};
     }
-    return { cardFill: '#c8ddf0', cardStroke: '#d0d8e4', textFill: 'transparent' };
+    // Andere Spieler — noch nicht abgestimmt
+    return { cfg: {
+            fill: '#152030', stroke: '#2e4a6a',
+            textFill: 'transparent', cornerColor: 'transparent',
+            innerBorder: 'rgba(74,158,222,0.1)'
+        }};
 }
 
 function _appendNameBadge(svg, id, player, px, py, cardH, nameFontSize, roleColor, isSelf) {
-    const nameY       = py + cardH / 2 + 6;
+    const nameY       = py + cardH / 2 + 4;
     const displayName = player.name.length > 10
         ? player.name.substring(0, 9) + '…'
         : player.name + (isSelf ? ' (Du)' : '');
-    const nameW = Math.min(displayName.length * 7 + 10, 110);
+    const nameW   = Math.min(displayName.length * 7 + 16, 120);
+    const nameH   = nameFontSize + 10;
+    const badgeRx = (nameH / 2);
 
-    const nameBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    nameBg.setAttribute('x', px - nameW / 2);
-    nameBg.setAttribute('y', nameY);
-    nameBg.setAttribute('width', nameW);
-    nameBg.setAttribute('height', nameFontSize + 8);
-    nameBg.setAttribute('rx', 4);
-    nameBg.setAttribute('fill', 'white');
-    nameBg.setAttribute('opacity', '0.95');
-    svg.appendChild(nameBg);
+    // Badge-Hintergrund — passt zur Rollfarbe
+    const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    badgeBg.setAttribute('x', px - nameW / 2);
+    badgeBg.setAttribute('y', nameY);
+    badgeBg.setAttribute('width', nameW);
+    badgeBg.setAttribute('height', nameH);
+    badgeBg.setAttribute('rx', badgeRx);
+    badgeBg.setAttribute('fill', '#0d1f35');
+    badgeBg.setAttribute('stroke', roleColor);
+    badgeBg.setAttribute('stroke-width', '1.5');
+    svg.appendChild(badgeBg);
 
-    const roleBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    roleBar.setAttribute('x', px - nameW / 2);
-    roleBar.setAttribute('y', nameY);
-    roleBar.setAttribute('width', 3);
-    roleBar.setAttribute('height', nameFontSize + 8);
-    roleBar.setAttribute('rx', 2);
-    roleBar.setAttribute('fill', roleColor);
-    svg.appendChild(roleBar);
-
+    // Name
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     nameText.setAttribute('x', px);
-    nameText.setAttribute('y', nameY + nameFontSize);
+    nameText.setAttribute('y', nameY + nameH / 2 + 1);
     nameText.setAttribute('text-anchor', 'middle');
-    nameText.setAttribute('fill', '#1a1a2e');
+    nameText.setAttribute('dominant-baseline', 'middle');
+    nameText.setAttribute('fill', isSelf ? '#7dd3fc' : '#cbd5e1');
     nameText.setAttribute('font-size', nameFontSize);
-    nameText.setAttribute('font-weight', '600');
+    nameText.setAttribute('font-weight', isSelf ? '700' : '500');
     nameText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
     nameText.textContent = displayName;
     svg.appendChild(nameText);
 }
-
 // ====================================
-// Teilnehmer-Sidebar
+// Teilnehmer-Sidebar mit verbesserten Avataren
 // ====================================
 
 /**
  * Rendert die Teilnehmer-Sidebar neu.
- * Sortiert nach Kartenwert (nach Aufdecken) oder alphabetisch.
+ * Avatare: farbiger Außenring nach Rolle, Status-Badge unten rechts.
  */
 function renderSidebar() {
     const playerList = Object.entries(players);
@@ -331,26 +390,54 @@ function renderSidebar() {
 }
 
 function _buildSidebarItem(id, player, activeModerators) {
-    const isSelfEntry       = id === participantId;
-    const hasVoted          = player.voted;
-    const avatarColor       = getAvatarColor(player.name);
-    const roleColor         = ROLE_COLORS[player.role] || '#004178';
+    const isSelfEntry        = id === participantId;
+    const hasVoted           = player.voted;
+    const avatarBg           = getAvatarColor(player.name);
+    const roleColor          = ROLE_COLORS[player.role] || '#004178';
     const isAlreadyModerator = player.moderator || (isSelfEntry && isModerator);
-    const canDemote         = isAlreadyModerator && activeModerators > 1;
+    const canDemote          = isAlreadyModerator && activeModerators > 1;
+
+    // Status-Badge: Farbe + Symbol
+    const statusColor  = player.role === 'PRODUCT_OWNER' ? 'transparent'
+        : hasVoted   ? '#22c55e'
+            : '#9ca3af';
+    const statusSymbol = hasVoted ? '✓' : '';
+
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const bgBorder = isDark ? '#1e1e2e' : '#ffffff';
+    const outlineColor = isAlreadyModerator ? '#eab308' : roleColor;
 
     const li = document.createElement('li');
     li.className = 'sidebar__item';
     li.innerHTML = `
-        <div class="player-avatar"
-             style="background:${avatarColor}; border: 2px solid ${roleColor}20;">
-            ${player.name.charAt(0).toUpperCase()}
+        <div style="position:relative; flex-shrink:0; padding:3px;">
+            <div style="
+                width:36px; height:36px; border-radius:50%;
+                background:${avatarBg};
+                display:flex; align-items:center; justify-content:center;
+                font-size:0.875rem; font-weight:700; color:#ffffff;
+                outline: 3px solid ${outlineColor};
+                outline-offset: 2px;
+            ">
+                ${escapeHtml(player.name.charAt(0).toUpperCase())}
+            </div>
+            ${player.role !== 'PRODUCT_OWNER' ? `
+            <div style="
+                position:absolute; bottom:1px; right:1px;
+                width:14px; height:14px; border-radius:50%;
+                background:${statusColor};
+                border:2px solid ${bgBorder};
+                display:flex; align-items:center; justify-content:center;
+                font-size:8px; font-weight:700; color:#ffffff; line-height:1;
+                z-index:1;
+            ">${statusSymbol}</div>` : ''}
         </div>
         <div class="player-info">
             <span class="player-info__name ${isSelfEntry ? 'player-info__name--self' : ''}">
                 ${escapeHtml(player.name)}${isSelfEntry ? ' (Sie)' : ''}
             </span>
             <span class="player-info__role" style="color:${roleColor};">
-                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · Moderator' : ''}
+                ${getRoleLabel(player.role)}${isAlreadyModerator ? ' · Moderator ⭐' : ''}
             </span>
         </div>
         ${_buildStatusOrValue(player, hasVoted)}
@@ -371,15 +458,48 @@ function _buildStatusOrValue(player, hasVoted) {
     if (isRevealed && player.cardValue) {
         return `<span class="sidebar__card-value
                     ${player.changed ? 'sidebar__card-value--changed' : ''}">
-                    ${player.cardValue}
+                    ${escapeHtml(player.cardValue)}
                 </span>`;
     }
     if (player.role === 'PRODUCT_OWNER') return '';
     return `<div class="player-status
-                ${player.changed    ? 'player-status--changed'  :
-        hasVoted          ? 'player-status--voted'    :
+                ${player.changed ? 'player-status--changed'  :
+        hasVoted       ? 'player-status--voted'    :
             'player-status--waiting'}">
             </div>`;
+}
+
+// ====================================
+// Ticket-Sidebar
+// ====================================
+
+function renderTicketSidebar() {
+    const ul = document.getElementById('ticketSidebarList');
+    ul.innerHTML = '';
+
+    Object.entries(tickets).forEach(([id, ticket]) => {
+        const isActive = id === currentTicketId?.toString();
+        const isVoted  = ticket.status === 'VOTED';
+
+        const li = document.createElement('li');
+        li.className = 'ticket-sidebar__item'
+            + (isActive ? ' ticket-sidebar__item--active' : '')
+            + (isVoted  ? ' ticket-sidebar__item--voted'  : '');
+
+        li.innerHTML = `
+            <span class="ticket-sidebar__title">${escapeHtml(ticket.title)}</span>
+            ${isVoted && ticket.finalEstimate
+            ? `<span class="ticket-sidebar__estimate">${escapeHtml(ticket.finalEstimate)}</span>`
+            : ''}
+        `;
+
+        if (isModerator && !isVoted) {
+            li.style.cursor = 'pointer';
+            li.onclick = () => selectTicket(id);
+        }
+
+        ul.appendChild(li);
+    });
 }
 
 // ====================================
@@ -387,7 +507,7 @@ function _buildStatusOrValue(player, hasVoted) {
 // ====================================
 
 function syncStatusToSvg() {
-    const svgProgress = document.getElementById('svgProgressBar');
+    const svgProgress  = document.getElementById('svgProgressBar');
     const htmlProgress = document.getElementById('progressBar');
     if (svgProgress && htmlProgress) {
         const pct = parseFloat(htmlProgress.style.width) || 0;
@@ -399,19 +519,4 @@ function syncStatusToSvg() {
         const htmlStatus = document.getElementById('voteStatus');
         if (svgStatus && htmlStatus) svgStatus.textContent = htmlStatus.textContent;
     }
-
-// ====================================
-// Utility Methods (in utils.js ergänzen)
-// ====================================
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str
-            .replace(/&/g,  '&amp;')
-            .replace(/</g,  '&lt;')
-            .replace(/>/g,  '&gt;')
-            .replace(/"/g,  '&quot;')
-            .replace(/'/g,  '&#x27;');
-    }
-
 }

@@ -24,7 +24,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
-        alert('Fehler beim Erstellen der Session.');
+        showToast('Fehler beim Erstellen der Session.', 'error');
     }
 });
 
@@ -43,7 +43,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         .filter(title => title.length > 0);
 
     if (!moderatorName || tickets.length === 0) {
-        alert('Bitte Name und mindestens ein Ticket eingeben.');
+        showToast('Bitte Name und mindestens ein Ticket eingeben.', 'warning');
         return;
     }
 
@@ -60,7 +60,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         sessionStorage.setItem('participantRole', data.moderatorRole);
         window.location.href = '/session/' + data.roomCode;
     } else {
-        alert('Fehler beim Erstellen der Session.');
+        showToast('Fehler beim Erstellen der Session.', 'error');
     }
 });
 
@@ -90,7 +90,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('participantRole', data.role);
         window.location.href = '/session/' + roomCode;
     } else {
-        alert('Session nicht gefunden oder bereits beendet.');
+        showToast('Session nicht gefunden oder bereits beendet.', 'error');
     }
 });
 
@@ -108,6 +108,7 @@ function addTicketField() {
         <button type="button" class="btn--remove" onclick="removeTicket(this)">✕</button>
     `;
     list.appendChild(entry);
+    entry.querySelector('input').focus();
 }
 
 function removeTicket(btn) {
