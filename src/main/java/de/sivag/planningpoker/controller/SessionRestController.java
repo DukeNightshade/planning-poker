@@ -70,7 +70,6 @@ public class SessionRestController {
 
         Long moderatorId = sessionService.getParticipants(session.getRoomCode())
                 .stream()
-                .filter(p -> p.getRole() == moderatorRole)
                 .findFirst()
                 .map(Participant::getId)
                 .orElseThrow(() -> new IllegalStateException(
