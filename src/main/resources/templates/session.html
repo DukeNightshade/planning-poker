@@ -107,7 +107,7 @@
             <button class="btn--icon" onclick="toggleSettings()" aria-label="Einstellungen schließen">&#x2715;</button>
         </div>
         <div class="settings-panel__body">
-            <label class="settings__toggle" for="settingShowTopic">
+            <label class="settings__toggle" for="settingShowTopic" th:if="${hasTickets}">
                 <span th:text="#{settings.show_topic}">Ticket-Modul anzeigen</span>
                 <input type="checkbox" id="settingShowTopic" th:checked="${showTopic}" onchange="saveSettings()">
             </label>
