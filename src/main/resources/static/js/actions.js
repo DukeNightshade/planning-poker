@@ -155,7 +155,7 @@ function resetUI() {
     document.getElementById('resultsArea').style.display     = 'none';
     document.getElementById('cardArea').style.display        =
         participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
-    document.getElementById('voteStatus').textContent        = 'Warte auf Abstimmung...';
+    document.getElementById('voteStatus').textContent = globalThis.i18n.labels.waiting;
     document.getElementById('progressBar').style.width       = '0%';
     document.querySelector('[onclick="revealCards()"]').disabled = false;
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));

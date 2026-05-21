@@ -2,11 +2,13 @@ package de.sivag.planningpoker.service;
 
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
+import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
 import de.sivag.planningpoker.repository.SessionRepository;
+import de.sivag.planningpoker.repository.TicketRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,9 @@ class SessionServiceTest {
 
     @Mock
     private ParticipantRepository participantRepository;
+
+    @Mock
+    private TicketRepository ticketRepository;
 
     @InjectMocks
     private SessionService sessionService;
@@ -99,6 +104,29 @@ class SessionServiceTest {
                 "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER);
 
         verify(sessionRepository, times(2)).existsByRoomCode(anyString());
+    }
+
+    // ====================================
+    // createSessionWithTickets()
+    // ====================================
+
+    @Test
+    @DisplayName("createSessionWithTickets: Tickets werden angelegt und erstes Ticket als currentTicketId gesetzt")
+    void createSessionWithTickets_success() {
+        Ticket firstTicket = new Ticket();
+        firstTicket.setId(10L);
+        firstTicket.setTitle("Story A");
+
+        when(sessionRepository.existsByRoomCode(anyString())).thenReturn(false);
+        when(sessionRepository.save(any(Session.class))).thenReturn(testSession);
+        when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
+        when(ticketRepository.save(any(Ticket.class))).thenReturn(firstTicket);
+
+        sessionService.createSessionWithTickets(
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER,
+                List.of("Story A", "Story B"));
+
+        verify(ticketRepository, times(2)).save(any(Ticket.class));
     }
 
     // ====================================
