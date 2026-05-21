@@ -187,32 +187,7 @@ function _appendProgressBar(svg, cx, cy) {
 // SVG Hilfsfunktionen — Stats
 // ====================================
 
-function _renderTableStats(svg, cx, cy, stats) {
-    if (!stats.devAvg && !stats.testerAvg) {
-        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        t.setAttribute('x', cx);
-        t.setAttribute('y', cy + 6);
-        t.setAttribute('text-anchor', 'middle');
-        t.setAttribute('fill', 'rgba(255,255,255,0.6)');
-        t.setAttribute('font-size', '14');
-        t.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-        t.textContent = 'Keine numerischen Werte';
-        svg.appendChild(t);
-        return;
-    }
-
-    const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    divider.setAttribute('x1', cx); divider.setAttribute('y1',  String(cy - 28));
-    divider.setAttribute('x2', cx); divider.setAttribute('y2', cy + 28);
-    divider.setAttribute('stroke', 'rgba(255,255,255,0.2)');
-    divider.setAttribute('stroke-width', '1');
-    svg.appendChild(divider);
-
-    if (stats.devAvg)    _renderStatBlock(svg, cx - 55, cy, '⚙ Dev',  stats.devAvg,    stats.devSpread,    '#60a5fa');
-    if (stats.testerAvg) _renderStatBlock(svg, cx + 55, cy, '✓ Test', stats.testerAvg, stats.testerSpread, '#4ade80');
-}
-
-function _renderStatBlock(svg, x, y, label, avg, spread, color) {
+    function _renderStatBlock(svg, x, y, label, avg, spreadValue, color) {
     const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     labelText.setAttribute('x', x);
     labelText.setAttribute('y',  String(y - 18));
@@ -235,7 +210,7 @@ function _renderStatBlock(svg, x, y, label, avg, spread, color) {
     avgText.textContent = `Ø ${avg}`;
     svg.appendChild(avgText);
 
-    if (spread !== null) {
+    if (spreadValue !== null) {
         const spreadText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         spreadText.setAttribute('x', x);
         spreadText.setAttribute('y', y + 26);
@@ -243,8 +218,58 @@ function _renderStatBlock(svg, x, y, label, avg, spread, color) {
         spreadText.setAttribute('fill', 'rgba(255,255,255,0.55)');
         spreadText.setAttribute('font-size', '11');
         spreadText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-        spreadText.textContent = `↕ ${spread}`;
+        spreadText.textContent = `↕ ${spreadValue}`;
         svg.appendChild(spreadText);
+    }
+}
+
+function _renderTableStats(svg, cx, cy, stats) {
+    if (!stats.devAvg && !stats.testerAvg && !stats.architectAvg) {
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', cx);
+        t.setAttribute('y', cy + 6);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', 'rgba(255,255,255,0.6)');
+        t.setAttribute('font-size', '14');
+        t.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        t.textContent = 'Keine numerischen Werte';
+        svg.appendChild(t);
+        return;
+    }
+
+    const activeGroups = [
+        stats.devAvg       ? { label: '⚙ Dev',  avg: stats.devAvg,       spreadValue: stats.devSpread,       color: '#60a5fa' } : null,
+        stats.testerAvg    ? { label: '✓ Test', avg: stats.testerAvg,    spreadValue: stats.testerSpread,    color: '#4ade80' } : null,
+        stats.architectAvg ? { label: '🏗 Arch', avg: stats.architectAvg, spreadValue: stats.architectSpread, color: '#f9a825' } : null,
+    ].filter(Boolean);
+
+    const totalWidth = 110;
+    const startX = cx - (totalWidth * (activeGroups.length - 1)) / 2;
+
+    activeGroups.forEach((group, i) => {
+        _renderStatBlock(svg, startX + i * totalWidth, cy - 20, group.label, group.avg, group.spreadValue, group.color);
+    });
+
+    if (stats.overallAvg !== null) {
+        const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        divider.setAttribute('x1', String(cx - 60));
+        divider.setAttribute('y1', String(cy + 28));
+        divider.setAttribute('x2', String(cx + 60));
+        divider.setAttribute('y2', String(cy + 28));
+        divider.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+        divider.setAttribute('stroke-width', '1');
+        svg.appendChild(divider);
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', cx);
+        label.setAttribute('y', String(cy + 44));
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('fill', 'rgba(255,255,255,0.5)');
+        label.setAttribute('font-size', '11');
+        label.setAttribute('font-weight', '600');
+        label.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        label.textContent = `Gesamt Ø ${stats.overallAvg}`;
+        svg.appendChild(label);
     }
 }
 

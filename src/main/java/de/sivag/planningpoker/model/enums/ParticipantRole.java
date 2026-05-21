@@ -10,5 +10,6 @@ public enum ParticipantRole {
     MODERATOR,
     DEVELOPER,
     TESTER,
-    PRODUCT_OWNER
+    PRODUCT_OWNER,
+    IT_ARCHITECT
 }

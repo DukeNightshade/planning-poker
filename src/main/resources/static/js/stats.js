@@ -3,16 +3,19 @@
 // ====================================
 
 function recalculateStats() {
-    const devVotes   = extractNumericVotes('DEVELOPER');
-    const testerVotes = extractNumericVotes('TESTER');
-    const allVotes   = [...devVotes, ...testerVotes];
+    const devVotes       = extractNumericVotes('DEVELOPER');
+    const testerVotes    = extractNumericVotes('TESTER');
+    const architectVotes = extractNumericVotes('IT_ARCHITECT');
+    const allVotes       = [...devVotes, ...testerVotes, ...architectVotes];
 
     return {
-        devAvg:      average(devVotes),
-        testerAvg:   average(testerVotes),
-        devSpread:   spread(devVotes),
-        testerSpread: spread(testerVotes),
-        overallAvg:  average(allVotes)
+        devAvg:          average(devVotes),
+        testerAvg:       average(testerVotes),
+        architectAvg:    average(architectVotes),
+        devSpread:       spread(devVotes),
+        testerSpread:    spread(testerVotes),
+        architectSpread: spread(architectVotes),
+        overallAvg:      average(allVotes)
     };
 }
 

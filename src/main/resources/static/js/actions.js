@@ -289,13 +289,14 @@ function saveSettings() {
 
 function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
-    if (topicBar) topicBar.style.display = showTopic ? 'flex' : 'none';
+    if (topicBar) topicBar.style.display = (showTopic && Object.keys(tickets).length > 0) ? 'flex' : 'none';
 
     const canVote = participantRole !== 'PRODUCT_OWNER' &&
         !(isModerator && !moderatorCanVote);
     document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
 
-    document.getElementById('settingShowTopic').checked        = showTopic;
+    const showTopicEl = document.getElementById('settingShowTopic');
+    if (showTopicEl) showTopicEl.checked = showTopic;
     document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
     document.getElementById('settingAutoReveal').checked       = autoReveal;
 }

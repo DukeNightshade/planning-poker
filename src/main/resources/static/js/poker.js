@@ -37,9 +37,9 @@ if (isModerator) {
 }
 
 applySettings(
-    document.getElementById('settingShowTopic').checked,
-    document.getElementById('settingModeratorCanVote').checked,
-    document.getElementById('settingAutoReveal').checked
+    document.getElementById('settingShowTopic')?.checked ?? false,
+    document.getElementById('settingModeratorCanVote')?.checked ?? false,
+    document.getElementById('settingAutoReveal')?.checked ?? false
 );
 
 document.querySelectorAll('#playerData .player-entry').forEach(el => {

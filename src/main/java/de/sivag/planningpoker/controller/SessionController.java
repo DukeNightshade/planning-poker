@@ -3,6 +3,7 @@ package de.sivag.planningpoker.controller;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.service.SessionService;
+import de.sivag.planningpoker.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Controller;
@@ -31,6 +32,7 @@ public class SessionController {
     // ====================================
 
     private final SessionService sessionService;
+    private final TicketService  ticketService;
     private final MessageSource  messageSource;
 
     // ====================================
@@ -55,6 +57,7 @@ public class SessionController {
         model.addAttribute("moderatorCanVote", session.isModeratorCanVote());
         model.addAttribute("autoReveal",       session.isAutoReveal());
         model.addAttribute("methodLabels",     buildMethodLabels(locale));
+        model.addAttribute("hasTickets",       !ticketService.getTickets(roomCode).isEmpty());
         return "session";
     }
 

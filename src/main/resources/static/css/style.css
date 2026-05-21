@@ -907,6 +907,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-width: 0;
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
     border: 2px solid var(--color-border);
@@ -930,6 +931,26 @@ body {
 .ticket-sidebar__item--voted {
     border-color: #22c55e;
     background: #f0fdf4;
+}
+
+.ticket-sidebar__link {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-primary);
+    font-size: 0.8rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-primary);
+    opacity: 0.85;
+    transition: opacity var(--transition), border-color var(--transition);
+    min-width: 0;
+}
+
+.ticket-sidebar__link:hover {
+    opacity: 1;
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
 }
 
 .ticket-sidebar__title {
@@ -1275,6 +1296,16 @@ body {
     .ticket-sidebar__item--voted {
         background: #0f1f0f;
         border-color: #22c55e;
+    }
+
+    .ticket-sidebar__link {
+        color: #7dbfef;
+        border-bottom-color: #7dbfef;
+    }
+
+    .ticket-sidebar__link:hover {
+        color: #4a9ede;
+        border-bottom-color: #4a9ede;
     }
 
     .ticket-sidebar__estimate {
