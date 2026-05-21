@@ -9,14 +9,34 @@ function renderTicketSidebar() {
     Object.entries(tickets).forEach(([id, ticket]) => {
         const isActive = id === currentTicketId?.toString();
         const isVoted  = ticket.status === 'VOTED';
+        const isUrl = ticket.title.startsWith('http://') || ticket.title.startsWith('https://');
 
         const li = document.createElement('li');
         li.className = 'ticket-sidebar__item'
             + (isActive ? ' ticket-sidebar__item--active' : '')
             + (isVoted  ? ' ticket-sidebar__item--voted'  : '');
 
+        const linkLabel = (() => {
+            try {
+                const url = new URL(ticket.title);
+                return url.pathname.split('/').findLast(Boolean) || ticket.title;
+            } catch {
+                return ticket.title;
+            }
+        })();
+
+        const titleHtml = isUrl
+            ? `<a href="${escapeHtml(ticket.title)}" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="ticket-sidebar__link"
+          title="${escapeHtml(ticket.title)}">
+           ${escapeHtml(linkLabel)}
+       </a>`
+            : `<span class="ticket-sidebar__title">${escapeHtml(ticket.title)}</span>`;
+
         li.innerHTML = `
-            <span class="ticket-sidebar__title">${escapeHtml(ticket.title)}</span>
+            ${titleHtml}
             ${isVoted && ticket.finalEstimate
             ? `<span class="ticket-sidebar__estimate">${escapeHtml(ticket.finalEstimate)}</span>`
             : ''}
@@ -24,7 +44,10 @@ function renderTicketSidebar() {
 
         if (isModerator && !isVoted) {
             li.style.cursor = 'pointer';
-            li.onclick = () => selectTicket(id);
+            li.onclick = (e) => {
+                if (e.target.closest('a')) return;
+                selectTicket(id);
+            };
         }
 
         ul.appendChild(li);

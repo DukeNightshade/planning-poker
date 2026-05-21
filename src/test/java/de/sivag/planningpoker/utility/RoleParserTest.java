@@ -82,10 +82,10 @@ class RoleParserTest {
     }
 
     @Test
-    @DisplayName("parseModeratorRole: PRODUCT_OWNER fällt auf DEVELOPER zurück")
-    void parseModeratorRole_productOwner_fallsBackToDeveloper() {
+    @DisplayName("parseModeratorRole: PRODUCT_OWNER wird korrekt durchgelassen")
+    void parseModeratorRole_productOwner_allowed() {
         assertThat(RoleParser.parseModeratorRole("PRODUCT_OWNER"))
-                .isEqualTo(ParticipantRole.DEVELOPER);
+                .isEqualTo(ParticipantRole.PRODUCT_OWNER);
     }
 
     @ParameterizedTest
@@ -102,11 +102,11 @@ class RoleParserTest {
 
     @Test
     @DisplayName("RoleParser: Konstruktor wirft UnsupportedOperationException")
-    void constructor_throwsException() {
-        assertThatThrownBy(() -> {
-            var constructor = RoleParser.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        }).cause().isInstanceOf(UnsupportedOperationException.class);
+    void constructor_throwsException() throws Exception {
+        var constructor = RoleParser.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        assertThatThrownBy(constructor::newInstance)
+                .cause()
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

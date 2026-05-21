@@ -35,8 +35,7 @@ public final class RoleParser {
     public static ParticipantRole parseModeratorRole(String roleStr) {
         try {
             ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            if (role == ParticipantRole.MODERATOR ||
-                    role == ParticipantRole.PRODUCT_OWNER) {
+            if (role == ParticipantRole.MODERATOR) {
                 return ParticipantRole.DEVELOPER;
             }
             return role;

@@ -87,6 +87,8 @@
                 <select class="form__select" id="moderatorRole">
                     <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
                     <option value="TESTER"    th:text="#{role.tester}">Tester</option>
+                    <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
+                    <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
                 </select>
                 <button class="btn btn--primary" type="submit" th:text="#{home.create.submit}">Session erstellen</button>
             </form>
@@ -104,6 +106,7 @@
                     <option value="DEVELOPER"     th:text="#{role.developer}">Entwickler</option>
                     <option value="TESTER"        th:text="#{role.tester}">Tester</option>
                     <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
+                    <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
                 </select>
                 <button class="btn btn--secondary" type="submit" th:text="#{home.join.submit}">Beitreten</button>
             </form>
@@ -124,6 +127,8 @@
             <select class="form__select" id="moderatorRoleTickets">
                 <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
                 <option value="TESTER"    th:text="#{role.tester}">Tester</option>
+                <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
+                <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
             </select>
             <label class="form__label" for="firstTicketInput" th:text="#{home.tickets.label}">Tickets</label>
             <div id="ticketList" class="ticket-list">

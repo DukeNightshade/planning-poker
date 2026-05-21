@@ -12,7 +12,8 @@ const ROLE_COLORS = {
     DEVELOPER:     '#004178',
     TESTER:        '#16a34a',
     PRODUCT_OWNER: '#9333ea',
-    MODERATOR:     '#004178'
+    MODERATOR:     '#004178',
+    IT_ARCHITECT: '#0891b2'
 };
 
 // ====================================
@@ -25,7 +26,8 @@ function getRoleLabel(role) {
         DEVELOPER:     'Entwickler',
         TESTER:        'Tester',
         PRODUCT_OWNER: 'Product Owner',
-        MODERATOR:     'Moderator'
+        MODERATOR:     'Moderator',
+        IT_ARCHITECT: 'IT-Architekt'
     };
     return labels[role] || '';
 }
