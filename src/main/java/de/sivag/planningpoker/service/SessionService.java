@@ -42,17 +42,16 @@ public class SessionService {
     // ====================================
 
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int CODE_LENGTH = 8;
+    private static final int    CODE_LENGTH = 8;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     // ====================================
     // Abhängigkeiten
     // ====================================
 
-    private final SessionRepository sessionRepository;
+    private final SessionRepository     sessionRepository;
     private final ParticipantRepository participantRepository;
-    private final TicketRepository ticketRepository;
-    private final SessionService        self;
+    private final TicketRepository      ticketRepository;
 
     // ====================================
     // Business Logik Methoden
@@ -61,27 +60,14 @@ public class SessionService {
     @Transactional
     public Session createSession(String moderatorName, EstimationMethod method,
                                  ParticipantRole moderatorRole, String browserId) {
-        Session session = new Session();
-        session.setRoomCode(generateUniqueRoomCode());
-        session.setEstimationMethod(method);
-        sessionRepository.save(session);
-
-        Participant moderator = new Participant();
-        moderator.setName(StringUtils.sanitizeName(moderatorName));
-        moderator.setRole(moderatorRole);
-        moderator.setModerator(true);
-        moderator.setBrowserId(browserId);
-        moderator.setSession(session);
-        participantRepository.save(moderator);
-
-        return session;
+        return buildSession(moderatorName, method, moderatorRole, browserId);
     }
 
     @Transactional
     public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
                                             ParticipantRole moderatorRole,
                                             List<String> ticketTitles, String browserId) {
-        Session session = self.createSession(moderatorName, method, moderatorRole, browserId);
+        Session session = buildSession(moderatorName, method, moderatorRole, browserId);
         session.setShowTopic(true);
 
         Ticket firstTicket = null;
@@ -113,6 +99,7 @@ public class SessionService {
 
         String cleanedName = StringUtils.sanitizeName(participantName);
 
+        // Reconnect: bestehenden Teilnehmer mit gleicher Browser-ID zurückgeben
         if (browserId != null) {
             Optional<Participant> existing = participantRepository
                     .findBySessionRoomCodeAndBrowserId(roomCode, browserId);
@@ -126,6 +113,7 @@ public class SessionService {
             }
         }
 
+        // Duplikat-Prüfung
         if (participantRepository.existsBySessionRoomCodeAndName(roomCode, cleanedName)) {
             throw new IllegalStateException(
                     "Der Name \"" + cleanedName + "\" ist in dieser Session bereits vergeben.");
@@ -204,6 +192,24 @@ public class SessionService {
     // ====================================
     // Utility Methoden
     // ====================================
+
+    private Session buildSession(String moderatorName, EstimationMethod method,
+                                 ParticipantRole moderatorRole, String browserId) {
+        Session session = new Session();
+        session.setRoomCode(generateUniqueRoomCode());
+        session.setEstimationMethod(method);
+        sessionRepository.save(session);
+
+        Participant moderator = new Participant();
+        moderator.setName(StringUtils.sanitizeName(moderatorName));
+        moderator.setRole(moderatorRole);
+        moderator.setModerator(true);
+        moderator.setBrowserId(browserId);
+        moderator.setSession(session);
+        participantRepository.save(moderator);
+
+        return session;
+    }
 
     private String generateUniqueRoomCode() {
         String code;
