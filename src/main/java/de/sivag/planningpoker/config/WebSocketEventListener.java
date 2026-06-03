@@ -27,14 +27,18 @@ public class WebSocketEventListener {
 
     private final SessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final WebSocketSessionRegistry sessionRegistry;
 
     // ====================================
     // Konstruktor
     // ====================================
 
-    public WebSocketEventListener(@Lazy SessionService sessionService, SimpMessagingTemplate messagingTemplate) {
-        this.sessionService = sessionService;
+    public WebSocketEventListener(@Lazy SessionService sessionService,
+                                  SimpMessagingTemplate messagingTemplate,
+                                  WebSocketSessionRegistry sessionRegistry) {
+        this.sessionService    = sessionService;
         this.messagingTemplate = messagingTemplate;
+        this.sessionRegistry   = sessionRegistry;
     }
 
     // ====================================
@@ -44,32 +48,28 @@ public class WebSocketEventListener {
     @EventListener
     public void handleDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        String wsSessionId = accessor.getSessionId();
 
-        if (sessionAttributes == null) return;
-
-        String roomCode     = (String) sessionAttributes.get("roomCode");
-        Long   participantId = (Long)   sessionAttributes.get("participantId");
-
-        if (roomCode == null || participantId == null) return;
+        WebSocketSessionRegistry.ParticipantInfo info = sessionRegistry.remove(wsSessionId);
+        if (info == null) return;
 
         try {
-            String participantName = sessionService.removeParticipant(participantId);
+            String participantName = sessionService.removeParticipant(info.participantId());
 
             log.info("Teilnehmer getrennt und entfernt: name={}, roomCode={}",
-                    participantName, roomCode);
+                    participantName, info.roomCode());
 
             messagingTemplate.convertAndSend(
-                    "/topic/session/" + roomCode,
+                    "/topic/session/" + info.roomCode(),
                     Map.of(
                             "type",            "PLAYER_LEFT",
-                            "participantId",   participantId.toString(),
+                            "participantId",   info.participantId().toString(),
                             "participantName", participantName
                     )
             );
         } catch (Exception e) {
             log.warn("Fehler beim Entfernen des Teilnehmers {}: {}",
-                    participantId, e.getMessage());
+                    info.participantId(), e.getMessage());
         }
     }
 }
