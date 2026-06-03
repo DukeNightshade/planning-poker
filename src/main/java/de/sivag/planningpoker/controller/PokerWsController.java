@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.controller;
 
+import de.sivag.planningpoker.config.WebSocketSessionRegistry;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
@@ -42,14 +43,29 @@ public class PokerWsController {
     // Abhängigkeiten
     // ====================================
 
-    private final SessionService        sessionService;
-    private final VoteService           voteService;
-    private final TicketService         ticketService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final SessionService            sessionService;
+    private final VoteService               voteService;
+    private final TicketService             ticketService;
+    private final SimpMessagingTemplate     messagingTemplate;
+    private final WebSocketSessionRegistry  sessionRegistry;
 
     // ====================================
     // WebSocket Endpunkte
     // ====================================
+    @MessageMapping("/session/{roomCode}/register")
+    public void register(
+            @DestinationVariable String roomCode,
+            @Payload Map<String, String> payload,
+            SimpMessageHeaderAccessor headerAccessor) {
+
+        String raw = payload.get(PARTICIPANT_ID);
+        if (raw == null) return;
+
+        Long participantId = Long.parseLong(raw);
+        String wsSessionId = headerAccessor.getSessionId();
+
+        sessionRegistry.register(wsSessionId, roomCode, participantId);
+    }
 
     @MessageMapping("/session/{roomCode}/vote")
     public void submitVote(

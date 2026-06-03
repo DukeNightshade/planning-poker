@@ -82,7 +82,11 @@ function connect() {
 
         stompClient.subscribe('/topic/session/' + roomCode, function (message) {
             handleMessage(JSON.parse(message.body));
-        }, {}).then?.();
+        }, {});
+
+        stompClient.send('/app/session/' + roomCode + '/register', {},
+            JSON.stringify({ participantId }));
+
         loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
 
     }, function (error) {
