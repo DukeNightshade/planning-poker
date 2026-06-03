@@ -23,4 +23,6 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     List<Participant> findBySessionRoomCode(String roomCode);
 
     Optional<Participant> findBySessionRoomCodeAndBrowserId(String roomCode, String browserId);
+
+    boolean existsBySessionRoomCodeAndName(String roomCode, String name);
 }

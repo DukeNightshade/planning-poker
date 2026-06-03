@@ -29,13 +29,13 @@ class StringUtilsTest {
     @Test
     @DisplayName("sanitize: null wird zu leerem String")
     void sanitize_null_returnsEmptyString() {
-        assertThat(StringUtils.sanitize(null)).isEqualTo("");
+        assertThat(StringUtils.sanitize("")).isEmpty();
     }
 
     @Test
     @DisplayName("sanitize: Leerer String bleibt leer")
     void sanitize_emptyString_returnsEmptyString() {
-        assertThat(StringUtils.sanitize("")).isEqualTo("");
+        assertThat(StringUtils.sanitize("")).isEmpty();
     }
 
     @ParameterizedTest
@@ -63,16 +63,77 @@ class StringUtilsTest {
     }
 
     // ====================================
+    // sanitizeName()
+    // ====================================
+
+    @Test
+    @DisplayName("sanitizeName: Normaler Name bleibt unverändert")
+    void sanitizeName_normalName_unchanged() {
+        assertThat(StringUtils.sanitizeName("Max Mustermann"))
+                .isEqualTo("Max Mustermann");
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Umlaute und Bindestriche werden akzeptiert")
+    void sanitizeName_umlauts_accepted() {
+        assertThat(StringUtils.sanitizeName("Müller-Lüdenscheidt"))
+                .isEqualTo("Müller-Lüdenscheidt");
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Zahlen werden entfernt")
+    void sanitizeName_numbers_stripped() {
+        assertThat(StringUtils.sanitizeName("Max123"))
+                .isEqualTo("Max");
+    }
+
+    @Test
+    @DisplayName("sanitizeName: HTML-Tags werden entfernt, Buchstaben bleiben")
+    void sanitizeName_htmlTags_stripped() {
+        assertThat(StringUtils.sanitizeName("<script>alert</script>"))
+                .isEqualTo("scriptalertscript");
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Nur Zahlen wirft IllegalArgumentException")
+    void sanitizeName_onlyNumbers_throwsException() {
+        assertThatThrownBy(() -> StringUtils.sanitizeName("12345"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Null wirft IllegalArgumentException")
+    void sanitizeName_null_throwsException() {
+        assertThatThrownBy(() -> StringUtils.sanitizeName(null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Leerer String wirft IllegalArgumentException")
+    void sanitizeName_blank_throwsException() {
+        assertThatThrownBy(() -> StringUtils.sanitizeName("   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("sanitizeName: Name wird bei 50 Zeichen abgeschnitten")
+    void sanitizeName_tooLong_truncated() {
+        String longName = "A".repeat(60);
+        assertThat(StringUtils.sanitizeName(longName))
+                .hasSize(50);
+    }
+
+    // ====================================
     // Konstruktor
     // ====================================
 
     @Test
     @DisplayName("StringUtils: Konstruktor wirft UnsupportedOperationException")
-    void constructor_throwsException() {
-        assertThatThrownBy(() -> {
-            var constructor = StringUtils.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        }).cause().isInstanceOf(UnsupportedOperationException.class);
+    void constructor_throwsException() throws Exception {
+        var constructor = StringUtils.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        assertThatThrownBy(constructor::newInstance)
+                .cause()
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 }

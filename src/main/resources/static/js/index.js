@@ -41,7 +41,9 @@ document.getElementById('createForm').addEventListener('submit', async function 
         const data = await response.json();
         handleSessionCreated(data);
     } else {
-        showToast(globalThis.i18n.toast.errorCreate, 'error');
+        let msg = globalThis.i18n.toast.errorCreate;
+        try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        showToast(msg, 'error');
     }
 });
 
@@ -74,7 +76,9 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         const data = await response.json();
         handleSessionCreated(data);
     } else {
-        showToast(globalThis.i18n.toast.errorCreate, 'error');
+        let msg = globalThis.i18n.toast.errorCreate;
+        try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        showToast(msg, 'error');
     }
 });
 
@@ -104,7 +108,18 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('participantRole', data.role);
         globalThis.location.href = '/session/' + roomCode;
     } else {
-        showToast(globalThis.i18n.toast.errorJoin, 'error');
+        let msg = globalThis.i18n.toast.errorJoin;
+        try {
+            const err = await response.json();
+            if (response.status === 400) {
+                if (err.error?.includes('vergeben') || err.error?.includes('taken')) {
+                    msg = globalThis.i18n.toast.errorNameTaken;
+                } else if (err.error?.includes('Buchstaben') || err.error?.includes('letters')) {
+                    msg = globalThis.i18n.toast.errorNameInvalid;
+                }
+            }
+        } catch {}
+        showToast(msg, 'error');
     }
 });
 
