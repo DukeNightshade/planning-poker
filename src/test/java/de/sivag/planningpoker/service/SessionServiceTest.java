@@ -54,7 +54,9 @@ class SessionServiceTest {
     // Testdaten
     // ====================================
 
-    private Session testSession;
+    private static final String BROWSER_ID = "test-browser-id-1234";
+
+    private Session     testSession;
     private Participant testModerator;
 
     @BeforeEach
@@ -84,7 +86,7 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
 
         Session result = sessionService.createSession(
-                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER);
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID);
 
         assertThat(result).isNotNull();
         verify(sessionRepository, times(1)).save(any(Session.class));
@@ -101,7 +103,7 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
 
         sessionService.createSession(
-                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER);
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID);
 
         verify(sessionRepository, times(2)).existsByRoomCode(anyString());
     }
@@ -124,7 +126,7 @@ class SessionServiceTest {
 
         sessionService.createSessionWithTickets(
                 "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER,
-                List.of("Story A", "Story B"));
+                List.of("Story A", "Story B"), BROWSER_ID);
 
         verify(ticketRepository, times(2)).save(any(Ticket.class));
     }
@@ -143,14 +145,39 @@ class SessionServiceTest {
 
         when(sessionRepository.findByRoomCode("ABCD1234"))
                 .thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCodeAndBrowserId("ABCD1234", BROWSER_ID))
+                .thenReturn(Optional.empty());
         when(participantRepository.save(any(Participant.class)))
                 .thenReturn(newParticipant);
 
         Participant result = sessionService.joinSession(
-                "ABCD1234", "Lisa", ParticipantRole.TESTER);
+                "ABCD1234", "Lisa", ParticipantRole.TESTER, BROWSER_ID);
 
         assertThat(result.getName()).isEqualTo("Lisa");
         assertThat(result.getRole()).isEqualTo(ParticipantRole.TESTER);
+    }
+
+    @Test
+    @DisplayName("joinSession: Reconnect – bestehender Teilnehmer wird zurückgegeben")
+    void joinSession_reconnect_returnsExistingParticipant() {
+        Participant existing = new Participant();
+        existing.setId(2L);
+        existing.setName("Lisa");
+        existing.setRole(ParticipantRole.TESTER);
+        existing.setBrowserId(BROWSER_ID);
+
+        when(sessionRepository.findByRoomCode("ABCD1234"))
+                .thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCodeAndBrowserId("ABCD1234", BROWSER_ID))
+                .thenReturn(Optional.of(existing));
+        when(participantRepository.save(any(Participant.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        Participant result = sessionService.joinSession(
+                "ABCD1234", "Lisa", ParticipantRole.TESTER, BROWSER_ID);
+
+        assertThat(result.getId()).isEqualTo(2L);
+        verify(participantRepository, times(1)).save(existing);
     }
 
     @Test
@@ -160,7 +187,7 @@ class SessionServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                sessionService.joinSession("INVALID", "Lisa", ParticipantRole.DEVELOPER))
+                sessionService.joinSession("INVALID", "Lisa", ParticipantRole.DEVELOPER, BROWSER_ID))
                 .isInstanceOf(NoSuchElementException.class);
     }
 
@@ -172,9 +199,29 @@ class SessionServiceTest {
                 .thenReturn(Optional.of(testSession));
 
         assertThatThrownBy(() ->
-                sessionService.joinSession("ABCD1234", "Lisa", ParticipantRole.DEVELOPER))
+                sessionService.joinSession("ABCD1234", "Lisa", ParticipantRole.DEVELOPER, BROWSER_ID))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("bereits beendet");
+    }
+
+    @Test
+    @DisplayName("joinSession: browserId null – neuer Teilnehmer wird angelegt ohne Reconnect-Prüfung")
+    void joinSession_nullBrowserId_createsNewParticipant() {
+        Participant newParticipant = new Participant();
+        newParticipant.setId(3L);
+        newParticipant.setName("Tom");
+
+        when(sessionRepository.findByRoomCode("ABCD1234"))
+                .thenReturn(Optional.of(testSession));
+        when(participantRepository.save(any(Participant.class)))
+                .thenReturn(newParticipant);
+
+        Participant result = sessionService.joinSession(
+                "ABCD1234", "Tom", ParticipantRole.DEVELOPER, null);
+
+        assertThat(result.getId()).isEqualTo(3L);
+        verify(participantRepository, never())
+                .findBySessionRoomCodeAndBrowserId(any(), any());
     }
 
     // ====================================
@@ -283,7 +330,7 @@ class SessionServiceTest {
         when(participantRepository.findById(1L))
                 .thenReturn(Optional.of(testModerator));
 
-        String name = sessionService.removeParticipant( 1L);
+        String name = sessionService.removeParticipant(1L);
 
         assertThat(name).isEqualTo("Max");
         verify(participantRepository, times(1)).delete(testModerator);

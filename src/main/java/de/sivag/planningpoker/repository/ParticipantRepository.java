@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository für den Datenbankzugriff auf Participant-Entitäten.
@@ -20,4 +21,6 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     // ====================================
 
     List<Participant> findBySessionRoomCode(String roomCode);
+
+    Optional<Participant> findBySessionRoomCodeAndBrowserId(String roomCode, String browserId);
 }

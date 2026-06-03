@@ -2,6 +2,15 @@
 // Hilfsfunktionen
 // ====================================
 
+function getBrowserId() {
+    let id = localStorage.getItem('browserId');
+    if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem('browserId', id);
+    }
+    return id;
+}
+
 function handleSessionCreated(data) {
     sessionStorage.setItem('participantId',   data.participantId);
     sessionStorage.setItem('isModerator',     'true');
@@ -25,7 +34,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
     const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moderatorName, method, moderatorRole })
+        body: JSON.stringify({ moderatorName, method, moderatorRole, browserId: getBrowserId() })
     });
 
     if (response.ok) {
@@ -58,7 +67,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
     const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moderatorName, method, moderatorRole, tickets })
+        body: JSON.stringify({ moderatorName, method, moderatorRole, tickets, browserId: getBrowserId() })
     });
 
     if (response.ok) {
@@ -85,7 +94,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
     const response = await fetch(`/api/sessions/${roomCode}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, role })
+        body: JSON.stringify({ name, role, browserId: getBrowserId() })
     });
 
     if (response.ok) {

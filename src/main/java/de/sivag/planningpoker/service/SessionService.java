@@ -11,12 +11,14 @@ import de.sivag.planningpoker.repository.SessionRepository;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.utility.StringUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * Service für den Session-Lifecycle.
@@ -24,6 +26,7 @@ import java.util.NoSuchElementException;
  * @author Nico Hoffmann
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SessionService {
@@ -56,7 +59,7 @@ public class SessionService {
 
     @Transactional
     public Session createSession(String moderatorName, EstimationMethod method,
-                                 ParticipantRole moderatorRole) {
+                                 ParticipantRole moderatorRole, String browserId) {
         Session session = new Session();
         session.setRoomCode(generateUniqueRoomCode());
         session.setEstimationMethod(method);
@@ -66,6 +69,7 @@ public class SessionService {
         moderator.setName(StringUtils.sanitize(moderatorName));
         moderator.setRole(moderatorRole);
         moderator.setModerator(true);
+        moderator.setBrowserId(browserId);
         moderator.setSession(session);
         participantRepository.save(moderator);
 
@@ -75,8 +79,8 @@ public class SessionService {
     @Transactional
     public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
                                             ParticipantRole moderatorRole,
-                                            List<String> ticketTitles) {
-        Session session = createSession(moderatorName, method, moderatorRole);
+                                            List<String> ticketTitles, String browserId) {
+        Session session = createSession(moderatorName, method, moderatorRole, browserId);
         session.setShowTopic(true);
 
         Ticket firstTicket = null;
@@ -99,16 +103,28 @@ public class SessionService {
 
     @Transactional
     public Participant joinSession(String roomCode, String participantName,
-                                   ParticipantRole role) {
+                                   ParticipantRole role, String browserId) {
         Session session = getSessionByRoomCode(roomCode);
 
         if (session.getStatus() == SessionStatus.FINISHED) {
             throw new IllegalStateException("Session ist bereits beendet.");
         }
 
+        if (browserId != null) {
+            Optional<Participant> existing = participantRepository
+                    .findBySessionRoomCodeAndBrowserId(roomCode, browserId);
+            if (existing.isPresent()) {
+                Participant p = existing.get();
+                p.setName(StringUtils.sanitize(participantName));
+                p.setRole(role);
+                return participantRepository.save(p);
+            }
+        }
+
         Participant participant = new Participant();
         participant.setName(StringUtils.sanitize(participantName));
         participant.setRole(role);
+        participant.setBrowserId(browserId);
         participant.setSession(session);
 
         return participantRepository.save(participant);

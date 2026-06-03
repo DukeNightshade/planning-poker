@@ -49,6 +49,7 @@ public class SessionRestController {
             @RequestBody Map<String, Object> body) {
 
         String moderatorName = (String) body.get("moderatorName");
+        String browserId     = (String) body.get("browserId");
         EstimationMethod method = EstimationMethod.valueOf(
                 (String) body.get(METHOD));
         ParticipantRole moderatorRole = RoleParser.parseModeratorRole(
@@ -59,9 +60,9 @@ public class SessionRestController {
                 (List<String>) body.getOrDefault("tickets", List.of());
 
         Session session = ticketTitles.isEmpty()
-                ? sessionService.createSession(moderatorName, method, moderatorRole)
+                ? sessionService.createSession(moderatorName, method, moderatorRole, browserId)
                 : sessionService.createSessionWithTickets(
-                moderatorName, method, moderatorRole, ticketTitles);
+                moderatorName, method, moderatorRole, ticketTitles, browserId);
 
         log.info("Session erstellt: roomCode={}, methode={}, tickets={}",
                 session.getRoomCode(),
