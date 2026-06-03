@@ -42,6 +42,9 @@ public class Participant {
     @Column(nullable = false)
     private LocalDateTime joinedAt;
 
+    @Column(length = 36)
+    private String browserId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;

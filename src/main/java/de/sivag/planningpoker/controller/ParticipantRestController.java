@@ -48,11 +48,12 @@ public class ParticipantRestController {
             @PathVariable String roomCode,
             @RequestBody Map<String, String> body) {
 
-        String name = body.get("name");
+        String name      = body.get("name");
+        String browserId = body.get("browserId");
         ParticipantRole role = RoleParser.parseParticipantRole(
                 body.getOrDefault("role", "DEVELOPER"));
 
-        Participant participant = sessionService.joinSession(roomCode, name, role);
+        Participant participant = sessionService.joinSession(roomCode, name, role, browserId);
 
         log.info("Teilnehmer beigetreten: name={}, rolle={}, roomCode={}",
                 name, role.name(), roomCode);
@@ -61,8 +62,8 @@ public class ParticipantRestController {
                 TOPIC_SESSION + roomCode,
                 Map.of(
                         "type",            "PLAYER_JOINED",
-                        PARTICIPANT_ID,   participant.getId().toString(),
-                        PARTICIPANT_NAME, participant.getName(),
+                        PARTICIPANT_ID,    participant.getId().toString(),
+                        PARTICIPANT_NAME,  participant.getName(),
                         "participantRole", participant.getRole().name()
                 )
         );
