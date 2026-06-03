@@ -52,6 +52,7 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final ParticipantRepository participantRepository;
     private final TicketRepository ticketRepository;
+    private final SessionService        self;
 
     // ====================================
     // Business Logik Methoden
@@ -66,7 +67,7 @@ public class SessionService {
         sessionRepository.save(session);
 
         Participant moderator = new Participant();
-        moderator.setName(StringUtils.sanitize(moderatorName));
+        moderator.setName(StringUtils.sanitizeName(moderatorName));
         moderator.setRole(moderatorRole);
         moderator.setModerator(true);
         moderator.setBrowserId(browserId);
@@ -80,7 +81,7 @@ public class SessionService {
     public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
                                             ParticipantRole moderatorRole,
                                             List<String> ticketTitles, String browserId) {
-        Session session = createSession(moderatorName, method, moderatorRole, browserId);
+        Session session = self.createSession(moderatorName, method, moderatorRole, browserId);
         session.setShowTopic(true);
 
         Ticket firstTicket = null;
@@ -110,19 +111,28 @@ public class SessionService {
             throw new IllegalStateException("Session ist bereits beendet.");
         }
 
+        String cleanedName = StringUtils.sanitizeName(participantName);
+
         if (browserId != null) {
             Optional<Participant> existing = participantRepository
                     .findBySessionRoomCodeAndBrowserId(roomCode, browserId);
             if (existing.isPresent()) {
                 Participant p = existing.get();
-                p.setName(StringUtils.sanitize(participantName));
+                p.setName(cleanedName);
                 p.setRole(role);
+                log.info("Reconnect: Bestehender Teilnehmer gefunden: name={}, roomCode={}",
+                        p.getName(), roomCode);
                 return participantRepository.save(p);
             }
         }
 
+        if (participantRepository.existsBySessionRoomCodeAndName(roomCode, cleanedName)) {
+            throw new IllegalStateException(
+                    "Der Name \"" + cleanedName + "\" ist in dieser Session bereits vergeben.");
+        }
+
         Participant participant = new Participant();
-        participant.setName(StringUtils.sanitize(participantName));
+        participant.setName(cleanedName);
         participant.setRole(role);
         participant.setBrowserId(browserId);
         participant.setSession(session);
