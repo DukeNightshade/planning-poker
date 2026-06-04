@@ -1403,4 +1403,88 @@ body {
         border-color: #f87171;
         color: #f87171;
     }
+
+    /* ================================
+   Join Modal
+   ================================ */
+    .join-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        animation: fadeIn 0.25s ease;
+    }
+
+    .join-modal {
+        background: var(--color-white);
+        border-radius: var(--radius);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        width: 100%;
+        max-width: 400px;
+        margin: 1rem;
+        border-top: 4px solid var(--color-primary);
+        animation: slideDown 0.35s cubic-bezier(.34, 1.4, .64, 1);
+    }
+
+    .join-modal__title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        margin-bottom: 0.35rem;
+    }
+
+    .join-modal__subtitle {
+        font-size: 0.875rem;
+        color: var(--color-text-light);
+        margin-bottom: 1.5rem;
+    }
+
+    .join-modal__roomcode {
+        font-weight: 700;
+        color: var(--color-primary);
+        background: var(--color-ice);
+        padding: 0.1rem 0.5rem;
+        border-radius: var(--radius-sm);
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+    }
+
+    .join-modal__error {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        color: #dc2626;
+        border-radius: var(--radius-sm);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        display: none;
+    }
+
+    /* Dark Mode – Join Modal */
+    @media (prefers-color-scheme: dark) {
+        .join-modal {
+            background: #1e1e2e;
+            border-color: #4a9ede;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .join-modal__title  { color: #4a9ede; }
+
+        .join-modal__roomcode {
+            background: #1e3a52;
+            color: #7dbfef;
+        }
+
+        .join-modal__error {
+            background: #1f0a0a;
+            border-color: #f87171;
+            color: #f87171;
+        }
+    }
 }
