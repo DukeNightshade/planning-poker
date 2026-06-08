@@ -12,6 +12,8 @@ let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 // ====================================
 // Zustandsvariablen
+// WICHTIG: alle lets VOR dem Entry-Point deklarieren,
+// damit connect() keinen TDZ-Fehler wirft
 // ====================================
 
 let selectedCard    = null;
@@ -26,9 +28,17 @@ let tickets = {};
 /** Spieler-Map: { id -> { name, role, moderator, voted, cardValue, originalCardValue, changed } } */
 let players = {};
 
+// WebSocket-Flags – müssen vor connect() stehen
+let _reconnectAttempts = 0;
+let _wasDisconnected   = false;
+let _connecting        = false;
+
+// Modal-Mutex – verhindert Doppel-Submit
+let _joinDone = false;
+
 // ====================================
 // Spieler aus DOM laden
-// (läuft immer, auch vor dem Join – so sieht man die laufende Runde im Hintergrund)
+// (immer, auch vor dem Join – Tisch im Hintergrund sichtbar)
 // ====================================
 
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
@@ -72,9 +82,9 @@ function initSession() {
     }
 
     applySettings(
-        document.getElementById('settingShowTopic')?.checked    ?? false,
+        document.getElementById('settingShowTopic')?.checked        ?? false,
         document.getElementById('settingModeratorCanVote')?.checked ?? false,
-        document.getElementById('settingAutoReveal')?.checked   ?? false
+        document.getElementById('settingAutoReveal')?.checked       ?? false
     );
 
     if (participantRole === 'PRODUCT_OWNER') {
@@ -106,6 +116,8 @@ function showJoinModal() {
     modal.style.display = 'flex';
 
     const nameInput = document.getElementById('joinModalName');
+    const btn       = document.getElementById('joinModalBtn');
+
     if (nameInput) {
         setTimeout(() => nameInput.focus(), 100);
         nameInput.addEventListener('keydown', function (e) {
@@ -113,8 +125,9 @@ function showJoinModal() {
         });
     }
 
-    const btn = document.getElementById('joinModalBtn');
-    if (btn) btn.addEventListener('click', _handleJoinSubmit);
+    if (btn) {
+        btn.addEventListener('click', _handleJoinSubmit);
+    }
 }
 
 async function _handleJoinSubmit() {
@@ -126,15 +139,19 @@ async function _handleJoinSubmit() {
     if (!nameInput || !roleSelect) return;
 
     const name = nameInput.value.trim();
-    const role = roleSelect.value;
-
     if (!name) {
         if (nameInput) nameInput.focus();
         return;
     }
 
-    if (btn)      btn.disabled          = true;
+    // Mutex: kein zweiter Submit sobald Name validiert
+    if (_joinDone) return;
+    _joinDone = true;
+
+    if (btn)      btn.disabled           = true;
     if (errorDiv) errorDiv.style.display = 'none';
+
+    const role = roleSelect.value;
 
     try {
         const response = await fetch('/api/sessions/' + roomCode + '/join', {
@@ -154,12 +171,32 @@ async function _handleJoinSubmit() {
             sessionStorage.setItem('isModerator',     'false');
             sessionStorage.setItem('participantRole', participantRole);
 
+            // Sich selbst sofort in players eintragen –
+            // PLAYER_JOINED-Broadcast kommt vor dem WS-Subscribe, würde sonst fehlen
+            if (!players[participantId]) {
+                players[participantId] = {
+                    name:              name,
+                    role:              participantRole,
+                    moderator:         false,
+                    voted:             false,
+                    cardValue:         null,
+                    originalCardValue: null,
+                    changed:           false
+                };
+            }
+
             const modal = document.getElementById('joinModal');
             if (modal) modal.style.display = 'none';
 
             initSession();
+            renderTable();
+            renderSidebar();
             connect();
         } else {
+            // Fehler → Mutex freigeben, Button wieder aktivieren
+            _joinDone = false;
+            if (btn) btn.disabled = false;
+
             let msg = globalThis.i18n?.toast?.errorJoin || 'Fehler beim Beitreten.';
             try {
                 const err = await response.json();
@@ -178,15 +215,17 @@ async function _handleJoinSubmit() {
                 errorDiv.textContent   = msg;
                 errorDiv.style.display = 'block';
             }
-            if (btn) btn.disabled = false;
         }
     } catch (e) {
+        // Netzwerkfehler → Mutex freigeben
+        _joinDone = false;
+        if (btn) btn.disabled = false;
+
         const msg = globalThis.i18n?.toast?.errorJoin || 'Verbindungsfehler.';
         if (errorDiv) {
             errorDiv.textContent   = msg;
             errorDiv.style.display = 'block';
         }
-        if (btn) btn.disabled = false;
     }
 }
 
@@ -194,15 +233,16 @@ async function _handleJoinSubmit() {
 // WebSocket
 // ====================================
 
-let _reconnectAttempts = 0;
-let _wasDisconnected   = false;
-
 function connect() {
+    if (_connecting) return;
+    _connecting = true;
+
     const socket = new SockJS('/ws');
     stompClient  = Stomp.over(socket);
     stompClient.debug = null;
 
     stompClient.connect({}, function () {
+        _connecting        = false;
         _reconnectAttempts = 0;
 
         if (_wasDisconnected) {
@@ -220,6 +260,7 @@ function connect() {
         loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
 
     }, function (error) {
+        _connecting = false;
         console.error('WebSocket Verbindungsfehler:', error);
         _wasDisconnected = true;
         _reconnectAttempts++;
@@ -242,9 +283,9 @@ async function loadInitialData() {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
 
-        const hasTickets   = ticketList.length > 0;
+        const hasTickets    = ticketList.length > 0;
         const ticketSidebar = document.getElementById('ticketSidebar');
-        const sessionEl    = document.querySelector('.session');
+        const sessionEl     = document.querySelector('.session');
         if (ticketSidebar) ticketSidebar.style.display = hasTickets ? 'flex' : 'none';
         if (sessionEl)     sessionEl.classList.toggle('session--with-tickets', hasTickets);
         renderTicketSidebar();
