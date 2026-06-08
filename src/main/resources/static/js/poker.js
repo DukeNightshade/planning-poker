@@ -4,14 +4,16 @@
 // Session-Daten aus DOM
 // ====================================
 
-const sessionData     = document.getElementById('sessionData');
-const roomCode        = sessionData.dataset.roomcode;
-const participantId   = sessionStorage.getItem('participantId');
-let   isModerator     = sessionStorage.getItem('isModerator') === 'true';
-const participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
+const sessionData   = document.getElementById('sessionData');
+const roomCode      = sessionData.dataset.roomcode;
+let participantId   = sessionStorage.getItem('participantId');
+let isModerator     = sessionStorage.getItem('isModerator') === 'true';
+let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 // ====================================
 // Zustandsvariablen
+// WICHTIG: alle lets VOR dem Entry-Point deklarieren,
+// damit connect() keinen TDZ-Fehler wirft
 // ====================================
 
 let selectedCard    = null;
@@ -26,21 +28,18 @@ let tickets = {};
 /** Spieler-Map: { id -> { name, role, moderator, voted, cardValue, originalCardValue, changed } } */
 let players = {};
 
-// ====================================
-// Initialisierung
-// ====================================
+// WebSocket-Flags – müssen vor connect() stehen
+let _reconnectAttempts = 0;
+let _wasDisconnected   = false;
+let _connecting        = false;
 
-if (isModerator) {
-    document.getElementById('moderatorActions').style.display = 'flex';
-    document.getElementById('settingsBtn').style.display      = 'block';
-    document.getElementById('addTicketBtn').style.display     = 'block';
-}
+// Modal-Mutex – verhindert Doppel-Submit
+let _joinDone = false;
 
-applySettings(
-    document.getElementById('settingShowTopic')?.checked ?? false,
-    document.getElementById('settingModeratorCanVote')?.checked ?? false,
-    document.getElementById('settingAutoReveal')?.checked ?? false
-);
+// ====================================
+// Spieler aus DOM laden
+// (immer, auch vor dem Join – Tisch im Hintergrund sichtbar)
+// ====================================
 
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
     players[el.dataset.playerId] = {
@@ -54,25 +53,196 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
     };
 });
 
-if (participantRole === 'PRODUCT_OWNER') {
-    document.getElementById('cardArea').style.display = 'none';
-}
-
 renderTable();
 renderSidebar();
+
+// ====================================
+// Einstiegspunkt
+// ====================================
+
+if (!participantId) {
+    showJoinModal();
+} else {
+    initSession();
+    connect();
+}
+
+// ====================================
+// Session-Initialisierung
+// ====================================
+
+function initSession() {
+    if (isModerator) {
+        const modActions   = document.getElementById('moderatorActions');
+        const settingsBtn  = document.getElementById('settingsBtn');
+        const addTicketBtn = document.getElementById('addTicketBtn');
+        if (modActions)   modActions.style.display   = 'flex';
+        if (settingsBtn)  settingsBtn.style.display  = 'block';
+        if (addTicketBtn) addTicketBtn.style.display = 'block';
+    }
+
+    applySettings(
+        document.getElementById('settingShowTopic')?.checked        ?? false,
+        document.getElementById('settingModeratorCanVote')?.checked ?? false,
+        document.getElementById('settingAutoReveal')?.checked       ?? false
+    );
+
+    if (participantRole === 'PRODUCT_OWNER') {
+        const cardArea = document.getElementById('cardArea');
+        if (cardArea) cardArea.style.display = 'none';
+    }
+}
+
+// ====================================
+// Join Modal
+// ====================================
+
+function _getBrowserId() {
+    try {
+        let id = localStorage.getItem('browserId');
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem('browserId', id);
+        }
+        return id;
+    } catch (e) {
+        return 'fallback-' + Math.random().toString(36).substring(2);
+    }
+}
+
+function showJoinModal() {
+    const modal = document.getElementById('joinModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const nameInput = document.getElementById('joinModalName');
+    const btn       = document.getElementById('joinModalBtn');
+
+    if (nameInput) {
+        setTimeout(() => nameInput.focus(), 100);
+        nameInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') _handleJoinSubmit();
+        });
+    }
+
+    if (btn) {
+        btn.addEventListener('click', _handleJoinSubmit);
+    }
+}
+
+async function _handleJoinSubmit() {
+    const nameInput  = document.getElementById('joinModalName');
+    const roleSelect = document.getElementById('joinModalRole');
+    const errorDiv   = document.getElementById('joinModalError');
+    const btn        = document.getElementById('joinModalBtn');
+
+    if (!nameInput || !roleSelect) return;
+
+    const name = nameInput.value.trim();
+    if (!name) {
+        if (nameInput) nameInput.focus();
+        return;
+    }
+
+    // Mutex: kein zweiter Submit sobald Name validiert
+    if (_joinDone) return;
+    _joinDone = true;
+
+    if (btn)      btn.disabled           = true;
+    if (errorDiv) errorDiv.style.display = 'none';
+
+    const role = roleSelect.value;
+
+    try {
+        const response = await fetch('/api/sessions/' + roomCode + '/join', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ name, role, browserId: _getBrowserId() })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            participantId   = String(data.participantId);
+            participantRole = data.role || 'DEVELOPER';
+            isModerator     = false;
+
+            sessionStorage.setItem('participantId',   participantId);
+            sessionStorage.setItem('isModerator',     'false');
+            sessionStorage.setItem('participantRole', participantRole);
+
+            // Sich selbst sofort in players eintragen –
+            // PLAYER_JOINED-Broadcast kommt vor dem WS-Subscribe, würde sonst fehlen
+            if (!players[participantId]) {
+                players[participantId] = {
+                    name:              name,
+                    role:              participantRole,
+                    moderator:         false,
+                    voted:             false,
+                    cardValue:         null,
+                    originalCardValue: null,
+                    changed:           false
+                };
+            }
+
+            const modal = document.getElementById('joinModal');
+            if (modal) modal.style.display = 'none';
+
+            initSession();
+            renderTable();
+            renderSidebar();
+            connect();
+        } else {
+            // Fehler → Mutex freigeben, Button wieder aktivieren
+            _joinDone = false;
+            if (btn) btn.disabled = false;
+
+            let msg = globalThis.i18n?.toast?.errorJoin || 'Fehler beim Beitreten.';
+            try {
+                const err = await response.json();
+                if (response.status === 400 && err.error) {
+                    if (err.error.includes('vergeben') || err.error.includes('taken')) {
+                        msg = globalThis.i18n?.toast?.errorNameTaken || err.error;
+                    } else if (err.error.includes('Buchstaben') || err.error.includes('letters')) {
+                        msg = globalThis.i18n?.toast?.errorNameInvalid || err.error;
+                    } else {
+                        msg = err.error;
+                    }
+                }
+            } catch (_) { /* JSON-Parsing ignorieren */ }
+
+            if (errorDiv) {
+                errorDiv.textContent   = msg;
+                errorDiv.style.display = 'block';
+            }
+        }
+    } catch (e) {
+        // Netzwerkfehler → Mutex freigeben
+        _joinDone = false;
+        if (btn) btn.disabled = false;
+
+        const msg = globalThis.i18n?.toast?.errorJoin || 'Verbindungsfehler.';
+        if (errorDiv) {
+            errorDiv.textContent   = msg;
+            errorDiv.style.display = 'block';
+        }
+    }
+}
 
 // ====================================
 // WebSocket
 // ====================================
 
-let _reconnectAttempts = 0;
-
 function connect() {
+    if (_connecting) return;
+    _connecting = true;
+
     const socket = new SockJS('/ws');
     stompClient  = Stomp.over(socket);
     stompClient.debug = null;
 
     stompClient.connect({}, function () {
+        _connecting        = false;
         _reconnectAttempts = 0;
 
         if (_wasDisconnected) {
@@ -90,19 +260,19 @@ function connect() {
         loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
 
     }, function (error) {
+        _connecting = false;
         console.error('WebSocket Verbindungsfehler:', error);
         _wasDisconnected = true;
         _reconnectAttempts++;
 
         const delay = Math.min(3000 * _reconnectAttempts, 15000);
         if (_reconnectAttempts === 1) {
-            showToast(globalThis.i18n.toast.disconnected, 'warning', globalThis.i18n.toast.disconnectedSub, 0);
+            showToast(globalThis.i18n.toast.disconnected, 'warning',
+                globalThis.i18n.toast.disconnectedSub, 0);
         }
         setTimeout(connect, delay);
     });
 }
-
-let _wasDisconnected = false;
 
 async function loadInitialData() {
     const ticketResponse = await fetch('/api/sessions/' + roomCode + '/tickets');
@@ -113,9 +283,11 @@ async function loadInitialData() {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
 
-        const hasTickets = ticketList.length > 0;
-        document.getElementById('ticketSidebar').style.display = hasTickets ? 'flex' : 'none';
-        document.querySelector('.session').classList.toggle('session--with-tickets', hasTickets);
+        const hasTickets    = ticketList.length > 0;
+        const ticketSidebar = document.getElementById('ticketSidebar');
+        const sessionEl     = document.querySelector('.session');
+        if (ticketSidebar) ticketSidebar.style.display = hasTickets ? 'flex' : 'none';
+        if (sessionEl)     sessionEl.classList.toggle('session--with-tickets', hasTickets);
         renderTicketSidebar();
     }
 
@@ -124,7 +296,8 @@ async function loadInitialData() {
         const state = await stateResponse.json();
         if (state.currentTicketId) {
             currentTicketId = state.currentTicketId.toString();
-            document.getElementById('topicText').textContent = state['currentTicketTitle'] ?? '';
+            const topicText = document.getElementById('topicText');
+            if (topicText) topicText.textContent = state['currentTicketTitle'] ?? '';
         }
     }
 
@@ -138,17 +311,17 @@ async function loadInitialData() {
 
 function handleMessage(data) {
     switch (data.type) {
-        case 'VOTE_UPDATE':      handleVoteUpdate(data);      break;
-        case 'REVEAL':           showResults(data.votes);     break;
-        case 'DISCUSSION_UPDATE': updateDiscussion(data.participantId, data.participantName, data.cardValue); break;
-        case 'RESET':            handleReset();               break;
-        case 'SETTINGS_UPDATE':  handleSettingsUpdate(data);  break;
-        case 'PLAYER_JOINED':    handlePlayerJoined(data);    break;
-        case 'PLAYER_LEFT':      handlePlayerLeft(data);      break;
+        case 'VOTE_UPDATE':        handleVoteUpdate(data);       break;
+        case 'REVEAL':             showResults(data.votes);      break;
+        case 'DISCUSSION_UPDATE':  updateDiscussion(data.participantId, data.participantName, data.cardValue); break;
+        case 'RESET':              handleReset();                break;
+        case 'SETTINGS_UPDATE':    handleSettingsUpdate(data);   break;
+        case 'PLAYER_JOINED':      handlePlayerJoined(data);     break;
+        case 'PLAYER_LEFT':        handlePlayerLeft(data);       break;
         case 'MODERATOR_PROMOTED': handleModeratorPromoted(data); break;
         case 'MODERATOR_DEMOTED':  handleModeratorDemoted(data);  break;
-        case 'TICKET_ADDED':     handleTicketAdded(data);     break;
-        case 'TICKET_SELECTED':  handleTicketSelected(data);  break;
+        case 'TICKET_ADDED':       handleTicketAdded(data);      break;
+        case 'TICKET_SELECTED':    handleTicketSelected(data);   break;
     }
 }
 
@@ -164,19 +337,23 @@ function handleSettingsUpdate(data) {
 
 function handleTicketAdded(data) {
     tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
-    document.getElementById('ticketSidebar').style.display = 'flex';
-    document.querySelector('.session').classList.add('session--with-tickets');
+    const ticketSidebar = document.getElementById('ticketSidebar');
+    const sessionEl     = document.querySelector('.session');
+    if (ticketSidebar) ticketSidebar.style.display = 'flex';
+    if (sessionEl)     sessionEl.classList.add('session--with-tickets');
     renderTicketSidebar();
     showToast(globalThis.i18n.toast.ticketAdded + ' ' + escapeHtml(data.title), 'success', '', 3000);
 }
 
 function handleTicketSelected(data) {
     currentTicketId = data.id;
-    document.getElementById('topicText').textContent = data.title;
+    const topicText = document.getElementById('topicText');
+    if (topicText) topicText.textContent = data.title;
     resetUI();
     renderTicketSidebar();
     showToast(globalThis.i18n.toast.ticketSelected + ' ' + escapeHtml(data.title), 'info', '', 2500);
 }
+
 function handleVoteUpdate(data) {
     updateVoteStatus(data.votedCount, data.totalCount, data.voterId);
 }
@@ -222,9 +399,12 @@ function handleModeratorPromoted(data) {
     }
     if (data.participantId === participantId) {
         isModerator = true;
-        document.getElementById('moderatorActions').style.display = 'flex';
-        document.getElementById('settingsBtn').style.display      = 'block';
-        document.getElementById('addTicketBtn').style.display     = 'block';
+        const modActions   = document.getElementById('moderatorActions');
+        const settingsBtn  = document.getElementById('settingsBtn');
+        const addTicketBtn = document.getElementById('addTicketBtn');
+        if (modActions)   modActions.style.display   = 'flex';
+        if (settingsBtn)  settingsBtn.style.display  = 'block';
+        if (addTicketBtn) addTicketBtn.style.display = 'block';
     } else {
         showToast(
             globalThis.i18n.toast.moderatorPromoted.replace('{0}', escapeHtml(data.participantName)),
@@ -241,15 +421,12 @@ function handleModeratorDemoted(data) {
     if (data.participantId === participantId) {
         isModerator = false;
         sessionStorage.setItem('isModerator', 'false');
-        document.getElementById('moderatorActions').style.display = 'none';
-        document.getElementById('settingsBtn').style.display      = 'none';
-        document.getElementById('addTicketBtn').style.display     = 'none';
+        const modActions   = document.getElementById('moderatorActions');
+        const settingsBtn  = document.getElementById('settingsBtn');
+        const addTicketBtn = document.getElementById('addTicketBtn');
+        if (modActions)   modActions.style.display   = 'none';
+        if (settingsBtn)  settingsBtn.style.display  = 'none';
+        if (addTicketBtn) addTicketBtn.style.display = 'none';
     }
     renderSidebar();
 }
-
-// ====================================
-// Start
-// ====================================
-
-connect();
