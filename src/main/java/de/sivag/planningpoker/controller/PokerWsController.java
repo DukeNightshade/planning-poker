@@ -9,6 +9,7 @@ import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
 import de.sivag.planningpoker.service.VoteService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -25,6 +26,7 @@ import java.util.Map;
  * @author Nico Hoffmann
  * @version 1.0
  */
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class PokerWsController {
@@ -66,6 +68,12 @@ public class PokerWsController {
         String wsSessionId   = headerAccessor.getSessionId();
 
         sessionRegistry.register(wsSessionId, roomCode, participantId);
+
+        boolean wasReconnect = sessionRegistry.cancelRemoval(participantId);
+        if (wasReconnect) {
+            log.info("Reconnect innerhalb Grace Period: participantId={}, roomCode={}",
+                    participantId, roomCode);
+        }
     }
 
     @MessageMapping("/session/{roomCode}/vote")
@@ -105,7 +113,6 @@ public class PokerWsController {
             return;
         }
 
-        // Nur abstimmungsberechtigte Teilnehmer zählen (kein Product Owner)
         int     totalParticipants = sessionService.getVotingParticipants(roomCode).size();
         int     votedCount        = voteService.getVotes(roomCode).size();
         Session session           = sessionService.getSessionByRoomCode(roomCode);

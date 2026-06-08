@@ -53,23 +53,31 @@ public class WebSocketEventListener {
         WebSocketSessionRegistry.ParticipantInfo info = sessionRegistry.remove(wsSessionId);
         if (info == null) return;
 
-        try {
-            String participantName = sessionService.removeParticipant(info.participantId());
+        Long   participantId = info.participantId();
+        String roomCode      = info.roomCode();
 
-            log.info("Teilnehmer getrennt und entfernt: name={}, roomCode={}",
-                    participantName, info.roomCode());
+        log.debug("WS getrennt: participantId={}, roomCode={} – Grace Period läuft",
+                participantId, roomCode);
 
-            messagingTemplate.convertAndSend(
-                    "/topic/session/" + info.roomCode(),
-                    Map.of(
-                            "type",            "PLAYER_LEFT",
-                            "participantId",   info.participantId().toString(),
-                            "participantName", participantName
-                    )
-            );
-        } catch (Exception e) {
-            log.warn("Fehler beim Entfernen des Teilnehmers {}: {}",
-                    info.participantId(), e.getMessage());
-        }
+        sessionRegistry.scheduleRemoval(participantId, () -> {
+            try {
+                String participantName = sessionService.removeParticipant(participantId);
+
+                log.info("Teilnehmer entfernt nach Grace Period: name={}, roomCode={}",
+                        participantName, roomCode);
+
+                messagingTemplate.convertAndSend(
+                        "/topic/session/" + roomCode,
+                        Map.of(
+                                "type",            "PLAYER_LEFT",
+                                "participantId",   participantId.toString(),
+                                "participantName", participantName
+                        )
+                );
+            } catch (Exception e) {
+                log.warn("Fehler beim Entfernen des Teilnehmers {} nach Grace Period: {}",
+                        participantId, e.getMessage());
+            }
+        });
     }
 }
