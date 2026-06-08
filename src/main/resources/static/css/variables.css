@@ -1,0 +1,23 @@
+/* ================================
+   CSS Custom Properties
+   ================================ */
+:root {
+    --color-primary:    #004178;
+    --color-red:        #E1001A;
+    --color-accent:     #00579d;
+    --color-ice:        #e4eff9;
+    --color-dark:       #333333;
+    --color-white:      #ffffff;
+    --color-grey:       #f4f6f9;
+    --color-border:     #d0d8e4;
+    --color-text:       #1a1a2e;
+    --color-text-light: #595f6e;
+    --font-main:        'Fira Sans', 'Lucida Sans', sans-serif;
+    --radius:           10px;
+    --radius-sm:        6px;
+    --shadow:           0 2px 12px rgba(0,65,120,0.10);
+    --shadow-card:      0 4px 20px rgba(0,65,120,0.10);
+    --transition:       0.2s ease;
+    --spring:           0.25s cubic-bezier(.34,1.56,.64,1);
+    --header-bg:        linear-gradient(135deg, #004178 0%, #00579d 100%);
+}

@@ -11,10 +11,11 @@ function getBrowserId() {
     return id;
 }
 
-function handleSessionCreated(data) {
+function handleSessionCreated(data, moderatorName) {
     sessionStorage.setItem('participantId',   data.participantId);
     sessionStorage.setItem('isModerator',     'true');
     sessionStorage.setItem('participantRole', data.moderatorRole);
+    localStorage.setItem('pp_name_' + data.roomCode, moderatorName);
     globalThis.location.href = '/session/' + data.roomCode;
 }
 
@@ -39,7 +40,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
 
     if (response.ok) {
         const data = await response.json();
-        handleSessionCreated(data);
+        handleSessionCreated(data, moderatorName);
     } else {
         let msg = globalThis.i18n.toast.errorCreate;
         try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
@@ -74,7 +75,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
 
     if (response.ok) {
         const data = await response.json();
-        handleSessionCreated(data);
+        handleSessionCreated(data, moderatorName);
     } else {
         let msg = globalThis.i18n.toast.errorCreate;
         try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
@@ -106,6 +107,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('participantId',   data.participantId);
         sessionStorage.setItem('isModerator',     'false');
         sessionStorage.setItem('participantRole', data.role);
+        localStorage.setItem('pp_name_' + roomCode, name);
         globalThis.location.href = '/session/' + roomCode;
     } else {
         let msg = globalThis.i18n.toast.errorJoin;

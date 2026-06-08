@@ -10,89 +10,33 @@
     <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <style>
-        .skip-link { position: absolute; top: -48px; left: 1rem; background: var(--color-primary, #004178); color: #ffffff; padding: 0.5rem 1rem; border-radius: 0 0 6px 6px; font-family: var(--font-main, sans-serif), sans-serif; font-size: 0.9rem; font-weight: 600; text-decoration: none; z-index: 10000; transition: top 0.15s ease; }
+        /* Session-spezifisch: Viewport füllen, kein globales Scrollen */
+        html, body       { height: 100%; }
+        body             { overflow: hidden; }
+        .header--session { flex-shrink: 0; }
+        .footer          { flex-shrink: 0; }
+
+        .skip-link {
+            position: absolute; top: -48px; left: 1rem;
+            background: var(--color-primary, #004178); color: #ffffff;
+            padding: 0.5rem 1rem; border-radius: 0 0 6px 6px;
+            font-family: var(--font-main, sans-serif), sans-serif;
+            font-size: 0.9rem; font-weight: 600; text-decoration: none;
+            z-index: 10000; transition: top 0.15s ease;
+        }
         .skip-link:focus { top: 0; outline: 3px solid #ffffff; outline-offset: 2px; }
-        .lang-btn { color: rgba(255,255,255,0.7); font-size: 0.85rem; font-weight: 600; text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px; border: 2px solid rgba(255,255,255,0.25); font-family: var(--font-main, sans-serif), sans-serif; transition: all 0.2s; }
-        a.lang-btn:hover, a.lang-btn[aria-current="true"] { color: #ffffff !important; border-color: rgba(255,255,255,0.7) !important; background: #1a5fa0; }
 
-        /* ================================
-           Join Modal
-           ================================ */
-        .join-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(3px);
-            -webkit-backdrop-filter: blur(3px);
-            animation: fadeIn 0.25s ease;
+        .lang-btn {
+            color: rgba(255,255,255,0.7); font-size: 0.85rem; font-weight: 600;
+            text-decoration: none; padding: 0.2rem 0.5rem; border-radius: 4px;
+            border: 2px solid rgba(255,255,255,0.25);
+            font-family: var(--font-main, sans-serif), sans-serif; transition: all 0.2s;
         }
-
-        .join-modal {
-            background: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 2rem;
-            width: 100%;
-            max-width: 400px;
-            margin: 1rem;
-            border-top: 4px solid var(--color-primary);
-            animation: slideDown 0.35s cubic-bezier(.34, 1.4, .64, 1);
-        }
-
-        .join-modal__title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--color-primary);
-            margin-bottom: 0.35rem;
-        }
-
-        .join-modal__subtitle {
-            font-size: 0.875rem;
-            color: var(--color-text-light);
-            margin-bottom: 1.5rem;
-        }
-
-        .join-modal__roomcode {
-            font-weight: 700;
-            color: var(--color-primary);
-            background: var(--color-ice);
-            padding: 0.1rem 0.5rem;
-            border-radius: var(--radius-sm);
-            letter-spacing: 1px;
-            font-size: 0.9rem;
-        }
-
-        .join-modal__error {
-            background: #fef2f2;
-            border: 1px solid #fca5a5;
-            color: #dc2626;
-            border-radius: var(--radius-sm);
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            margin-bottom: 0.75rem;
-            display: none;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .join-modal {
-                background: #1e1e2e;
-                border-color: #4a9ede;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            }
-            .join-modal__title  { color: #4a9ede; }
-            .join-modal__roomcode {
-                background: #1e3a52;
-                color: #7dbfef;
-            }
-            .join-modal__error {
-                background: #1f0a0a;
-                border-color: #f87171;
-                color: #f87171;
-            }
+        a.lang-btn:hover,
+        a.lang-btn[aria-current="true"] {
+            color: #ffffff !important;
+            border-color: rgba(255,255,255,0.7) !important;
+            background: #1a5fa0;
         }
     </style>
 </head>
@@ -102,9 +46,6 @@
 
 <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
-<!-- ================================
-     Join Modal
-     ================================ -->
 <div id="joinModal" class="join-modal-backdrop"
      role="dialog" aria-modal="true" aria-labelledby="joinModalTitle">
     <div class="join-modal">
@@ -164,22 +105,22 @@
         nav:     { copied:  /*[[#{nav.copied}]]*/ '' },
         session: { voted:   /*[[#{session.voted}]]*/ '' },
         roles: {
-            DEVELOPER:      /*[[#{role.developer}]]*/ '',
-            TESTER:         /*[[#{role.tester}]]*/ '',
-            PRODUCT_OWNER:  /*[[#{role.product_owner.short}]]*/ '',
-            MODERATOR:      /*[[#{role.moderator}]]*/ '',
-            IT_ARCHITECT:   /*[[#{role.it_architect}]]*/ ''
+            DEVELOPER:     /*[[#{role.developer}]]*/ '',
+            TESTER:        /*[[#{role.tester}]]*/ '',
+            PRODUCT_OWNER: /*[[#{role.product_owner.short}]]*/ '',
+            MODERATOR:     /*[[#{role.moderator}]]*/ '',
+            IT_ARCHITECT:  /*[[#{role.it_architect}]]*/ ''
         },
         labels: {
-            moderator:      /*[[#{role.moderator}]]*/ '',
-            moderatorStar:  /*[[#{session.moderator.star}]]*/ '',
-            you:            /*[[#{session.you}]]*/ 'Du',
-            waiting:        /*[[#{session.waiting}]]*/ '',
-            method:         /*[[#{session.sidebar.method}]]*/ '',
-            participants:   /*[[#{session.sidebar.participants}]]*/ '',
-            ticketsAdd:     /*[[#{tickets.add}]]*/ '',
-            ticketsInput:   /*[[#{tickets.input.placeholder}]]*/ '',
-            ticketsSubmit:  /*[[#{tickets.submit}]]*/ ''
+            moderator:    /*[[#{role.moderator}]]*/ '',
+            moderatorStar: /*[[#{session.moderator.star}]]*/ '',
+            you:          /*[[#{session.you}]]*/ 'Du',
+            waiting:      /*[[#{session.waiting}]]*/ '',
+            method:       /*[[#{session.sidebar.method}]]*/ '',
+            participants: /*[[#{session.sidebar.participants}]]*/ '',
+            ticketsAdd:   /*[[#{tickets.add}]]*/ '',
+            ticketsInput: /*[[#{tickets.input.placeholder}]]*/ '',
+            ticketsSubmit: /*[[#{tickets.submit}]]*/ ''
         }
     };
 </script>
@@ -208,8 +149,10 @@
         <div class="header__right">
             <span class="header__roomcode-label" th:text="#{nav.roomcode}">Raumcode:</span>
             <span class="header__roomcode" id="roomCodeDisplay" th:text="${roomCode}"></span>
-            <button class="header__copy-btn" id="copyBtn" onclick="copyRoomCode()" th:text="#{nav.copy}">Kopieren</button>
-            <button class="btn--icon" id="settingsBtn" style="display:none;" onclick="toggleSettings()"
+            <button class="header__copy-btn" id="copyBtn"
+                    onclick="copyRoomCode()" th:text="#{nav.copy}">Kopieren</button>
+            <button class="btn--icon" id="settingsBtn" style="display:none;"
+                    onclick="toggleSettings()"
                     aria-label="Einstellungen öffnen" aria-expanded="false">&#9881;&#65039;</button>
         </div>
     </div>
@@ -220,20 +163,24 @@
     <div class="settings-panel" id="settingsPanel" style="display:none; grid-column: 1 / -1;">
         <div class="settings-panel__header">
             <h3 th:text="#{settings.title}">Einstellungen</h3>
-            <button class="btn--icon" onclick="toggleSettings()" aria-label="Einstellungen schließen">&#x2715;</button>
+            <button class="btn--icon" onclick="toggleSettings()"
+                    aria-label="Einstellungen schließen">&#x2715;</button>
         </div>
         <div class="settings-panel__body">
             <label class="settings__toggle" for="settingShowTopic" th:if="${hasTickets}">
                 <span th:text="#{settings.show_topic}">Ticket-Modul anzeigen</span>
-                <input type="checkbox" id="settingShowTopic" th:checked="${showTopic}" onchange="saveSettings()">
+                <input type="checkbox" id="settingShowTopic"
+                       th:checked="${showTopic}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle" for="settingModeratorCanVote">
                 <span th:text="#{settings.moderator_vote}">Moderator darf mitwählen</span>
-                <input type="checkbox" id="settingModeratorCanVote" th:checked="${moderatorCanVote}" onchange="saveSettings()">
+                <input type="checkbox" id="settingModeratorCanVote"
+                       th:checked="${moderatorCanVote}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle" for="settingAutoReveal">
                 <span th:text="#{settings.auto_reveal}">Automatisch aufdecken</span>
-                <input type="checkbox" id="settingAutoReveal" th:checked="${autoReveal}" onchange="saveSettings()">
+                <input type="checkbox" id="settingAutoReveal"
+                       th:checked="${autoReveal}" onchange="saveSettings()">
             </label>
         </div>
     </div>
@@ -243,10 +190,12 @@
         <ul class="ticket-sidebar__list" id="ticketSidebarList"></ul>
         <div id="addTicketForm" style="display:none; margin-top: 0.75rem;">
             <div class="ticket-entry">
-                <label for="newTicketInput" class="sr-only" th:text="#{tickets.input.placeholder}">Ticket-Titel</label>
+                <label for="newTicketInput" class="sr-only"
+                       th:text="#{tickets.input.placeholder}">Ticket-Titel</label>
                 <input class="form__input" type="text" id="newTicketInput"
                        th:placeholder="#{tickets.input.placeholder}" style="font-size: 0.85rem;">
-                <button class="btn--remove" onclick="cancelAddTicket()" aria-label="Abbrechen">&#x2715;</button>
+                <button class="btn--remove" onclick="cancelAddTicket()"
+                        aria-label="Abbrechen">&#x2715;</button>
             </div>
             <button class="btn btn--primary"
                     style="width:100%; margin-top: 0.5rem; font-size: 0.85rem;"
@@ -261,44 +210,56 @@
 
         <div class="session__topic" id="topicBar">
             <span class="session__topic-title" th:text="#{session.topic.label}">Aktuelles Ticket:</span>
-            <span class="session__topic-text" id="topicText" th:text="#{session.topic.empty}">&#8211;</span>
+            <span class="session__topic-text"  id="topicText"
+                  th:text="#{session.topic.empty}">&#8211;</span>
         </div>
 
-        <div id="discussionLabel" style="display:none;" class="poker-pane__discussion-label"
-             th:text="#{session.discussion.label}" aria-live="polite">&#x1F4AC; Diskussionsmodus</div>
+        <div id="discussionLabel" style="display:none;"
+             class="poker-pane__discussion-label"
+             th:text="#{session.discussion.label}"
+             aria-live="polite">&#x1F4AC; Diskussionsmodus</div>
 
-        <div id="pokerTable" style="width:100%; min-height:380px;" aria-label="Pokertisch"></div>
+        <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
 
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
-            <div th:if="${estimationMethod == 'FIBONACCI'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'FIBONACCI'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,0,0.5,1,2,3,5,8,13,20,40,100'.split(',')}"
-                        th:text="${v}" th:attr="data-value=${v}" onclick="selectCard(this)"></button>
+                        th:text="${v}" th:attr="data-value=${v}"
+                        onclick="selectCard(this)"></button>
             </div>
-            <div th:if="${estimationMethod == 'T_SHIRT'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'T_SHIRT'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,XS,S,M,L,XL,XXL'.split(',')}"
-                        th:text="${v}" th:attr="data-value=${v}" onclick="selectCard(this)"></button>
+                        th:text="${v}" th:attr="data-value=${v}"
+                        onclick="selectCard(this)"></button>
             </div>
-            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}" class="cards__grid" style="justify-content:center;">
+            <div th:if="${estimationMethod == 'POWERS_OF_TWO'}"
+                 class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
                         th:each="v : ${'?,☕,1,2,4,8,16,32,64'.split(',')}"
-                        th:text="${v}" th:attr="data-value=${v}" onclick="selectCard(this)"></button>
+                        th:text="${v}" th:attr="data-value=${v}"
+                        onclick="selectCard(this)"></button>
             </div>
         </div>
 
         <div id="resultsArea" style="display:none;" aria-live="polite"></div>
-        <ul id="resultsList" style="display:none;"></ul>
+        <ul  id="resultsList"  style="display:none;"></ul>
 
         <div class="session__actions" id="moderatorActions" style="display:none;">
-            <button class="btn btn--primary"  onclick="revealCards()" th:text="#{session.reveal}">Karten aufdecken</button>
-            <button class="btn btn--secondary" onclick="resetRound()"  th:text="#{session.newround}">Neue Runde</button>
+            <button class="btn btn--primary"   onclick="revealCards()"
+                    th:text="#{session.reveal}">Karten aufdecken</button>
+            <button class="btn btn--secondary" onclick="resetRound()"
+                    th:text="#{session.newround}">Neue Runde</button>
         </div>
 
     </section>
 
     <aside class="session__sidebar" aria-label="Teilnehmer-Übersicht">
-        <h3 class="sidebar__title" id="sidebarTitle" th:text="#{session.sidebar.participants}">Teilnehmer</h3>
+        <h3 class="sidebar__title" id="sidebarTitle"
+            th:text="#{session.sidebar.participants}">Teilnehmer</h3>
         <ul class="sidebar__list" id="participantList" aria-label="Teilnehmerliste"></ul>
         <div class="sidebar__method-block">
             <div class="sidebar__method-label" th:text="#{session.sidebar.method}">Methode</div>
@@ -315,7 +276,7 @@
 <footer class="footer">&copy; 2026 <span th:text="#{app.footer}">SIV.AG &#8211; Internes Tool</span></footer>
 
 <div style="display:none;">
-    <span id="voteStatus" th:text="#{session.waiting}">Warte auf Abstimmung...</span>
+    <span id="voteStatus"   th:text="#{session.waiting}">Warte auf Abstimmung...</span>
     <span id="progressBar"></span>
 </div>
 

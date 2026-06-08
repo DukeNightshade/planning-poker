@@ -43,15 +43,16 @@ public class PokerWsController {
     // Abhängigkeiten
     // ====================================
 
-    private final SessionService            sessionService;
-    private final VoteService               voteService;
-    private final TicketService             ticketService;
-    private final SimpMessagingTemplate     messagingTemplate;
-    private final WebSocketSessionRegistry  sessionRegistry;
+    private final SessionService           sessionService;
+    private final VoteService              voteService;
+    private final TicketService            ticketService;
+    private final SimpMessagingTemplate    messagingTemplate;
+    private final WebSocketSessionRegistry sessionRegistry;
 
     // ====================================
     // WebSocket Endpunkte
     // ====================================
+
     @MessageMapping("/session/{roomCode}/register")
     public void register(
             @DestinationVariable String roomCode,
@@ -61,8 +62,8 @@ public class PokerWsController {
         String raw = payload.get(PARTICIPANT_ID);
         if (raw == null) return;
 
-        Long participantId = Long.parseLong(raw);
-        String wsSessionId = headerAccessor.getSessionId();
+        Long   participantId = Long.parseLong(raw);
+        String wsSessionId   = headerAccessor.getSessionId();
 
         sessionRegistry.register(wsSessionId, roomCode, participantId);
     }
@@ -84,9 +85,7 @@ public class PokerWsController {
             sessionAttributes.put(PARTICIPANT_ID, participantId);
         }
 
-        Vote vote = voteService.submitVote(
-                roomCode, participantId, cardValue, isDiscussion);
-
+        Vote vote = voteService.submitVote(roomCode, participantId, cardValue, isDiscussion);
         if (vote == null) return;
 
         if (isDiscussion) {
@@ -98,7 +97,7 @@ public class PokerWsController {
                     .orElse("");
 
             broadcast(roomCode, Map.of(
-                    "type",          "DISCUSSION_UPDATE",
+                    "type",           "DISCUSSION_UPDATE",
                     PARTICIPANT_ID,   participantId.toString(),
                     PARTICIPANT_NAME, participantName,
                     CARD_VALUE,       cardValue
@@ -106,7 +105,8 @@ public class PokerWsController {
             return;
         }
 
-        int     totalParticipants = sessionService.getParticipants(roomCode).size();
+        // Nur abstimmungsberechtigte Teilnehmer zählen (kein Product Owner)
+        int     totalParticipants = sessionService.getVotingParticipants(roomCode).size();
         int     votedCount        = voteService.getVotes(roomCode).size();
         Session session           = sessionService.getSessionByRoomCode(roomCode);
 
@@ -185,12 +185,11 @@ public class PokerWsController {
     }
 
     // ====================================
-    // Utility Methoden
+    // Hilfsmethoden
     // ====================================
 
     private void broadcast(String roomCode, Map<String, ?> message) {
-        messagingTemplate.convertAndSend(
-                TOPIC_SESSION + roomCode, message);
+        messagingTemplate.convertAndSend(TOPIC_SESSION + roomCode, message);
     }
 
     private void broadcastReveal(String roomCode, List<Vote> votes) {

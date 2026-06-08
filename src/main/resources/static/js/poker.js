@@ -12,8 +12,7 @@ let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 // ====================================
 // Zustandsvariablen
-// WICHTIG: alle lets VOR dem Entry-Point deklarieren,
-// damit connect() keinen TDZ-Fehler wirft
+// (alle VOR dem Entry-Point – kein TDZ-Fehler)
 // ====================================
 
 let selectedCard    = null;
@@ -28,17 +27,16 @@ let tickets = {};
 /** Spieler-Map: { id -> { name, role, moderator, voted, cardValue, originalCardValue, changed } } */
 let players = {};
 
-// WebSocket-Flags – müssen vor connect() stehen
+// WebSocket-Flags
 let _reconnectAttempts = 0;
 let _wasDisconnected   = false;
 let _connecting        = false;
 
-// Modal-Mutex – verhindert Doppel-Submit
+// Modal-Mutex
 let _joinDone = false;
 
 // ====================================
 // Spieler aus DOM laden
-// (immer, auch vor dem Join – Tisch im Hintergrund sichtbar)
 // ====================================
 
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
@@ -55,6 +53,16 @@ document.querySelectorAll('#playerData .player-entry').forEach(el => {
 
 renderTable();
 renderSidebar();
+
+// ====================================
+// Resize-Listener
+// ====================================
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(renderTable, 150);
+});
 
 // ====================================
 // Einstiegspunkt
@@ -124,10 +132,7 @@ function showJoinModal() {
             if (e.key === 'Enter') _handleJoinSubmit();
         });
     }
-
-    if (btn) {
-        btn.addEventListener('click', _handleJoinSubmit);
-    }
+    if (btn) btn.addEventListener('click', _handleJoinSubmit);
 }
 
 async function _handleJoinSubmit() {
@@ -139,12 +144,8 @@ async function _handleJoinSubmit() {
     if (!nameInput || !roleSelect) return;
 
     const name = nameInput.value.trim();
-    if (!name) {
-        if (nameInput) nameInput.focus();
-        return;
-    }
+    if (!name) { if (nameInput) nameInput.focus(); return; }
 
-    // Mutex: kein zweiter Submit sobald Name validiert
     if (_joinDone) return;
     _joinDone = true;
 
@@ -170,18 +171,13 @@ async function _handleJoinSubmit() {
             sessionStorage.setItem('participantId',   participantId);
             sessionStorage.setItem('isModerator',     'false');
             sessionStorage.setItem('participantRole', participantRole);
+            // Name für Auto-Reconnect speichern
+            localStorage.setItem('pp_name_' + roomCode, name);
 
-            // Sich selbst sofort in players eintragen –
-            // PLAYER_JOINED-Broadcast kommt vor dem WS-Subscribe, würde sonst fehlen
             if (!players[participantId]) {
                 players[participantId] = {
-                    name:              name,
-                    role:              participantRole,
-                    moderator:         false,
-                    voted:             false,
-                    cardValue:         null,
-                    originalCardValue: null,
-                    changed:           false
+                    name, role: participantRole, moderator: false,
+                    voted: false, cardValue: null, originalCardValue: null, changed: false
                 };
             }
 
@@ -193,7 +189,6 @@ async function _handleJoinSubmit() {
             renderSidebar();
             connect();
         } else {
-            // Fehler → Mutex freigeben, Button wieder aktivieren
             _joinDone = false;
             if (btn) btn.disabled = false;
 
@@ -209,23 +204,89 @@ async function _handleJoinSubmit() {
                         msg = err.error;
                     }
                 }
-            } catch (_) { /* JSON-Parsing ignorieren */ }
+            } catch (_) {}
 
-            if (errorDiv) {
-                errorDiv.textContent   = msg;
-                errorDiv.style.display = 'block';
-            }
+            if (errorDiv) { errorDiv.textContent = msg; errorDiv.style.display = 'block'; }
         }
     } catch (e) {
-        // Netzwerkfehler → Mutex freigeben
         _joinDone = false;
         if (btn) btn.disabled = false;
-
         const msg = globalThis.i18n?.toast?.errorJoin || 'Verbindungsfehler.';
-        if (errorDiv) {
-            errorDiv.textContent   = msg;
-            errorDiv.style.display = 'block';
+        if (errorDiv) { errorDiv.textContent = msg; errorDiv.style.display = 'block'; }
+    }
+}
+
+// ====================================
+// Auto-Reconnect nach Seiten-Refresh
+// ====================================
+
+async function _ensureRegistered() {
+    // Teilnehmer ist im SSR-gerenderten playerData → noch in der DB
+    if (players[participantId]) return;
+
+    const storedName = localStorage.getItem('pp_name_' + roomCode);
+    if (!storedName) return;
+
+    const storedRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
+    const wasM       = isModerator;
+
+    try {
+        const res = await fetch('/api/sessions/' + roomCode + '/join', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                name:      storedName,
+                role:      storedRole,
+                browserId: _getBrowserId()
+            })
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const newId = String(data.participantId);
+
+        participantId   = newId;
+        participantRole = data.role || storedRole;
+        isModerator     = false;
+
+        sessionStorage.setItem('participantId',   participantId);
+        sessionStorage.setItem('participantRole', participantRole);
+        sessionStorage.setItem('isModerator',     'false');
+
+        if (!players[participantId]) {
+            players[participantId] = {
+                name:              storedName,
+                role:              participantRole,
+                moderator:         false,
+                voted:             false,
+                cardValue:         null,
+                originalCardValue: null,
+                changed:           false
+            };
         }
+
+        stompClient.send('/app/session/' + roomCode + '/register', {},
+            JSON.stringify({ participantId }));
+
+        // War Moderator → Rechte wiederherstellen
+        if (wasM) {
+            const promRes = await fetch(
+                '/api/sessions/' + roomCode + '/participants/' + participantId + '/promote',
+                { method: 'POST' }
+            );
+            if (promRes.ok) {
+                isModerator = true;
+                sessionStorage.setItem('isModerator', 'true');
+                if (players[participantId]) players[participantId].moderator = true;
+                initSession();
+            }
+        }
+
+        renderTable();
+        renderSidebar();
+
+    } catch (e) {
+        console.warn('Auto-Reconnect fehlgeschlagen:', e);
     }
 }
 
@@ -241,7 +302,7 @@ function connect() {
     stompClient  = Stomp.over(socket);
     stompClient.debug = null;
 
-    stompClient.connect({}, function () {
+    stompClient.connect({}, async function () {
         _connecting        = false;
         _reconnectAttempts = 0;
 
@@ -256,6 +317,8 @@ function connect() {
 
         stompClient.send('/app/session/' + roomCode + '/register', {},
             JSON.stringify({ participantId }));
+
+        await _ensureRegistered();
 
         loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
 

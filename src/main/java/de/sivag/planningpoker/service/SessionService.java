@@ -41,9 +41,9 @@ public class SessionService {
     // Statische Variablen
     // ====================================
 
-    private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int    CODE_LENGTH = 8;
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String       CODE_CHARS  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final int          CODE_LENGTH = 8;
+    private static final SecureRandom RANDOM      = new SecureRandom();
 
     // ====================================
     // Abhängigkeiten
@@ -99,7 +99,6 @@ public class SessionService {
 
         String cleanedName = StringUtils.sanitizeName(participantName);
 
-        // Reconnect: bestehenden Teilnehmer mit gleicher Browser-ID zurückgeben
         if (browserId != null) {
             Optional<Participant> existing = participantRepository
                     .findBySessionRoomCodeAndBrowserId(roomCode, browserId);
@@ -113,7 +112,6 @@ public class SessionService {
             }
         }
 
-        // Duplikat-Prüfung
         if (participantRepository.existsBySessionRoomCodeAndName(roomCode, cleanedName)) {
             throw new IllegalStateException(
                     "Der Name \"" + cleanedName + "\" ist in dieser Session bereits vergeben.");
@@ -131,8 +129,7 @@ public class SessionService {
     @Transactional
     public String removeParticipant(Long participantId) {
         Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException(
-                        PARTICIPANT_NOT_FOUND));
+                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
 
         String name = participant.getName();
         participantRepository.delete(participant);
@@ -187,6 +184,13 @@ public class SessionService {
 
     public List<Participant> getParticipants(String roomCode) {
         return participantRepository.findBySessionRoomCode(roomCode);
+    }
+
+    public List<Participant> getVotingParticipants(String roomCode) {
+        return participantRepository.findBySessionRoomCode(roomCode)
+                .stream()
+                .filter(p -> p.getRole() != ParticipantRole.PRODUCT_OWNER)
+                .toList();
     }
 
     // ====================================
