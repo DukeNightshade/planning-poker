@@ -30,4 +30,7 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
 
     @Query("SELECT v FROM Vote v JOIN FETCH v.participant WHERE v.session.roomCode = :roomCode")
     List<Vote> findBySessionRoomCodeWithParticipant(@Param("roomCode") String roomCode);
+
+    @Query("SELECT v.participant.id FROM Vote v WHERE v.session.roomCode = :roomCode")
+    List<Long> findParticipantIdsBySessionRoomCode(@Param("roomCode") String roomCode);
 }

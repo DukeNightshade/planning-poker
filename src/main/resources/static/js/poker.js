@@ -362,6 +362,15 @@ async function loadInitialData() {
             const topicText = document.getElementById('topicText');
             if (topicText) topicText.textContent = state['currentTicketTitle'] ?? '';
         }
+        if (state.votedParticipantIds?.length > 0) {
+            state.votedParticipantIds.forEach(id => {
+                if (players[id]) players[id].voted = true;
+            });
+
+            const totalCount = Object.values(players)
+                .filter(p => p.role !== 'PRODUCT_OWNER').length;
+            updateVoteStatus(state.votedCount, totalCount, null);
+        }
     }
 
     renderTable();
