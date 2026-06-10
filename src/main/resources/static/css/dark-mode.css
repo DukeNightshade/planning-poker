@@ -1,0 +1,113 @@
+/* ================================
+   Dark Mode
+   ================================ */
+@media (prefers-color-scheme: dark) {
+
+    /* Variables */
+    :root {
+        --color-primary:    #4a9ede;
+        --color-accent:     #5baee8;
+        --color-ice:        #1e3a52;
+        --color-dark:       #e0e0e0;
+        --color-white:      #1e1e2e;
+        --color-grey:       #151520;
+        --color-border:     #2e3a4a;
+        --color-text:       #e8eaf0;
+        --color-text-light: #9aa5b4;
+        --shadow:           0 2px 12px rgba(0,0,0,0.4);
+        --shadow-card:      0 4px 20px rgba(0,0,0,0.35);
+        --header-bg:        linear-gradient(135deg, #0a1628 0%, #0f2240 100%);
+    }
+
+    /* Base */
+    .footer { background: #1e1e2e; border-top-color: var(--color-border); }
+
+    /* Header */
+    .header             { border-bottom-color: var(--color-red); }
+    .header--session    { background: transparent; }
+    .header__top        { border-bottom-color: var(--color-red); }
+    .header__bottom {
+        background: linear-gradient(135deg, #0f1d30 0%, #141e2e 100%);
+        border-top: 1px solid rgba(74,158,222,0.15);
+        border-bottom-color: #1e3a52;
+        box-shadow: none;
+    }
+    .header__logo-img { opacity: 0.95; content: url('../images/siv-logo.png'); }
+    .header__back         { color: #a8d0f0; }
+    .header__roomcode-label { color: #7ab8e8; }
+    .header__title,
+    .header__app-title  { color: #e8eaf0; }
+    .header__subtitle   { color: rgba(255, 255, 255, 0.82); }
+    .header__roomcode   { background: #1e3a52; color: #7dbfef; }
+    .header__copy-btn   { background: #4a9ede; border-color: #4a9ede; color: #0a1628; }
+    .header__copy-btn:hover { background: #5baee8; border-color: #5baee8; }
+
+    /* Buttons */
+    .btn--primary         { background: #4a9ede; color: #0a1628; }
+    .btn--primary:hover   { background: #5baee8; box-shadow: 0 6px 20px rgba(74,158,222,0.3); }
+    .btn--secondary       { background: var(--color-red); color: #ffffff; }
+    .btn--secondary:hover { background: #c0001a; color: #ffffff; }
+    .btn--outline         { border-color: #4a9ede; color: #4a9ede; }
+    .btn--outline:hover   { background: #1e3a52; }
+    .btn--icon:hover      { background: #252535; }
+    .btn--promote:hover   { background: #2a2400; border-color: #eab308; }
+    .btn--demote:hover    { background: #1f0a0a; border-color: #f87171; color: #f87171; }
+
+    /* Forms */
+    .form__input,
+    .form__select { background: #252535; color: var(--color-text); border-color: var(--color-border); }
+    .form__input:focus,
+    .form__select:focus { border-color: #4a9ede; box-shadow: 0 0 0 3px rgba(74,158,222,0.15); }
+
+    /* Homepage */
+    .hero { background: linear-gradient(160deg, #1a2a3a 0%, #151520 100%); border-bottom-color: var(--color-border); }
+    .hero__tag     { background: rgba(74,158,222,0.25); color: #ffffff; border-color: rgba(74,158,222,0.4); }
+    .hero__headline { color: #e8eaf0; }
+    .hero__pill    { background: #1e1e2e; border-color: var(--color-border); color: #4a9ede; }
+    .hero__pill:hover { border-color: #4a9ede; background: #1e3a52; }
+    .card, .card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
+    .card__title   { color: #4a9ede; border-bottom-color: #1e3a52; }
+    .card__title::before { background: #4a9ede; }
+
+    /* Session */
+    .session__poker,
+    .session__sidebar,
+    .ticket-sidebar,
+    .settings-panel { background: #1e1e2e; border-color: var(--color-border); }
+    .settings-panel__header { background: #1e3a52; border-bottom-color: var(--color-border); }
+    .settings-panel__header h3 { color: #4a9ede; }
+    .session__topic { background: #1e3a52; border-left-color: #4a9ede; }
+    .session__topic-text { color: #4a9ede; }
+    .poker-pane__discussion-label { background: #0f1f0f; border-color: #22c55e; color: #4ade80; }
+
+    .card-btn { background: #252535; border-color: var(--color-border); color: #4a9ede; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .card-btn:hover { background: #1e3a52; border-color: #4a9ede; box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
+    .card-btn.selected { background: linear-gradient(145deg, #1a3a6e, #2155a0); border-color: #4a9ede; color: #e8eaf0; box-shadow: 0 12px 32px rgba(74,158,222,0.3); }
+
+    .sidebar__method-block { background: #252535; }
+    .sidebar__card-value   { background: #1e3a52; color: #7dbfef; border-color: var(--color-border); }
+    .sidebar__card-value--changed { background: #2a1a0a; border-color: #f97316; color: #f97316; }
+    .player-avatar--moderator { box-shadow: 0 0 0 2px #1e1e2e, 0 0 0 4px #eab308; }
+
+    .ticket-sidebar__item         { background: #252535; border-color: var(--color-border); }
+    .ticket-sidebar__item--active { background: #1e3a52; border-color: #4a9ede; }
+    .ticket-sidebar__item--voted  { background: #0f1f0f; border-color: #22c55e; }
+    .ticket-sidebar__link         { color: #7dbfef; border-bottom-color: #7dbfef; }
+    .ticket-sidebar__link:hover   { color: #4a9ede; border-bottom-color: #4a9ede; }
+    .ticket-sidebar__estimate     { background: #0f1f0f; color: #4ade80; }
+
+    /* Toast */
+    .toast { background: #1e1e2e; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .toast__msg { color: #e8eaf0; }
+    .toast--success .toast__icon { background: #0f1f0f; color: #4ade80; }
+    .toast--error   .toast__icon { background: #1f0a0a; color: #f87171; }
+    .toast--warning .toast__icon { background: #1f120a; color: #fb923c; }
+    .toast--info    .toast__icon { background: #1e3a52; color: #7dbfef; }
+    .toast__close:hover { background: #252535; }
+
+    /* Modal */
+    .join-modal { background: #1e1e2e; border-color: #4a9ede; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+    .join-modal__title    { color: #4a9ede; }
+    .join-modal__roomcode { background: #1e3a52; color: #7dbfef; }
+    .join-modal__error    { background: #1f0a0a; border-color: #f87171; color: #f87171; }
+}

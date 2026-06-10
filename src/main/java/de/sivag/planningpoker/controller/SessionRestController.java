@@ -6,6 +6,7 @@ import de.sivag.planningpoker.model.enums.EstimationMethod;
 import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
+import de.sivag.planningpoker.service.VoteService;
 import de.sivag.planningpoker.utility.RoleParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class SessionRestController {
 
     private final SessionService sessionService;
     private final TicketService  ticketService;
+    private final VoteService voteService;
 
     // ====================================
     // Endpunkte
@@ -86,21 +88,26 @@ public class SessionRestController {
     }
 
     @GetMapping("/{roomCode}/state")
-    public ResponseEntity<Map<String, Object>> getState(
-            @PathVariable String roomCode) {
-
+    public ResponseEntity<Map<String, Object>> getState(@PathVariable String roomCode) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
         String currentTicketTitle = ticketService.getCurrentTicketTitle(
                 roomCode, session.getCurrentTicketId());
 
+        List<String> votedIds = voteService.getVotedParticipantIds(roomCode)
+                .stream()
+                .map(Object::toString)
+                .toList();
+
         return ResponseEntity.ok(Map.of(
-                "roomCode",           session.getRoomCode(),
-                "currentTicketId",    session.getCurrentTicketId() != null
+                "roomCode",            session.getRoomCode(),
+                "currentTicketId",     session.getCurrentTicketId() != null
                         ? session.getCurrentTicketId() : "",
-                "currentTicketTitle", currentTicketTitle,
-                METHOD,             session.getEstimationMethod().name(),
-                "status",             session.getStatus().name(),
-                "participantCount",   sessionService.getParticipants(roomCode).size()
+                "currentTicketTitle",  currentTicketTitle,
+                METHOD,                session.getEstimationMethod().name(),
+                "status",              session.getStatus().name(),
+                "participantCount",    sessionService.getParticipants(roomCode).size(),
+                "votedParticipantIds", votedIds,
+                "votedCount",          votedIds.size()
         ));
     }
 }

@@ -51,10 +51,19 @@ function renderTable() {
     const playerList = Object.entries(players);
     const total      = playerList.length;
 
-    const tableRx     = 200;
-    const tableRy     = 110;
-    const baseOrbitRx = tableRx + 110;
-    const baseOrbitRy = tableRy + 100;
+    // Echte Container-Maße; Viewport-Fallback wenn Layout noch nicht settled
+    const cW = container.clientWidth  > 10 ? container.clientWidth  : window.innerWidth  * 0.62;
+    const cH = container.clientHeight > 10 ? container.clientHeight : window.innerHeight * 0.50;
+
+    // Tisch: proportional zum Container, aber gedeckelt
+    const tableRx = Math.min(cW * 0.21, 200);
+    const tableRy = Math.min(cH * 0.21, 110);
+
+    // Orbit = Tisch + Mindestabstand für Karte + Name-Badge (nie unter 80/70px)
+    const gapX = Math.max(cW * 0.10, 80);
+    const gapY = Math.max(cH * 0.13, 70);
+    const baseOrbitRx = tableRx + gapX;
+    const baseOrbitRy = tableRy + gapY;
     const minSpacing  = 65;
 
     const circumference = 2 * Math.PI * Math.sqrt(
@@ -63,8 +72,9 @@ function renderTable() {
     const orbitRx = baseOrbitRx * scaleFactor;
     const orbitRy = baseOrbitRy * scaleFactor;
 
-    const W  = Math.max(900, orbitRx * 2 + 200);
-    const H  = Math.max(500, orbitRy * 2 + 200);
+    // ViewBox = Container; nur bei vielen Spielern aufweiten
+    const W  = Math.max(cW, orbitRx * 2 + 160);
+    const H  = Math.max(cH, orbitRy * 2 + 160);
     const cx = W / 2;
     const cy = H / 2;
 
@@ -74,8 +84,9 @@ function renderTable() {
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('width', '100%');
+    svg.setAttribute('width',  '100%');
     svg.setAttribute('height', '100%');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.style.overflow = 'visible';
     svg.setAttribute('role', 'img');
 
@@ -164,20 +175,20 @@ function _appendVoteStatus(svg, cx, cy) {
 
 function _appendProgressBar(svg, cx, cy) {
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('x',  String(cx - 70));
-    bg.setAttribute('y',  String(cy + 20));
+    bg.setAttribute('x',      String(cx - 70));
+    bg.setAttribute('y',      String(cy + 20));
     bg.setAttribute('width',  String(140));
-    bg.setAttribute('height',  String(5));
-    bg.setAttribute('rx',  String(3));
+    bg.setAttribute('height', String(5));
+    bg.setAttribute('rx',     String(3));
     bg.setAttribute('fill', 'rgba(255,255,255,0.2)');
     svg.appendChild(bg);
 
     const fill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    fill.setAttribute('x',  String(cx - 70));
-    fill.setAttribute('y', cy + 20);
+    fill.setAttribute('x',      String(cx - 70));
+    fill.setAttribute('y',      cy + 20);
     fill.setAttribute('width',  String(0));
-    fill.setAttribute('height',  String(5));
-    fill.setAttribute('rx',  String(3));
+    fill.setAttribute('height', String(5));
+    fill.setAttribute('rx',     String(3));
     fill.setAttribute('fill', '#E1001A');
     fill.setAttribute('id', 'svgProgressBar');
     svg.appendChild(fill);
@@ -187,7 +198,7 @@ function _appendProgressBar(svg, cx, cy) {
 // SVG Hilfsfunktionen — Stats
 // ====================================
 
-    function _renderStatBlock(svg, x, y, label, avg, spreadValue, color) {
+function _renderStatBlock(svg, x, y, label, avg, spreadValue, color) {
     const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     labelText.setAttribute('x', x);
     labelText.setAttribute('y',  String(y - 18));
@@ -278,7 +289,7 @@ function _renderTableStats(svg, cx, cy, stats) {
 // ====================================
 
 function _appendPlayerCard(svg, id, player, pos, cardSize) {
-    const { px, py }                    = pos;
+    const { px, py }                     = pos;
     const { cardW, cardH, nameFontSize } = cardSize;
     const isSelf    = id === participantId;
     const hasVoted  = player.voted;
@@ -293,88 +304,88 @@ function _appendPlayerCard(svg, id, player, pos, cardSize) {
     g.style.transformBox    = 'view-box';
 
     const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    shadow.setAttribute('x',  String(px - cardW / 2 + 2));
-    shadow.setAttribute('y',  String(py - cardH / 2 + 4));
-    shadow.setAttribute('width', cardW);
+    shadow.setAttribute('x',      String(px - cardW / 2 + 2));
+    shadow.setAttribute('y',      String(py - cardH / 2 + 4));
+    shadow.setAttribute('width',  cardW);
     shadow.setAttribute('height', cardH);
-    shadow.setAttribute('rx',  String(rx));
+    shadow.setAttribute('rx',     String(rx));
     shadow.setAttribute('fill', 'rgba(0,0,0,0.4)');
     g.appendChild(shadow);
 
     const cardRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    cardRect.setAttribute('x',  String(px - cardW / 2));
-    cardRect.setAttribute('y',  String(py - cardH / 2));
-    cardRect.setAttribute('width', cardW);
+    cardRect.setAttribute('x',      String(px - cardW / 2));
+    cardRect.setAttribute('y',      String(py - cardH / 2));
+    cardRect.setAttribute('width',  cardW);
     cardRect.setAttribute('height', cardH);
-    cardRect.setAttribute('rx',  String(rx));
-    cardRect.setAttribute('fill', cfg.fill);
-    cardRect.setAttribute('stroke', cfg.stroke);
+    cardRect.setAttribute('rx',     String(rx));
+    cardRect.setAttribute('fill',         cfg.fill);
+    cardRect.setAttribute('stroke',       cfg.stroke);
     cardRect.setAttribute('stroke-width', '2');
     cardRect.setAttribute('id', `card-${id}`);
     g.appendChild(cardRect);
 
     if (!showValue && !hasVoted) {
         const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        pattern.setAttribute('x',  String(px - cardW / 2 + 2));
-        pattern.setAttribute('y',  String(py - cardH / 2 + 2));
+        pattern.setAttribute('x',      String(px - cardW / 2 + 2));
+        pattern.setAttribute('y',      String(py - cardH / 2 + 2));
         pattern.setAttribute('width',  String(cardW - 4));
-        pattern.setAttribute('height',  String(cardH - 4));
-        pattern.setAttribute('rx',  String(rx - 2));
+        pattern.setAttribute('height', String(cardH - 4));
+        pattern.setAttribute('rx',     String(rx - 2));
         pattern.setAttribute('fill', 'url(#cardPattern)');
         g.appendChild(pattern);
 
         const accentLine = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        accentLine.setAttribute('x',  String(px - cardW / 2 + 8));
-        accentLine.setAttribute('y',  String(py - cardH / 2 + 7));
+        accentLine.setAttribute('x',      String(px - cardW / 2 + 8));
+        accentLine.setAttribute('y',      String(py - cardH / 2 + 7));
         accentLine.setAttribute('width',  String(cardW - 16));
-        accentLine.setAttribute('height',  String(2));
-        accentLine.setAttribute('rx',  String(1));
-        accentLine.setAttribute('fill', cfg.stroke);
+        accentLine.setAttribute('height', String(2));
+        accentLine.setAttribute('rx',     String(1));
+        accentLine.setAttribute('fill',    cfg.stroke);
         accentLine.setAttribute('opacity', '0.25');
         g.appendChild(accentLine);
 
         const accentBottom = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        accentBottom.setAttribute('x',  String(px - cardW / 2 + 8));
-        accentBottom.setAttribute('y',  String(py + cardH / 2 - 9));
+        accentBottom.setAttribute('x',      String(px - cardW / 2 + 8));
+        accentBottom.setAttribute('y',      String(py + cardH / 2 - 9));
         accentBottom.setAttribute('width',  String(cardW - 16));
-        accentBottom.setAttribute('height',  String(2));
-        accentBottom.setAttribute('rx',  String(1));
-        accentBottom.setAttribute('fill', cfg.stroke);
+        accentBottom.setAttribute('height', String(2));
+        accentBottom.setAttribute('rx',     String(1));
+        accentBottom.setAttribute('fill',    cfg.stroke);
         accentBottom.setAttribute('opacity', '0.25');
         g.appendChild(accentBottom);
     }
 
     if (showValue) {
         const inner = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        inner.setAttribute('x',  String(px - cardW / 2 + 4));
-        inner.setAttribute('y',  String(py - cardH / 2 + 4));
+        inner.setAttribute('x',      String(px - cardW / 2 + 4));
+        inner.setAttribute('y',      String(py - cardH / 2 + 4));
         inner.setAttribute('width',  String(cardW - 8));
-        inner.setAttribute('height',  String(cardH - 8));
-        inner.setAttribute('rx',  String(rx - 3));
-        inner.setAttribute('fill', 'none');
-        inner.setAttribute('stroke', cfg.innerBorder);
+        inner.setAttribute('height', String(cardH - 8));
+        inner.setAttribute('rx',     String(rx - 3));
+        inner.setAttribute('fill',         'none');
+        inner.setAttribute('stroke',       cfg.innerBorder);
         inner.setAttribute('stroke-width', '1');
         g.appendChild(inner);
 
         const corner = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        corner.setAttribute('x',  String(px - cardW / 2 + 7));
-        corner.setAttribute('y',  String(py - cardH / 2 + 13));
-        corner.setAttribute('fill', cfg.cornerColor);
-        corner.setAttribute('font-size', String(Math.max(Math.round(cardW * 0.2), 7)));
+        corner.setAttribute('x',           String(px - cardW / 2 + 7));
+        corner.setAttribute('y',           String(py - cardH / 2 + 13));
+        corner.setAttribute('fill',        cfg.cornerColor);
+        corner.setAttribute('font-size',   String(Math.max(Math.round(cardW * 0.2), 7)));
         corner.setAttribute('font-weight', '700');
         corner.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
         corner.textContent = player.cardValue;
         g.appendChild(corner);
 
         const cardText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        cardText.setAttribute('x', px);
-        cardText.setAttribute('y', py + 1);
-        cardText.setAttribute('text-anchor', 'middle');
-        cardText.setAttribute('dominant-baseline', 'middle');
-        cardText.setAttribute('fill', cfg.textFill);
-        cardText.setAttribute('font-size',  String(cardW > 36 ? 16 : 13));
-        cardText.setAttribute('font-weight', '700');
-        cardText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+        cardText.setAttribute('x',                  px);
+        cardText.setAttribute('y',                  py + 1);
+        cardText.setAttribute('text-anchor',        'middle');
+        cardText.setAttribute('dominant-baseline',  'middle');
+        cardText.setAttribute('fill',               cfg.textFill);
+        cardText.setAttribute('font-size',          String(cardW > 36 ? 16 : 13));
+        cardText.setAttribute('font-weight',        '700');
+        cardText.setAttribute('font-family',        'Fira Sans, Lucida Sans, sans-serif');
         cardText.textContent = player.cardValue;
         g.appendChild(cardText);
     }
@@ -386,19 +397,19 @@ function _appendPlayerCard(svg, id, player, pos, cardSize) {
 function _revealedCardConfig(changed, dark) {
     if (changed) {
         return { cfg: {
-                fill:        dark ? '#1a0a00'              : '#fff7ed',
+                fill:        dark ? '#1a0a00'               : '#fff7ed',
                 stroke:      '#f97316',
-                textFill:    dark ? '#fb923c'              : '#c2410c',
-                cornerColor: dark ? 'rgba(251,146,60,0.5)' : 'rgba(194,65,12,0.4)',
-                innerBorder: dark ? 'rgba(249,115,22,0.3)' : 'rgba(249,115,22,0.2)'
+                textFill:    dark ? '#fb923c'               : '#c2410c',
+                cornerColor: dark ? 'rgba(251,146,60,0.5)'  : 'rgba(194,65,12,0.4)',
+                innerBorder: dark ? 'rgba(249,115,22,0.3)'  : 'rgba(249,115,22,0.2)'
             }};
     }
     return { cfg: {
-            fill:        dark ? '#0d1f35'               : '#eaf3fc',
-            stroke:      dark ? '#4a9ede'               : '#004178',
-            textFill:    dark ? '#e2f0ff'               : '#004178',
-            cornerColor: dark ? 'rgba(226,240,255,0.4)' : 'rgba(0,65,120,0.3)',
-            innerBorder: dark ? 'rgba(74,158,222,0.25)' : 'rgba(0,65,120,0.12)'
+            fill:        dark ? '#0d1f35'                : '#eaf3fc',
+            stroke:      dark ? '#4a9ede'                : '#004178',
+            textFill:    dark ? '#e2f0ff'                : '#004178',
+            cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
+            innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.12)'
         }};
 }
 
@@ -414,11 +425,11 @@ function _votedCardConfig(dark) {
 
 function _selfCardConfig(dark) {
     return { cfg: {
-            fill:        dark ? '#0d1f35'               : '#ffffff',
-            stroke:      dark ? '#4a9ede'               : '#004178',
-            textFill:    dark ? '#e2f0ff'               : '#004178',
-            cornerColor: dark ? 'rgba(226,240,255,0.4)' : 'rgba(0,65,120,0.3)',
-            innerBorder: dark ? 'rgba(74,158,222,0.25)' : 'rgba(0,65,120,0.1)'
+            fill:        dark ? '#0d1f35'                : '#ffffff',
+            stroke:      dark ? '#4a9ede'                : '#004178',
+            textFill:    dark ? '#e2f0ff'                : '#004178',
+            cornerColor: dark ? 'rgba(226,240,255,0.4)'  : 'rgba(0,65,120,0.3)',
+            innerBorder: dark ? 'rgba(74,158,222,0.25)'  : 'rgba(0,65,120,0.1)'
         }};
 }
 
@@ -441,7 +452,7 @@ function _resolveCardConfig(player, isSelf, hasVoted) {
 }
 
 function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
-    const { px, py }         = pos;
+    const { px, py }            = pos;
     const { roleColor, isSelf } = style;
     const nameY       = py + cardH / 2 + 4;
     const displayName = _resolveDisplayName(player.name, isSelf);
@@ -451,25 +462,25 @@ function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
     const darkBadge   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 
     const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    badgeBg.setAttribute('x',  String(px - nameW / 2));
-    badgeBg.setAttribute('y', nameY);
+    badgeBg.setAttribute('x',      String(px - nameW / 2));
+    badgeBg.setAttribute('y',      nameY);
     badgeBg.setAttribute('width',  String(nameW));
     badgeBg.setAttribute('height', nameH);
-    badgeBg.setAttribute('rx',  String(badgeRx));
-    badgeBg.setAttribute('fill', darkBadge ? '#0d1f35' : '#ffffff');
-    badgeBg.setAttribute('stroke', roleColor);
+    badgeBg.setAttribute('rx',     String(badgeRx));
+    badgeBg.setAttribute('fill',         darkBadge ? '#0d1f35' : '#ffffff');
+    badgeBg.setAttribute('stroke',       roleColor);
     badgeBg.setAttribute('stroke-width', '1.5');
     svg.appendChild(badgeBg);
 
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    nameText.setAttribute('x', px);
-    nameText.setAttribute('y', nameY + nameH / 2 + 1);
-    nameText.setAttribute('text-anchor', 'middle');
-    nameText.setAttribute('dominant-baseline', 'middle');
-    nameText.setAttribute('fill', _resolveNameColor(darkBadge, isSelf));
-    nameText.setAttribute('font-size', nameFontSize);
-    nameText.setAttribute('font-weight', isSelf ? '700' : '500');
-    nameText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+    nameText.setAttribute('x',                  px);
+    nameText.setAttribute('y',                  nameY + nameH / 2 + 1);
+    nameText.setAttribute('text-anchor',        'middle');
+    nameText.setAttribute('dominant-baseline',  'middle');
+    nameText.setAttribute('fill',               _resolveNameColor(darkBadge, isSelf));
+    nameText.setAttribute('font-size',          nameFontSize);
+    nameText.setAttribute('font-weight',        isSelf ? '700' : '500');
+    nameText.setAttribute('font-family',        'Fira Sans, Lucida Sans, sans-serif');
     nameText.textContent = displayName;
     svg.appendChild(nameText);
 }

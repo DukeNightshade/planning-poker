@@ -1,0 +1,77 @@
+/* ================================
+   Responsive – Viewport-Höhe
+   ================================ */
+
+/* Kompakt ab ≤ 800px Höhe */
+@media (max-height: 800px) {
+    .header__top        { padding: 0.3rem 1.5rem; }
+    .header__logo-img   { height: clamp(24px, 3.5vh, 36px); }
+    .header__app-title  { font-size: 1.25rem; }
+    .header__bottom     { padding: 0.3rem 1.5rem; }
+
+    .session            { gap: 0.75rem; padding: 0.75rem; }
+    .session__poker     { padding: 0.75rem; gap: 0.5rem; }
+    .session__topic     { padding: 0.4rem 0.75rem; }
+    .session__actions   { margin-top: 0.5rem; padding-top: 0.5rem; }
+    .session__sidebar,
+    .ticket-sidebar     { padding: 0.875rem; }
+    .cards              { padding: 0.25rem 0; margin-bottom: 0.25rem; }
+    .footer             { padding: 0.4rem 1rem; font-size: 0.7rem; }
+}
+
+/* Sehr klein: ≤ 700px Höhe */
+@media (max-height: 700px) {
+    .header__top        { padding: 0.2rem 1.25rem; }
+    .header__bottom     { padding: 0.2rem 1.25rem; }
+
+    .session            { gap: 0.4rem; padding: 0.5rem; }
+    .session__poker     { padding: 0.5rem; gap: 0.25rem; }
+    .session__topic     { padding: 0.3rem 0.6rem; font-size: 0.9rem; }
+    .session__actions   { margin-top: 0.4rem; padding-top: 0.4rem; gap: 0.5rem; }
+    .sidebar__title     { margin-bottom: 0.5rem; }
+    .sidebar__item      { padding: 0.25rem 0; }
+    .sidebar__method-block { padding: 0.5rem 0.75rem; margin-top: 0.25rem; }
+    .footer             { display: none; }
+}
+
+/* ================================
+   Responsive – Viewport-Breite
+   ================================ */
+
+@media (max-width: 1400px) {
+    .session {
+        grid-template-columns: 1fr 240px;
+        gap: 0.875rem;
+        padding: 0.875rem;
+    }
+    .session--with-tickets {
+        grid-template-columns: 190px 1fr 240px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .session {
+        grid-template-columns: 1fr 220px;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+    .session--with-tickets {
+        grid-template-columns: 175px 1fr 220px;
+    }
+    .session__poker     { padding: 0.75rem; }
+    .session__sidebar,
+    .ticket-sidebar     { padding: 1rem; }
+    .session__actions   { gap: 0.75rem; }
+}
+
+@media (max-width: 1024px) {
+    .session {
+        grid-template-columns: 1fr 200px;
+        gap: 0.6rem;
+        padding: 0.6rem;
+    }
+    .session--with-tickets {
+        grid-template-columns: 160px 1fr 200px;
+    }
+    .sidebar__method-block { padding: 0.5rem 0.75rem; }
+}
