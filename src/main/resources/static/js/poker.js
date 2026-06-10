@@ -431,7 +431,9 @@ function handleVoteUpdate(data) {
 }
 
 function handlePlayerJoined(data) {
-    if (!players[data.participantId]) {
+    const isNew = !players[data.participantId];
+
+    if (isNew) {
         players[data.participantId] = {
             name:              data.participantName,
             role:              data.participantRole || 'DEVELOPER',
@@ -447,7 +449,11 @@ function handlePlayerJoined(data) {
                 'info', getRoleLabel(data.participantRole), 3000
             );
         }
+    } else {
+        players[data.participantId].name = data.participantName;
+        players[data.participantId].role = data.participantRole || players[data.participantId].role;
     }
+
     renderTable();
     renderSidebar();
 }
