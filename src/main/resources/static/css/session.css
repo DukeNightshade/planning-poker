@@ -470,6 +470,20 @@
     white-space: nowrap;
 }
 
+.ticket-sidebar__link-btn {
+    flex-shrink: 0;
+    margin-left: 0.35rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+    opacity: 0.55;
+    transition: opacity var(--transition), transform var(--transition);
+    line-height: 1;
+}
+.ticket-sidebar__link-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
 /* ================================
    Ticket-Sidebar – Add-Formular
    ================================ */
