@@ -116,10 +116,7 @@ function showResults(votes) {
 
     if (currentTicketId && tickets[currentTicketId]) {
         tickets[currentTicketId].status = 'VOTED';
-        const parts = [];
-        if (stats.devAvg)    parts.push(`Dev ${stats.devAvg}`);
-        if (stats.testerAvg) parts.push(`Test ${stats.testerAvg}`);
-        tickets[currentTicketId].finalEstimate = parts.length > 0 ? parts.join(' / ') : '–';
+        tickets[currentTicketId].finalEstimate = stats.overallAvg ?? '–';
         renderTicketSidebar();
     }
 
