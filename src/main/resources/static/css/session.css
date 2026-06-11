@@ -5,6 +5,7 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    position: relative;
     display: grid;
     grid-template-columns: 1fr 260px;
     grid-template-rows: auto 1fr;
@@ -23,7 +24,11 @@
    Settings Panel
    ================================ */
 .settings-panel {
-    grid-column: 1 / -1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     background: var(--color-white);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
@@ -134,7 +139,7 @@
 /* Poker-Tisch füllt verfügbaren Platz */
 #pokerTable {
     flex: 1;
-    min-height: clamp(180px, 45vh, 700px);
+    min-height: 0;
     width: 100%;
     display: flex;
 }
