@@ -454,8 +454,9 @@ function handlePlayerJoined(data) {
         players[data.participantId].role = data.participantRole || players[data.participantId].role;
     }
 
-    renderTable();
-    renderSidebar();
+    const votedCount = Object.values(players).filter(p => p.voted).length;
+    const totalCount = Object.values(players).filter(p => p.role !== 'PRODUCT_OWNER').length;
+    updateVoteStatus(votedCount, totalCount, null);
 }
 
 function handlePlayerLeft(data) {
@@ -467,8 +468,9 @@ function handlePlayerLeft(data) {
             'warning', '', 3000
         );
     }
-    renderTable();
-    renderSidebar();
+    const votedCount = Object.values(players).filter(p => p.voted).length;
+    const totalCount = Object.values(players).filter(p => p.role !== 'PRODUCT_OWNER').length;
+    updateVoteStatus(votedCount, totalCount, null);
 }
 
 function handleModeratorPromoted(data) {
