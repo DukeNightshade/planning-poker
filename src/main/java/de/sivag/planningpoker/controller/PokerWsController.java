@@ -149,14 +149,16 @@ public class PokerWsController {
         boolean showTopic        = (boolean) payload.get("showTopic");
         boolean moderatorCanVote = (boolean) payload.get("moderatorCanVote");
         boolean autoReveal       = (boolean) payload.get("autoReveal");
+        boolean showOnlyTotal    = (boolean) payload.get("showOnlyTotal");   // NEU
 
-        sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal);
+        sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal, showOnlyTotal);
 
         broadcast(roomCode, Map.of(
                 "type",             "SETTINGS_UPDATE",
                 "showTopic",        showTopic,
                 "moderatorCanVote", moderatorCanVote,
-                "autoReveal",       autoReveal
+                "autoReveal",       autoReveal,
+                "showOnlyTotal",    showOnlyTotal   // NEU
         ));
     }
 

@@ -58,6 +58,7 @@ public class SessionController {
         model.addAttribute("autoReveal",       session.isAutoReveal());
         model.addAttribute("methodLabels",     buildMethodLabels(locale));
         model.addAttribute("hasTickets",       !ticketService.getTickets(roomCode).isEmpty());
+        model.addAttribute("showOnlyTotal",     session.isShowOnlyTotal());
         return "session";
     }
 

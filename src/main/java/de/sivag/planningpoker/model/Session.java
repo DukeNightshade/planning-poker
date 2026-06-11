@@ -5,6 +5,7 @@ import de.sivag.planningpoker.model.enums.SessionStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -55,6 +56,10 @@ public class Session {
 
     @Column(nullable = false)
     private boolean autoReveal = false;
+
+    @Column(nullable = false)
+    @ColumnDefault("true")
+    private boolean showOnlyTotal = true;
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants = new ArrayList<>();
