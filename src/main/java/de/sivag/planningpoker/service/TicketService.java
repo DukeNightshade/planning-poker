@@ -3,6 +3,7 @@ package de.sivag.planningpoker.service;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.enums.SessionStatus;
+import de.sivag.planningpoker.model.enums.TicketStatus;
 import de.sivag.planningpoker.repository.TicketRepository;
 import de.sivag.planningpoker.repository.VoteRepository;
 import de.sivag.planningpoker.utility.StringUtils;

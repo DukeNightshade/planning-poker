@@ -185,9 +185,10 @@ public class PokerWsController {
                 roomCode, Long.parseLong(payload.get("ticketId")));
 
         broadcast(roomCode, Map.of(
-                "type",  "TICKET_SELECTED",
-                "id",    ticket.getId().toString(),
-                TITLE,   ticket.getTitle()
+                "type",   "TICKET_SELECTED",
+                "id",     ticket.getId().toString(),
+                TITLE,    ticket.getTitle(),
+                "status", ticket.getStatus().name()   // NEU
         ));
     }
 

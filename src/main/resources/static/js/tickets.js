@@ -42,7 +42,7 @@ function renderTicketSidebar() {
             : ''}
         `;
 
-        if (isModerator && !isVoted) {
+        if (isModerator) {
             li.style.cursor = 'pointer';
             li.onclick = (e) => {
                 if (e.target.closest('a')) return;
