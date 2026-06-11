@@ -189,8 +189,6 @@
         <h3 class="sidebar__title" th:text="#{tickets.title}">Tickets</h3>
         <ul class="ticket-sidebar__list" id="ticketSidebarList"></ul>
         <div id="addTicketForm" style="display:none; margin-top: 0.75rem;">
-            <label for="newTicketInput" class="sr-only"
-                   th:text="#{tickets.input.placeholder}">Ticket-Titel</label>
             <input class="form__input" type="text" id="newTicketInput"
                    th:placeholder="#{tickets.input.placeholder}"
                    onkeydown="if(event.key==='Enter') submitNewTicket()">
