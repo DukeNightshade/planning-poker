@@ -16,9 +16,10 @@ let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 let selectedCard    = null;
 let stompClient     = null;
-let isRevealed      = false;
+let isRevealed   = false;
 let averageValue    = null;
 let currentTicketId = null;
+let showOnlyTotal= true;
 
 let tickets = {};
 let players = {};
@@ -85,7 +86,8 @@ function initSession() {
     applySettings(
         document.getElementById('settingShowTopic')?.checked        ?? false,
         document.getElementById('settingModeratorCanVote')?.checked ?? false,
-        document.getElementById('settingAutoReveal')?.checked       ?? false
+        document.getElementById('settingAutoReveal')?.checked       ?? false,
+        document.getElementById('settingShowOnlyTotal')?.checked    ?? true
     );
 
     if (participantRole === 'PRODUCT_OWNER') {
@@ -393,7 +395,7 @@ function handleReset() {
 }
 
 function handleSettingsUpdate(data) {
-    applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal);
+    applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal, data.showOnlyTotal);
     showToast(globalThis.i18n.toast.settings, 'info', '', 2500);
 }
 

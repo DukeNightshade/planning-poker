@@ -1,6 +1,6 @@
 /* global participantId, isModerator, isRevealed, players, tickets, currentTicketId,
           ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
-          selectTicket, promoteMyself, demoteParticipant */
+          selectTicket, promoteMyself, demoteParticipant, showOnlyTotal  */
 
 // ====================================
 // Hilfsfunktionen — Auflösung
@@ -248,6 +248,11 @@ function _renderTableStats(svg, cx, cy, stats) {
         return;
     }
 
+    if (showOnlyTotal) {
+        _renderOverallOnly(svg, cx, cy, stats.overallAvg);
+        return;
+    }
+
     const activeGroups = [
         stats.devAvg       ? { label: '⚙ Dev',  avg: stats.devAvg,       spreadValue: stats.devSpread,       color: '#60a5fa' } : null,
         stats.testerAvg    ? { label: '✓ Test', avg: stats.testerAvg,    spreadValue: stats.testerSpread,    color: '#4ade80' } : null,
@@ -287,6 +292,32 @@ function _renderTableStats(svg, cx, cy, stats) {
 // ====================================
 // SVG Hilfsfunktionen — Spielerkarten
 // ====================================
+
+function _renderOverallOnly(svg, cx, cy, overallAvg) {
+    if (overallAvg === null) return;
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', cx);
+    label.setAttribute('y', String(cy - 14));
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('fill', 'rgba(255,255,255,0.7)');
+    label.setAttribute('font-size', '13');
+    label.setAttribute('font-weight', '700');
+    label.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+    label.textContent = 'Gesamt';
+    svg.appendChild(label);
+
+    const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    value.setAttribute('x', cx);
+    value.setAttribute('y', String(cy + 20));
+    value.setAttribute('text-anchor', 'middle');
+    value.setAttribute('fill', 'white');
+    value.setAttribute('font-size', '34');
+    value.setAttribute('font-weight', '700');
+    value.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
+    value.textContent = `Ø ${overallAvg}`;
+    svg.appendChild(value);
+}
 
 function _appendPlayerCard(svg, id, player, pos, cardSize) {
     const { px, py }                     = pos;

@@ -288,11 +288,12 @@ function saveSettings() {
     const showTopic        = document.getElementById('settingShowTopic').checked;
     const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
     const autoReveal       = document.getElementById('settingAutoReveal').checked;
+    const showOnlyTotal    = document.getElementById('settingShowOnlyTotal').checked;   // NEU
     stompClient.send('/app/session/' + roomCode + '/settings', {},
-        JSON.stringify({ showTopic, moderatorCanVote, autoReveal }));
+        JSON.stringify({ showTopic, moderatorCanVote, autoReveal, showOnlyTotal }));
 }
 
-function applySettings(showTopic, moderatorCanVote, autoReveal) {
+function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = (showTopic && Object.keys(tickets).length > 0) ? 'flex' : 'none';
 
@@ -301,11 +302,17 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
     document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
     document.getElementById('settingAutoReveal').checked       = autoReveal;
 
+    const onlyTotalEl = document.getElementById('settingShowOnlyTotal');
+    if (onlyTotalEl) onlyTotalEl.checked = onlyTotal;
+    showOnlyTotal = onlyTotal;
+
     applyTicketSidebarVisibility();
 
     const canVote = participantRole !== 'PRODUCT_OWNER' &&
         !(isModerator && !moderatorCanVote);
     document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
+
+    if (isRevealed) renderTable();
 }
 
 // ====================================

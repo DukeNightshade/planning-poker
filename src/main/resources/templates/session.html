@@ -182,6 +182,11 @@
                 <input type="checkbox" id="settingAutoReveal"
                        th:checked="${autoReveal}" onchange="saveSettings()">
             </label>
+            <label class="settings__toggle" for="settingShowOnlyTotal">
+                <span th:text="#{settings.show_only_total}">Nur Gesamtwerte anzeigen</span>
+                <input type="checkbox" id="settingShowOnlyTotal"
+                       th:checked="${showOnlyTotal}" onchange="saveSettings()">
+            </label>
         </div>
     </div>
 

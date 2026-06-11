@@ -138,11 +138,13 @@ public class SessionService {
 
     @Transactional
     public void updateSettings(String roomCode, boolean showTopic,
-                               boolean moderatorCanVote, boolean autoReveal) {
+                               boolean moderatorCanVote, boolean autoReveal,
+                               boolean showOnlyTotal) {
         Session session = getSessionByRoomCode(roomCode);
         session.setShowTopic(showTopic);
         session.setModeratorCanVote(moderatorCanVote);
         session.setAutoReveal(autoReveal);
+        session.setShowOnlyTotal(showOnlyTotal);   // NEU
         sessionRepository.save(session);
     }
 
