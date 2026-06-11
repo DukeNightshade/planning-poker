@@ -227,10 +227,17 @@
         <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
 
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
+            <div th:if="${estimationMethod == 'SCRUM'}"
+                 class="cards__grid" style="justify-content:center;">
+                <button class="card-btn"
+                        th:each="v : ${'?,☕,1,2,3,5,8,13,20,40,100'.split(',')}"
+                        th:text="${v}" th:attr="data-value=${v}"
+                        onclick="selectCard(this)"></button>
+            </div>
             <div th:if="${estimationMethod == 'FIBONACCI'}"
                  class="cards__grid" style="justify-content:center;">
                 <button class="card-btn"
-                        th:each="v : ${'?,☕,0,0.5,1,2,3,5,8,13,20,40,100'.split(',')}"
+                        th:each="v : ${'?,☕,1,2,3,4,8,13,21'.split(',')}"
                         th:text="${v}" th:attr="data-value=${v}"
                         onclick="selectCard(this)"></button>
             </div>
