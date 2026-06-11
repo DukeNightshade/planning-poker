@@ -36,6 +36,12 @@
     overflow: hidden;
 }
 
+.ticket-sidebar,
+.session__poker,
+.session__sidebar {
+    grid-row: 2;
+}
+
 .settings-panel__header {
     display: flex;
     justify-content: space-between;
@@ -139,7 +145,7 @@
 /* Poker-Tisch füllt verfügbaren Platz */
 #pokerTable {
     flex: 1;
-    min-height: 0;
+    min-height: clamp(180px, 45vh, 700px);
     width: 100%;
     display: flex;
 }
