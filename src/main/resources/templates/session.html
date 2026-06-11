@@ -217,6 +217,13 @@
              th:text="#{session.discussion.label}"
              aria-live="polite">&#x1F4AC; Diskussionsmodus</div>
 
+        <div class="session__actions" id="moderatorActions" style="display:none;">
+            <button class="btn btn--primary"   onclick="revealCards()"
+                    th:text="#{session.reveal}">Karten aufdecken</button>
+            <button class="btn btn--secondary" onclick="resetRound()"
+                    th:text="#{session.newround}">Neue Runde</button>
+        </div>
+
         <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
 
         <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
@@ -245,13 +252,6 @@
 
         <div id="resultsArea" style="display:none;" aria-live="polite"></div>
         <ul  id="resultsList"  style="display:none;"></ul>
-
-        <div class="session__actions" id="moderatorActions" style="display:none;">
-            <button class="btn btn--primary"   onclick="revealCards()"
-                    th:text="#{session.reveal}">Karten aufdecken</button>
-            <button class="btn btn--secondary" onclick="resetRound()"
-                    th:text="#{session.newround}">Neue Runde</button>
-        </div>
 
     </section>
 

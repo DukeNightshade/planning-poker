@@ -238,9 +238,9 @@
     justify-content: center;
     gap: 1rem;
     width: 100%;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
     align-items: center;
     flex-wrap: wrap;
     box-sizing: border-box;
