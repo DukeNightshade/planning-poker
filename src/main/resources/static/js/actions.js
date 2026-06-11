@@ -72,7 +72,6 @@ function resetRound() {
 
     const groups = [...svg.querySelectorAll('[id^="card-group-"]')];
     groups.forEach((g, i) => {
-        // Aktuelle Position aus transform-origin auslesen
         const origin = g.style.transformOrigin || '0px 0px';
         const parts  = origin.match(/([\d.]+)px\s+([\d.]+)px/);
         if (!parts) return;
@@ -271,6 +270,15 @@ async function demoteParticipant(targetParticipantId) {
 // Settings
 // ====================================
 
+function applyTicketSidebarVisibility() {
+    const showTopicEl   = document.getElementById('settingShowTopic');
+    const showTopic     = showTopicEl ? showTopicEl.checked : false;
+    const ticketSidebar = document.getElementById('ticketSidebar');
+    const sessionEl     = document.querySelector('.session');
+    if (ticketSidebar) ticketSidebar.style.display = showTopic ? 'flex' : 'none';
+    if (sessionEl)     sessionEl.classList.toggle('session--with-tickets', showTopic);
+}
+
 function toggleSettings() {
     const panel = document.getElementById('settingsPanel');
     const btn   = document.getElementById('settingsBtn');
@@ -291,14 +299,16 @@ function applySettings(showTopic, moderatorCanVote, autoReveal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = (showTopic && Object.keys(tickets).length > 0) ? 'flex' : 'none';
 
-    const canVote = participantRole !== 'PRODUCT_OWNER' &&
-        !(isModerator && !moderatorCanVote);
-    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
-
     const showTopicEl = document.getElementById('settingShowTopic');
     if (showTopicEl) showTopicEl.checked = showTopic;
     document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
     document.getElementById('settingAutoReveal').checked       = autoReveal;
+
+    applyTicketSidebarVisibility();
+
+    const canVote = participantRole !== 'PRODUCT_OWNER' &&
+        !(isModerator && !moderatorCanVote);
+    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
 }
 
 // ====================================
