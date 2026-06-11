@@ -443,9 +443,22 @@ function _otherCardConfig(dark) {
         }};
 }
 
+// Skip-Karte: gedämpfte, neutrale Darstellung
+function _skipCardConfig(dark) {
+    return { cfg: {
+            fill:        dark ? '#1a1a2a' : '#f4f4f6',
+            stroke:      dark ? '#3a3f4a' : '#b0b8c4',
+            textFill:    dark ? '#9aa5b4' : '#595f6e',
+            cornerColor: dark ? 'rgba(154,165,180,0.3)' : 'rgba(89,95,110,0.25)',
+            innerBorder: dark ? 'rgba(154,165,180,0.1)' : 'rgba(89,95,110,0.08)'
+        }};
+}
+
 function _resolveCardConfig(player, isSelf, hasVoted) {
     const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isRevealed && player.cardValue === '–') return _skipCardConfig(dark);
     if (isRevealed && player.cardValue) return _revealedCardConfig(player.changed, dark);
+    if (isSelf && player.cardValue === '–') return _skipCardConfig(dark);
     if (hasVoted)                        return _votedCardConfig(dark);
     if (isSelf)                          return _selfCardConfig(dark);
     return _otherCardConfig(dark);
@@ -503,7 +516,8 @@ function renderSidebar() {
 
     const sorted = [...playerList].sort(([, a], [, b]) => {
         if (isRevealed && a.cardValue && b.cardValue) {
-            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8',
+            // '–' (Skip) wird ans Ende sortiert
+            const order = ['?', '☕', '–', '0', '0.5', '1', '2', '3', '4', '5', '8',
                 '13', '16', '20', '32', '40', '64', '100',
                 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
             const ai = order.indexOf(a.cardValue);
@@ -583,6 +597,16 @@ function _buildSidebarItem(id, player, activeModerators) {
 
 function _buildStatusOrValue(player, hasVoted) {
     if (isRevealed && player.cardValue) {
+        const isSkip = player.cardValue === '–';
+        const extraClass = isSkip
+            ? 'style="color:var(--color-text-light); background:var(--color-grey); border-color:var(--color-border);"'
+            : (player.changed ? 'class="sidebar__card-value sidebar__card-value--changed"' : 'class="sidebar__card-value"');
+        if (isSkip) {
+            return `<span class="sidebar__card-value" ${extraClass}
+                        title="Überspringen – nicht gewertet">
+                        ${escapeHtml(player.cardValue)}
+                    </span>`;
+        }
         return `<span class="sidebar__card-value ${player.changed ? 'sidebar__card-value--changed' : ''}">
                     ${escapeHtml(player.cardValue)}
                 </span>`;
