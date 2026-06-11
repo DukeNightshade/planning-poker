@@ -26,13 +26,13 @@ function renderTicketSidebar() {
         })();
 
         const titleHtml = isUrl
-            ? `<a href="${escapeHtml(ticket.title)}" 
-          target="_blank" 
+            ? `<span class="ticket-sidebar__title">${escapeHtml(linkLabel)}</span>
+       <a href="${escapeHtml(ticket.title)}"
+          target="_blank"
           rel="noopener noreferrer"
-          class="ticket-sidebar__link"
-          title="${escapeHtml(ticket.title)}">
-           ${escapeHtml(linkLabel)}
-       </a>`
+          class="ticket-sidebar__link-btn"
+          title="${escapeHtml(ticket.title)}"
+          aria-label="Link öffnen">&#x1F517;</a>`
             : `<span class="ticket-sidebar__title">${escapeHtml(ticket.title)}</span>`;
 
         li.innerHTML = `
