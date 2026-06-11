@@ -1,4 +1,4 @@
-/* global SockJS, Stomp */
+/* global SockJS, Stomp, applyTicketSidebarVisibility */
 
 // ====================================
 // Session-Daten aus DOM
@@ -12,7 +12,6 @@ let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
 
 // ====================================
 // Zustandsvariablen
-// (alle VOR dem Entry-Point – kein TDZ-Fehler)
 // ====================================
 
 let selectedCard    = null;
@@ -21,19 +20,13 @@ let isRevealed      = false;
 let averageValue    = null;
 let currentTicketId = null;
 
-/** Ticket-Map: { id -> { title, status, finalEstimate } } */
 let tickets = {};
-
-/** Spieler-Map: { id -> { name, role, moderator, voted, cardValue, originalCardValue, changed } } */
 let players = {};
 
-// WebSocket-Flags
 let _reconnectAttempts = 0;
 let _wasDisconnected   = false;
 let _connecting        = false;
-
-// Modal-Mutex
-let _joinDone = false;
+let _joinDone          = false;
 
 // ====================================
 // Spieler aus DOM laden
@@ -171,7 +164,6 @@ async function _handleJoinSubmit() {
             sessionStorage.setItem('participantId',   participantId);
             sessionStorage.setItem('isModerator',     'false');
             sessionStorage.setItem('participantRole', participantRole);
-            // Name für Auto-Reconnect speichern
             localStorage.setItem('pp_name_' + roomCode, name);
 
             if (!players[participantId]) {
@@ -221,7 +213,6 @@ async function _handleJoinSubmit() {
 // ====================================
 
 async function _ensureRegistered() {
-    // Teilnehmer ist im SSR-gerenderten playerData → noch in der DB
     if (players[participantId]) return;
 
     const storedName = localStorage.getItem('pp_name_' + roomCode);
@@ -268,7 +259,6 @@ async function _ensureRegistered() {
         stompClient.send('/app/session/' + roomCode + '/register', {},
             JSON.stringify({ participantId }));
 
-        // War Moderator → Rechte wiederherstellen
         if (wasM) {
             const promRes = await fetch(
                 '/api/sessions/' + roomCode + '/participants/' + participantId + '/promote',
@@ -346,11 +336,7 @@ async function loadInitialData() {
             tickets[t.id] = { title: t.title, status: t.status, finalEstimate: t.finalEstimate };
         });
 
-        const hasTickets    = ticketList.length > 0;
-        const ticketSidebar = document.getElementById('ticketSidebar');
-        const sessionEl     = document.querySelector('.session');
-        if (ticketSidebar) ticketSidebar.style.display = hasTickets ? 'flex' : 'none';
-        if (sessionEl)     sessionEl.classList.toggle('session--with-tickets', hasTickets);
+        applyTicketSidebarVisibility();
         renderTicketSidebar();
     }
 
@@ -360,8 +346,12 @@ async function loadInitialData() {
         if (state.currentTicketId) {
             currentTicketId = state.currentTicketId.toString();
             const topicText = document.getElementById('topicText');
-            if (topicText) topicText.textContent = state['currentTicketTitle'] ?? '';
+            if (topicText) topicText.textContent = state.currentTicketTitle ?? '';
+        } else if (isModerator && Object.keys(tickets).length > 0) {
+            const firstId = Object.keys(tickets)[0];
+            selectTicket(firstId);
         }
+
         if (state.votedParticipantIds?.length > 0) {
             state.votedParticipantIds.forEach(id => {
                 if (players[id]) players[id].voted = true;
@@ -383,17 +373,17 @@ async function loadInitialData() {
 
 function handleMessage(data) {
     switch (data.type) {
-        case 'VOTE_UPDATE':        handleVoteUpdate(data);       break;
-        case 'REVEAL':             showResults(data.votes);      break;
+        case 'VOTE_UPDATE':        handleVoteUpdate(data);        break;
+        case 'REVEAL':             showResults(data.votes);       break;
         case 'DISCUSSION_UPDATE':  updateDiscussion(data.participantId, data.participantName, data.cardValue); break;
-        case 'RESET':              handleReset();                break;
-        case 'SETTINGS_UPDATE':    handleSettingsUpdate(data);   break;
-        case 'PLAYER_JOINED':      handlePlayerJoined(data);     break;
-        case 'PLAYER_LEFT':        handlePlayerLeft(data);       break;
+        case 'RESET':              handleReset();                 break;
+        case 'SETTINGS_UPDATE':    handleSettingsUpdate(data);    break;
+        case 'PLAYER_JOINED':      handlePlayerJoined(data);      break;
+        case 'PLAYER_LEFT':        handlePlayerLeft(data);        break;
         case 'MODERATOR_PROMOTED': handleModeratorPromoted(data); break;
         case 'MODERATOR_DEMOTED':  handleModeratorDemoted(data);  break;
-        case 'TICKET_ADDED':       handleTicketAdded(data);      break;
-        case 'TICKET_SELECTED':    handleTicketSelected(data);   break;
+        case 'TICKET_ADDED':       handleTicketAdded(data);       break;
+        case 'TICKET_SELECTED':    handleTicketSelected(data);    break;
     }
 }
 
@@ -409,18 +399,23 @@ function handleSettingsUpdate(data) {
 
 function handleTicketAdded(data) {
     tickets[data.id] = { title: data.title, status: data.status, finalEstimate: '' };
-    const ticketSidebar = document.getElementById('ticketSidebar');
-    const sessionEl     = document.querySelector('.session');
-    if (ticketSidebar) ticketSidebar.style.display = 'flex';
-    if (sessionEl)     sessionEl.classList.add('session--with-tickets');
+    applyTicketSidebarVisibility();
+    const showTopicEl = document.getElementById('settingShowTopic');
+    const topicBar    = document.getElementById('topicBar');
+    if (topicBar && showTopicEl && showTopicEl.checked && currentTicketId) {
+        topicBar.style.display = 'flex';
+    }
     renderTicketSidebar();
     showToast(globalThis.i18n.toast.ticketAdded + ' ' + escapeHtml(data.title), 'success', '', 3000);
 }
 
 function handleTicketSelected(data) {
     currentTicketId = data.id;
-    const topicText = document.getElementById('topicText');
+    const topicText   = document.getElementById('topicText');
+    const showTopicEl = document.getElementById('settingShowTopic');
+    const topicBar    = document.getElementById('topicBar');
     if (topicText) topicText.textContent = data.title;
+    if (topicBar && showTopicEl) topicBar.style.display = showTopicEl.checked ? 'flex' : 'none';
     resetUI();
     renderTicketSidebar();
     showToast(globalThis.i18n.toast.ticketSelected + ' ' + escapeHtml(data.title), 'info', '', 2500);
