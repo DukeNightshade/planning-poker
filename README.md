@@ -1,41 +1,56 @@
-# Planning Poker 🃏
+# Planning Poker
 
 > Webbasierte Aufwandseinschätzung für agile Sprintplanung – intern, werbefrei, in Echtzeit.
 
-Entwickelt im Rahmen der **IHK Abschlussprüfung Sommer 2026**  
-Ausbildungsbetrieb: **SIV.AG**, Konrad-Zuse-Straße 1, 18184 Roggentin
+Entwickelt im Rahmen der **IHK Abschlussprüfung Sommer 2026**
 
 ---
 
 ## Hintergrund
 
-Die Mitarbeiter der SIV.AG nutzten bisher ein kostenloses Drittanbieter-Tool für Planning Poker, das nicht offiziell freigegeben war und umfangreiche Werbebanner enthielt. Ziel dieses Projekts ist die Entwicklung einer offiziell freigegebenen, werbefreien und intern betriebenen Alternative.
+Im Ausbildungsbetrieb wurde bisher ein kostenloses Drittanbieter-Tool für Planning Poker genutzt, das nicht offiziell freigegeben war und umfangreiche Werbebanner enthielt. Ziel dieses Projekts ist die Entwicklung einer offiziell freigegebenen, werbefreien und intern betriebenen Alternative.
 
 ---
 
-## Features
+## Was kann die Anwendung?
 
-- 🏠 **Räume** – Moderator erstellt Session, Teilnehmer treten per Raumcode bei
-- ⚡ **Echtzeit** – Abstimmungen werden live synchronisiert (kein Seitenreload)
-- 🃏 **Schätzmethoden** – Fibonacci, T-Shirt-Größen, Zweierpotenzen
-- 👁️ **Aufdecken** – Karten werden gleichzeitig für alle sichtbar
-- 🔄 **Neue Runde** – Reset mit einem Klick
-- 📋 **User Stories** – Mehrere Stories pro Session verwaltbar
+Planning Poker ist eine Methode, mit der agile Teams gemeinsam den Aufwand für Aufgaben ("Tickets") einschätzen. Jede:r Teilnehmer:in wählt verdeckt eine Karte mit einem Schätzwert. Erst wenn alle gewählt haben, werden die Karten gemeinsam aufgedeckt – das verhindert, dass sich einzelne Meinungen gegenseitig beeinflussen.
+
+### Funktionen im Überblick
+
+**Session & Teilnahme**
+- 🏠 **Räume statt Konten** – Ein Moderator erstellt eine Session und erhält einen Raumcode. Teilnehmer treten einfach über diesen Code bei, ganz ohne Registrierung.
+- 👤 **Rollen** – Teilnehmer ordnen sich als Entwickler, Tester, IT-Architekt oder Product Owner (reiner Beobachter ohne Stimme) ein.
+- ⭐ **Moderator-Wechsel** – Moderatorrechte können während der Session übergeben oder selbst übernommen werden.
+- 🔌 **Stabile Verbindung** – Bei einem kurzen Verbindungsabbruch bleibt der Platz ca. 20 Sekunden reserviert, sodass man nahtlos wieder einsteigen kann.
+
+**Abstimmen & Auswerten**
+- 🃏 **Mehrere Schätzmethoden** – Fibonacci-Zahlen, T-Shirt-Größen (S, M, L, …), Zweierpotenzen oder klassische Scrum-Werte.
+- ⚡ **Echtzeit-Synchronisation** – Abstimmungen und Änderungen werden sofort an alle übertragen, ganz ohne Seite neu laden.
+- 👁️ **Gemeinsames Aufdecken** – Karten werden für alle gleichzeitig sichtbar, inklusive animierter Übergänge.
+- 💬 **Diskussionsmodus** – Nach dem Aufdecken kann die Karte noch einmal angepasst werden, z. B. nach kurzer Diskussion. Geänderte Werte werden farblich hervorgehoben.
+- 🔄 **Neue Runde** – Ein Klick genügt, um die nächste Schätzung zu starten.
+
+**Aufgabenverwaltung**
+- 📋 **Tickets** – Mehrere zu schätzende Aufgaben lassen sich pro Session anlegen; der Moderator wechselt bequem zwischen ihnen. Der Durchschnittswert wird automatisch je Ticket gespeichert.
+
+**Anpassung & Komfort**
+- ⚙️ **Einstellbare Optionen** – z. B. ob Tickets angezeigt werden, ob der Moderator mitschätzen darf, automatisches Aufdecken sowie Anzeige des Gesamtdurchschnitts oder der Werte je Rolle.
+- 🌐 **Zweisprachig** – Oberfläche auf Deutsch und Englisch, jederzeit umschaltbar.
+- 🧹 **Automatische Aufräumung** – Sessions, die älter als 24 Stunden sind, werden automatisch gelöscht.
 
 ---
 
 ## Tech-Stack
 
-| Schicht | Technologie | Version |
-|---|---|---|
-| Backend | Java + Spring Boot | 21 / 3.x |
-| Echtzeit | Spring WebSocket + STOMP | – |
-| Frontend | Thymeleaf + Vanilla JS | – |
-| WebSocket Client | SockJS + STOMP.js | via Webjars |
-| ORM | Spring Data JPA + Hibernate | – |
-| Datenbank (Dev) | H2 File-Modus | – |
-| Datenbank (Prod) | PostgreSQL | – |
-| Hosting | Railway | – |
+| Bereich | Eingesetzte Technologie |
+|---|---|
+| Backend | Java mit Spring Boot |
+| Echtzeit-Kommunikation | WebSocket (STOMP-Protokoll) |
+| Frontend | Thymeleaf-Templates + JavaScript, eigens entwickelte SVG-Visualisierung des Pokertischs |
+| Datenhaltung (Entwicklung) | H2-Datenbank (lokale Dateidatenbank) |
+| Datenhaltung (Produktion) | PostgreSQL |
+| Hosting | Heroku |
 
 ---
 
@@ -43,9 +58,9 @@ Die Mitarbeiter der SIV.AG nutzten bisher ein kostenloses Drittanbieter-Tool fü
 
 ### Voraussetzungen
 
-- Java 21+
-- Maven 3.9+ (oder Maven Wrapper `./mvnw` nutzen)
-- IntelliJ IDEA (empfohlen)
+- Java 21 oder neuer
+- Maven (alternativ kann der mitgelieferte Maven Wrapper `./mvnw` verwendet werden)
+- Eine Java-IDE wird empfohlen (z. B. IntelliJ IDEA)
 
 ### Starten
 
@@ -55,91 +70,53 @@ cd planning-poker
 ./mvnw spring-boot:run
 ```
 
-App läuft unter: [http://localhost:8080](http://localhost:8080)
+Die Anwendung ist anschließend unter folgender Adresse erreichbar: [http://localhost:8080](http://localhost:8080)
 
-### H2-Console (Datenbankansicht im Browser)
+### Datenbank-Ansicht im Browser (nur lokale Entwicklung)
 
 ```
 URL:      http://localhost:8080/h2-console
 JDBC URL: jdbc:h2:file:./data/planningpoker
-User:     sa
+Benutzer: sa
 Passwort: (leer lassen)
 ```
 
 ### Konfiguration
 
-Die Datei `src/main/resources/application.properties` enthält die Entwicklungskonfiguration mit H2.  
-Für Produktion wird `application-prod.properties` verwendet (nicht im Repository – wird über Umgebungsvariablen gesetzt).
+Die Grundeinstellungen für die lokale Entwicklung befinden sich in `src/main/resources/application.properties`. Für den produktiven Betrieb wird eine separate, nicht im Repository enthaltene Konfiguration verwendet, die über Umgebungsvariablen gesetzt wird (z. B. Zugangsdaten zur PostgreSQL-Datenbank).
 
 ---
 
-## Projektstruktur
+## Wie ist das Projekt aufgebaut?
 
-```
-src/main/java/de/sivag/planningpoker/
-├── config/
-│   └── WebSocketConfig.java          # STOMP-Broker Konfiguration
-├── controller/
-│   ├── PageController.java           # Thymeleaf-Seiten
-│   ├── SessionRestController.java    # REST-API
-│   └── PokerWsController.java        # WebSocket-Handler
-├── model/
-│   ├── Session.java                  # Entity
-│   ├── Participant.java              # Entity
-│   └── UserStory.java                # Entity
-├── repository/
-│   ├── SessionRepository.java
-│   └── ParticipantRepository.java
-├── service/
-│   └── SessionService.java           # Geschäftslogik
-└── PlanningPokerApplication.java
+Die Anwendung gliedert sich in drei grobe Bereiche, wie es bei modernen Webanwendungen üblich ist:
 
-src/main/resources/
-├── templates/
-│   ├── index.html                    # Startseite
-│   ├── moderator.html                # Moderator-Ansicht
-│   └── session.html                  # Abstimmungsraum
-├── static/
-│   ├── css/style.css
-│   └── js/poker.js                   # SockJS + STOMP Logik
-└── application.properties
-```
+- **Oberfläche (Frontend):** Die HTML-Seiten und das dazugehörige JavaScript, u. a. für den animierten Pokertisch, Benachrichtigungen (Toasts) und die Live-Aktualisierung der Ansicht.
+- **Anwendungslogik (Backend):** Verwaltet Sessions, Teilnehmer, Tickets und Abstimmungen, prüft Regeln (z. B. "der letzte Moderator kann nicht entmachtet werden") und berechnet die Durchschnittswerte.
+- **Datenhaltung:** Speichert Sessions, Teilnehmer, Tickets und abgegebene Stimmen dauerhaft ab.
+
+Die Kommunikation zwischen Oberfläche und Server läuft über zwei Wege: klassische Web-Anfragen für einmalige Aktionen (z. B. Session erstellen) und eine dauerhafte WebSocket-Verbindung für alles, was in Echtzeit bei allen Teilnehmern ankommen muss (z. B. eine abgegebene Stimme).
 
 ---
 
-## API-Übersicht
+## Kurzüberblick: Wichtigste Endpunkte
 
-### REST
+### Reguläre Web-Anfragen
 
-| Methode | Endpoint | Beschreibung |
-|---|---|---|
-| `POST` | `/api/sessions` | Neue Session erstellen |
-| `POST` | `/api/sessions/{code}/join` | Session beitreten |
-| `GET` | `/api/sessions/{code}/state` | Sessionstatus abrufen |
+| Aktion | Beschreibung |
+|---|---|
+| Session erstellen | Legt eine neue Planning-Poker-Runde mit Raumcode an |
+| Session beitreten | Ermöglicht Teilnehmern den Einstieg über den Raumcode |
+| Sessionstatus abrufen | Liefert den aktuellen Stand einer laufenden Session |
 
-### WebSocket (STOMP)
+### Echtzeit-Kommunikation (während einer laufenden Session)
 
-| Richtung | Route | Beschreibung |
-|---|---|---|
-| Client → Server | `/app/session/{code}/vote` | Karte wählen |
-| Client → Server | `/app/session/{code}/reveal` | Karten aufdecken |
-| Client → Server | `/app/session/{code}/reset` | Neue Runde |
-| Server → Client | `/topic/session/{code}` | Live-Update an alle |
-
----
-
-## Branch-Strategie
-
-```
-main        ← stabiler Stand, Railway deployed von hier
-└── dev     ← aktuelle Entwicklung
-      ├── feature/session-entity
-      ├── feature/websocket
-      ├── feature/rest-api
-      ├── feature/thymeleaf-templates
-      ├── feature/javascript
-      └── feature/testing
-```
+| Aktion | Beschreibung |
+|---|---|
+| Karte wählen | Eigene Schätzung abgeben |
+| Karten aufdecken | Alle abgegebenen Schätzungen für alle sichtbar machen |
+| Neue Runde starten | Zurücksetzen für die nächste Schätzung |
+| Live-Update | Automatische Benachrichtigung aller Teilnehmer über Änderungen |
 
 ---
 
@@ -147,18 +124,14 @@ main        ← stabiler Stand, Railway deployed von hier
 
 | Phase | Inhalt | Stunden |
 |---|---|---|
-| I – Analyse & Planung | Ist-Analyse, Soll-Konzept, Wirtschaftlichkeit, Technisches Design | 14h |
-| II – Realisierung | Backend, Datenbank, WebSocket, UI | 41h |
-| III – Qualitätssicherung | Unit-Tests, Fehlerbehebung, Abnahme | 10h |
-| IV – Dokumentation | Projektdokumentation, Benutzerhandbuch | 15h |
-| **Gesamt** | | **80h** |
+| I – Analyse & Planung | Ist-Analyse, Soll-Konzept, Wirtschaftlichkeit, technisches Design | 14 h |
+| II – Realisierung | Backend, Datenbank, Echtzeit-Kommunikation, Benutzeroberfläche | 41 h |
+| III – Qualitätssicherung | Tests, Fehlerbehebung, Abnahme | 10 h |
+| IV – Dokumentation | Projektdokumentation, Benutzerhandbuch | 15 h |
+| **Gesamt** | | **80 h** |
 
 ---
 
 ## Lizenz
 
 Dieses Projekt wurde im Rahmen einer IHK-Ausbildung entwickelt und ist nicht für den öffentlichen Einsatz lizenziert.
-
----
-
-*Nico Hoffmann – IHK Abschlussprüfung Sommer 2026 – SIV.AG*
