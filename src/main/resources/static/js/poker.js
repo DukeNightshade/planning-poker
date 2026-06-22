@@ -354,6 +354,13 @@ async function loadInitialData() {
             selectTicket(firstId);
         }
 
+        if (state.status === 'REVEALED' && state.votes?.length > 0) {
+            showResults(state.votes);
+            renderTable();
+            renderSidebar();
+            return;
+        }
+
         if (state.votedParticipantIds?.length > 0) {
             state.votedParticipantIds.forEach(id => {
                 if (players[id]) players[id].voted = true;

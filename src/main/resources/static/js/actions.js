@@ -97,11 +97,13 @@ function resetRound() {
 // Ergebnisse & Reset
 // ====================================
 
-function showResults(votes) {
+function showResults(votes, silent = false) {
     isRevealed = true;
 
     votes.forEach(vote => {
-        const id = Object.keys(players).find(k => players[k].name === vote.participantName);
+        const id = vote.participantId && players[vote.participantId]
+            ? vote.participantId
+            : Object.keys(players).find(k => players[k].name === vote.participantName);
         if (id) {
             players[id].cardValue         = vote.cardValue;
             players[id].originalCardValue = vote.cardValue;
@@ -120,7 +122,7 @@ function showResults(votes) {
         renderTicketSidebar();
     }
 
-    _flipCardsIn();
+    if (!silent) _flipCardsIn();
     renderTable();
     renderSidebar();
 
@@ -131,7 +133,7 @@ function showResults(votes) {
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
 
-    showToast(globalThis.i18n.toast.revealed, 'success', '', 3000);
+    if (!silent) showToast(globalThis.i18n.toast.revealed, 'success', '', 3000);
 }
 
 function resetUI() {

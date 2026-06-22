@@ -49,6 +49,7 @@ public class SessionController {
     @GetMapping("/session/{roomCode}")
     public String session(@PathVariable String roomCode, Model model, Locale locale) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        Map<String, String> methodLabels = buildMethodLabels(locale);
         model.addAttribute("session",          session);
         model.addAttribute("roomCode",         roomCode);
         model.addAttribute("estimationMethod", session.getEstimationMethod().name());
@@ -56,9 +57,10 @@ public class SessionController {
         model.addAttribute("showTopic",        session.isShowTopic());
         model.addAttribute("moderatorCanVote", session.isModeratorCanVote());
         model.addAttribute("autoReveal",       session.isAutoReveal());
-        model.addAttribute("methodLabels",     buildMethodLabels(locale));
+        model.addAttribute("methodLabels",     methodLabels);
         model.addAttribute("hasTickets",       !ticketService.getTickets(roomCode).isEmpty());
         model.addAttribute("showOnlyTotal",     session.isShowOnlyTotal());
+        model.addAttribute("currentMethodLabel", methodLabels.get(session.getEstimationMethod().name()));
         return "session";
     }
 
