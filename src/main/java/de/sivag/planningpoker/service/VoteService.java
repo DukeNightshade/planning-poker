@@ -108,6 +108,10 @@ public class VoteService {
         return voteRepository.findParticipantIdsBySessionRoomCode(roomCode);
     }
 
+    public List<Vote> getVotesWithParticipant(String roomCode) {
+        return voteRepository.findBySessionRoomCodeWithParticipant(roomCode);
+    }
+
     // ====================================
     // Utility Methoden
     // ====================================

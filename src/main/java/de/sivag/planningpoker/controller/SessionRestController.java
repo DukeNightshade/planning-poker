@@ -98,7 +98,7 @@ public class SessionRestController {
                 .map(Object::toString)
                 .toList();
 
-        return ResponseEntity.ok(Map.of(
+        Map<String, Object> body = new java.util.HashMap<>(Map.of(
                 "roomCode",            session.getRoomCode(),
                 "currentTicketId",     session.getCurrentTicketId() != null
                         ? session.getCurrentTicketId() : "",
@@ -109,5 +109,20 @@ public class SessionRestController {
                 "votedParticipantIds", votedIds,
                 "votedCount",          votedIds.size()
         ));
+
+        if (session.getStatus() == de.sivag.planningpoker.model.enums.SessionStatus.REVEALED) {
+            List<Map<String, Object>> votes = voteService.getVotesWithParticipant(roomCode)
+                    .stream()
+                    .map(v -> Map.<String, Object>of(
+                            "participantId",   v.getParticipant().getId().toString(),
+                            "participantName", v.getParticipant().getName(),
+                            "participantRole", v.getParticipant().getRole().name(),
+                            "cardValue",       v.getCardValue()
+                    ))
+                    .toList();
+            body.put("votes", votes);
+        }
+
+        return ResponseEntity.ok(body);
     }
 }
