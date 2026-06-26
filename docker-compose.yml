@@ -1,0 +1,55 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: planning-poker:latest
+    container_name: planning-poker-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/planningpoker
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_DATASOURCE_USERNAME: planningpoker
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      H2_CONSOLE_ENABLED: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - planning-poker-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: planning-poker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: planningpoker
+      POSTGRES_USER: planningpoker
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    # Datenverzeichnis des DB-Containers liegt komplett getrennt
+    # vom App-Container in einem eigenen, benannten Volume
+    volumes:
+      - planning-poker-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planningpoker -d planningpoker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - planning-poker-net
+    # Port nach aussen nur oeffnen, wenn du z.B. mit einem DB-Tool
+    # von deinem Host aus draufschauen willst:
+    # ports:
+    #   - "5432:5432"
+
+networks:
+  planning-poker-net:
+    driver: bridge
+
+# Eigenes, benanntes Volume -> Daten-Files liegen separat von App/Code,
+# ueberleben "docker compose down" und Image-Updates
+volumes:
+  planning-poker-db-data:

@@ -15,6 +15,7 @@ logs/
 ### Sensitive Konfiguration ###
 application-prod.properties
 application-local.properties
+.env
 
 ### IntelliJ IDEA ###
 .idea
