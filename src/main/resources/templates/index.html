@@ -23,6 +23,11 @@
 <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 <script th:inline="javascript">
+    /* Context-Path der App (z.B. "/" lokal, "/planning-poker/" hinter dem Proxy) */
+    globalThis.APP_BASE = /*[[@{/}]]*/ '/';
+</script>
+
+<script th:inline="javascript">
     globalThis.i18n = {
         toast: {
             revealed:          /*[[#{toast.revealed}]]*/ '',

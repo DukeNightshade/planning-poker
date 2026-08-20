@@ -77,6 +77,11 @@
 </div>
 
 <script th:inline="javascript">
+    /* Context-Path der App (z.B. "/" lokal, "/planning-poker/" hinter dem Proxy) */
+    globalThis.APP_BASE = /*[[@{/}]]*/ '/';
+</script>
+
+<script th:inline="javascript">
     globalThis.i18n = {
         toast: {
             revealed:          /*[[#{toast.revealed}]]*/ '',
@@ -144,7 +149,7 @@
     </div>
     <div class="header__bottom">
         <div class="header__left">
-            <a href="/" class="header__back" th:text="#{nav.dashboard}">&#8592; Dashboard</a>
+            <a th:href="@{/}" class="header__back" th:text="#{nav.dashboard}">&#8592; Dashboard</a>
         </div>
         <div class="header__right">
             <span class="header__roomcode-label" th:text="#{nav.roomcode}">Raumcode:</span>

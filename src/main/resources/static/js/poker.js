@@ -150,7 +150,7 @@ async function _handleJoinSubmit() {
     const role = roleSelect.value;
 
     try {
-        const response = await fetch('/api/sessions/' + roomCode + '/join', {
+        const response = await fetch(appUrl('/api/sessions/' + roomCode + '/join'), {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ name, role, browserId: _getBrowserId() })
@@ -224,7 +224,7 @@ async function _ensureRegistered() {
     const wasM       = isModerator;
 
     try {
-        const res = await fetch('/api/sessions/' + roomCode + '/join', {
+        const res = await fetch(appUrl('/api/sessions/' + roomCode + '/join'), {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
@@ -263,7 +263,7 @@ async function _ensureRegistered() {
 
         if (wasM) {
             const promRes = await fetch(
-                '/api/sessions/' + roomCode + '/participants/' + participantId + '/promote',
+                appUrl('/api/sessions/' + roomCode + '/participants/' + participantId + '/promote'),
                 { method: 'POST' }
             );
             if (promRes.ok) {
@@ -290,7 +290,7 @@ function connect() {
     if (_connecting) return;
     _connecting = true;
 
-    const socket = new SockJS('/ws');
+    const socket = new SockJS(appUrl('/ws'));
     stompClient  = Stomp.over(socket);
     stompClient.debug = null;
 
@@ -330,7 +330,7 @@ function connect() {
 }
 
 async function loadInitialData() {
-    const ticketResponse = await fetch('/api/sessions/' + roomCode + '/tickets');
+    const ticketResponse = await fetch(appUrl('/api/sessions/' + roomCode + '/tickets'));
     if (ticketResponse.ok) {
         const ticketList = await ticketResponse.json();
         tickets = {};
@@ -342,7 +342,7 @@ async function loadInitialData() {
         renderTicketSidebar();
     }
 
-    const stateResponse = await fetch('/api/sessions/' + roomCode + '/state');
+    const stateResponse = await fetch(appUrl('/api/sessions/' + roomCode + '/state'));
     if (stateResponse.ok) {
         const state = await stateResponse.json();
         if (state.currentTicketId) {

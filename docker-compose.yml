@@ -10,6 +10,11 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Bleibt LEER: der Reverse Proxy (appl-tools01) schneidet den Prefix
+      # /planning-poker ab, die App bekommt die Requests unter "/".
+      # Den Prefix fuer generierte Links liefert der Proxy per
+      # X-Forwarded-Prefix -> siehe server.forward-headers-strategy=framework.
+      APP_CONTEXT_PATH: ${APP_CONTEXT_PATH:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/planningpoker
       SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
       SPRING_DATASOURCE_USERNAME: planningpoker

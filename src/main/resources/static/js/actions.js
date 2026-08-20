@@ -240,7 +240,7 @@ function updateDiscussion(id, name, cardValue) {
 
 async function promoteMyself() {
     const response = await fetch(
-        `/api/sessions/${roomCode}/participants/${participantId}/promote`,
+        appUrl(`/api/sessions/${roomCode}/participants/${participantId}/promote`),
         { method: 'POST' }
     );
     if (response.ok) {
@@ -253,7 +253,7 @@ async function promoteMyself() {
 
 async function demoteParticipant(targetParticipantId) {
     const response = await fetch(
-        `/api/sessions/${roomCode}/participants/${targetParticipantId}/demote`,
+        appUrl(`/api/sessions/${roomCode}/participants/${targetParticipantId}/demote`),
         { method: 'POST' }
     );
     if (!response.ok) {

@@ -38,7 +38,9 @@ USER spring
 
 EXPOSE 8080
 
+# Context-Path muss im Healthcheck mitberuecksichtigt werden
+# (z.B. APP_CONTEXT_PATH=/planning-poker hinter dem Reverse Proxy)
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD curl -f "http://localhost:8080${APP_CONTEXT_PATH}/actuator/health" || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
