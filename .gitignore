@@ -48,3 +48,7 @@ build/
 ### macOS ###
 .DS_Store
 Thumbs.db
+
+### Deploy-Artefakte ###
+deploy/*.zip
+deploy/**/*.tar
