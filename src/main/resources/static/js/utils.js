@@ -17,13 +17,12 @@ const ROLE_COLORS = {
 };
 
 // ====================================
-// Basis-Pfad (Reverse-Proxy / Context-Path)
+// Basis-Pfad
 // ====================================
 
 /**
  * Baut eine URL relativ zum Context-Path der Anwendung.
- * globalThis.APP_BASE wird im Template via Thymeleaf (@{/}) gesetzt,
- * damit die App auch unter einem Prefix (z.B. /planning-poker/) laeuft.
+ * globalThis.APP_BASE wird im Template via Thymeleaf (@{/}) gesetzt.
  *
  * @param {string} [path] - Pfad ab dem App-Root, z.B. '/api/sessions'
  * @returns {string} vollstaendiger Pfad inkl. Context-Path

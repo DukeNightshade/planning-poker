@@ -29,7 +29,7 @@ RUN addgroup -S spring && adduser -S spring -G spring
 
 WORKDIR /app
 
-COPY --from=build /app/target/planning-poker-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 
 # Datenverzeichnis (z.B. falls H2-Fallback genutzt wird) anlegen und Rechte setzen
 RUN mkdir -p /app/data && chown -R spring:spring /app
@@ -38,8 +38,6 @@ USER spring
 
 EXPOSE 8080
 
-# Context-Path muss im Healthcheck mitberuecksichtigt werden
-# (z.B. APP_CONTEXT_PATH=/planning-poker hinter dem Reverse Proxy)
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
   CMD curl -f "http://localhost:8080${APP_CONTEXT_PATH}/actuator/health" || exit 1
 
