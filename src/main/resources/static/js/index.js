@@ -13,6 +13,7 @@ function getBrowserId() {
 
 function handleSessionCreated(data, moderatorName) {
     sessionStorage.setItem('participantId',   data.participantId);
+    sessionStorage.setItem('participantToken', data.token);
     sessionStorage.setItem('isModerator',     'true');
     sessionStorage.setItem('participantRole', data.moderatorRole);
     localStorage.setItem('pp_name_' + data.roomCode, moderatorName);
@@ -105,6 +106,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
     if (response.ok) {
         const data = await response.json();
         sessionStorage.setItem('participantId',   data.participantId);
+        sessionStorage.setItem('participantToken', data.token);
         sessionStorage.setItem('isModerator',     'false');
         sessionStorage.setItem('participantRole', data.role);
         localStorage.setItem('pp_name_' + roomCode, name);

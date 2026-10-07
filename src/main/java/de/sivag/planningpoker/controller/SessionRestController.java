@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.controller;
 
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.enums.EstimationMethod;
@@ -71,10 +72,9 @@ public class SessionRestController {
                 method.name(),
                 ticketTitles.size());
 
-        Long moderatorId = sessionService.getParticipants(session.getRoomCode())
+        Participant moderator = sessionService.getParticipants(session.getRoomCode())
                 .stream()
                 .findFirst()
-                .map(Participant::getId)
                 .orElseThrow(() -> new IllegalStateException(
                         "Moderator wurde nicht gefunden nach Session-Erstellung."));
 
@@ -82,13 +82,16 @@ public class SessionRestController {
                 "roomCode",      session.getRoomCode(),
                 METHOD,        session.getEstimationMethod().name(),
                 "status",        session.getStatus().name(),
-                "participantId", moderatorId,
-                "moderatorRole", moderatorRole.name()
+                "participantId", moderator.getId(),
+                "moderatorRole", moderatorRole.name(),
+                "token",         moderator.getToken()
         ));
     }
 
     @GetMapping("/{roomCode}/state")
-    public ResponseEntity<Map<String, Object>> getState(@PathVariable String roomCode) {
+    public ResponseEntity<Map<String, Object>> getState(
+            @PathVariable String roomCode,
+            @RequestHeader(value = "X-Participant-Token", required = false) String token) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
         String currentTicketTitle = ticketService.getCurrentTicketTitle(
                 roomCode, session.getCurrentTicketId());
@@ -109,6 +112,17 @@ public class SessionRestController {
                 "votedParticipantIds", votedIds,
                 "votedCount",          votedIds.size()
         ));
+
+        // Eigene Karte vor dem Aufdecken nur an den Token-Inhaber (für Reload)
+        if (token != null && !token.isBlank()) {
+            try {
+                Participant me = sessionService.authenticate(roomCode, token);
+                voteService.getOwnCardValue(roomCode, me.getId())
+                        .ifPresent(card -> body.put("myCardValue", card));
+            } catch (ForbiddenException e) {
+                log.debug("State ohne eigene Karte: {}", e.getMessage());
+            }
+        }
 
         if (session.getStatus() == de.sivag.planningpoker.model.enums.SessionStatus.REVEALED) {
             List<Map<String, Object>> votes = voteService.getVotesWithParticipant(roomCode)

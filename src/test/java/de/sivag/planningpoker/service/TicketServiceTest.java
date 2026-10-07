@@ -146,6 +146,24 @@ class TicketServiceTest {
                 .hasMessageContaining("nicht gefunden");
     }
 
+    @Test
+    @DisplayName("selectTicket: Ticket aus fremdem Raum wird nicht ausgewählt")
+    void selectTicket_ticketFromOtherRoom_throwsException() {
+        Session otherSession = new Session();
+        otherSession.setRoomCode("ZZZZ9999");
+        testTicket.setSession(otherSession);
+
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
+        when(ticketRepository.findById(1L))
+                .thenReturn(Optional.of(testTicket));
+
+        assertThatThrownBy(() -> ticketService.selectTicket("ABCD1234", 1L))
+                .isInstanceOf(NoSuchElementException.class);
+        assertThat(testSession.getCurrentTicketId()).isNull();
+        verify(voteRepository, never()).deleteBySessionRoomCode(any());
+    }
+
     // ====================================
     // getTickets()
     // ====================================

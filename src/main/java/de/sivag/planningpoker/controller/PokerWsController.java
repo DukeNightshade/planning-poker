@@ -1,6 +1,7 @@
 package de.sivag.planningpoker.controller;
 
 import de.sivag.planningpoker.config.WebSocketSessionRegistry;
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
@@ -11,6 +12,7 @@ import de.sivag.planningpoker.service.VoteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -40,6 +42,7 @@ public class PokerWsController {
     private static final String PARTICIPANT_NAME = "participantName";
     private static final String CARD_VALUE       = "cardValue";
     private static final String TITLE            = "title";
+    private static final String TOKEN_HEADER     = "participant-token";
 
     // ====================================
     // Abhängigkeiten
@@ -58,14 +61,19 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/register")
     public void register(
             @DestinationVariable String roomCode,
-            @Payload Map<String, String> payload,
+            @Header(name = TOKEN_HEADER, required = false) String token,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        String raw = payload.get(PARTICIPANT_ID);
-        if (raw == null) return;
-
-        Long   participantId = Long.parseLong(raw);
-        String wsSessionId   = headerAccessor.getSessionId();
+        // Veraltetes Token (Teilnehmer nach Grace Period entfernt) ist hier kein Fehler:
+        // der Client tritt danach ohnehin per browserId neu bei und registriert sich erneut
+        Long participantId;
+        try {
+            participantId = sessionService.authenticate(roomCode, token).getId();
+        } catch (ForbiddenException e) {
+            log.debug("Register ignoriert: {} (roomCode={})", e.getMessage(), roomCode);
+            return;
+        }
+        String wsSessionId = headerAccessor.getSessionId();
 
         sessionRegistry.register(wsSessionId, roomCode, participantId);
 
@@ -79,35 +87,24 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/vote")
     public void submitVote(
             @DestinationVariable String roomCode,
-            @Payload Map<String, String> payload,
-            SimpMessageHeaderAccessor headerAccessor) {
+            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Payload Map<String, String> payload) {
 
-        Long    participantId = Long.parseLong(payload.get(PARTICIPANT_ID));
-        String  cardValue     = payload.get(CARD_VALUE);
-        boolean isDiscussion  = Boolean.parseBoolean(
+        // Abgestimmt wird immer als der Teilnehmer hinter dem Token, nie per Payload-ID
+        Participant voter         = sessionService.authenticate(roomCode, token);
+        Long        participantId = voter.getId();
+        String      cardValue     = payload.get(CARD_VALUE);
+        boolean     isDiscussion  = Boolean.parseBoolean(
                 payload.getOrDefault("isDiscussion", "false"));
-
-        Map<String, Object> sessionAttributes = headerAccessor.getSessionAttributes();
-        if (sessionAttributes != null) {
-            sessionAttributes.put("roomCode",     roomCode);
-            sessionAttributes.put(PARTICIPANT_ID, participantId);
-        }
 
         Vote vote = voteService.submitVote(roomCode, participantId, cardValue, isDiscussion);
         if (vote == null) return;
 
         if (isDiscussion) {
-            String participantName = sessionService.getParticipants(roomCode)
-                    .stream()
-                    .filter(p -> p.getId().equals(participantId))
-                    .findFirst()
-                    .map(Participant::getName)
-                    .orElse("");
-
             broadcast(roomCode, Map.of(
                     "type",           "DISCUSSION_UPDATE",
                     PARTICIPANT_ID,   participantId.toString(),
-                    PARTICIPANT_NAME, participantName,
+                    PARTICIPANT_NAME, voter.getName(),
                     CARD_VALUE,       cardValue
             ));
             return;
@@ -139,12 +136,20 @@ public class PokerWsController {
     }
 
     @MessageMapping("/session/{roomCode}/reveal")
-    public void revealCards(@DestinationVariable String roomCode) {
+    public void revealCards(
+            @DestinationVariable String roomCode,
+            @Header(name = TOKEN_HEADER, required = false) String token) {
+
+        sessionService.requireModerator(roomCode, token);
         broadcastReveal(roomCode, voteService.revealCards(roomCode));
     }
 
     @MessageMapping("/session/{roomCode}/reset")
-    public void resetRound(@DestinationVariable String roomCode) {
+    public void resetRound(
+            @DestinationVariable String roomCode,
+            @Header(name = TOKEN_HEADER, required = false) String token) {
+
+        sessionService.requireModerator(roomCode, token);
         voteService.resetRound(roomCode);
         broadcast(roomCode, Map.of("type", "RESET"));
     }
@@ -152,8 +157,10 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/settings")
     public void updateSettings(
             @DestinationVariable String roomCode,
+            @Header(name = TOKEN_HEADER, required = false) String token,
             @Payload Map<String, Object> payload) {
 
+        sessionService.requireModerator(roomCode, token);
         Session current = sessionService.getSessionByRoomCode(roomCode);
 
         boolean showTopic        = flag(payload, "showTopic",        current.isShowTopic());
@@ -175,8 +182,10 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/ticket/add")
     public void addTicket(
             @DestinationVariable String roomCode,
+            @Header(name = TOKEN_HEADER, required = false) String token,
             @Payload Map<String, String> payload) {
 
+        sessionService.requireModerator(roomCode, token);
         Ticket ticket = ticketService.addTicket(roomCode, payload.get(TITLE));
 
         broadcast(roomCode, Map.of(
@@ -191,8 +200,10 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/ticket/select")
     public void selectTicket(
             @DestinationVariable String roomCode,
+            @Header(name = TOKEN_HEADER, required = false) String token,
             @Payload Map<String, String> payload) {
 
+        sessionService.requireModerator(roomCode, token);
         Ticket ticket = ticketService.selectTicket(
                 roomCode, Long.parseLong(payload.get("ticketId")));
 
@@ -200,7 +211,7 @@ public class PokerWsController {
                 "type",   "TICKET_SELECTED",
                 "id",     ticket.getId().toString(),
                 TITLE,    ticket.getTitle(),
-                "status", ticket.getStatus().name()   // NEU
+                "status", ticket.getStatus().name()
         ));
     }
 

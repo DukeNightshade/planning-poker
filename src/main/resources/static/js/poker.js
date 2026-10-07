@@ -1,4 +1,4 @@
-/* global SockJS, Stomp, applyTicketSidebarVisibility */
+/* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, sendWs, authHeaders */
 
 // ====================================
 // Session-Daten aus DOM
@@ -62,7 +62,7 @@ window.addEventListener('resize', () => {
 // Einstiegspunkt
 // ====================================
 
-if (!participantId) {
+if (!participantId || !getParticipantToken()) {
     showJoinModal();
 } else {
     initSession();
@@ -164,6 +164,7 @@ async function _handleJoinSubmit() {
             isModerator     = false;
 
             sessionStorage.setItem('participantId',   participantId);
+            sessionStorage.setItem('participantToken', data.token);
             sessionStorage.setItem('isModerator',     'false');
             sessionStorage.setItem('participantRole', participantRole);
             localStorage.setItem('pp_name_' + roomCode, name);
@@ -243,6 +244,7 @@ async function _ensureRegistered() {
         isModerator     = false;
 
         sessionStorage.setItem('participantId',   participantId);
+        sessionStorage.setItem('participantToken', data.token);
         sessionStorage.setItem('participantRole', participantRole);
         sessionStorage.setItem('isModerator',     'false');
 
@@ -258,13 +260,12 @@ async function _ensureRegistered() {
             };
         }
 
-        stompClient.send('/app/session/' + roomCode + '/register', {},
-            JSON.stringify({ participantId }));
+        sendWs('/register');
 
         if (wasM) {
             const promRes = await fetch(
                 appUrl('/api/sessions/' + roomCode + '/participants/' + participantId + '/promote'),
-                { method: 'POST' }
+                { method: 'POST', headers: authHeaders() }
             );
             if (promRes.ok) {
                 isModerator = true;
@@ -307,8 +308,13 @@ function connect() {
             handleMessage(JSON.parse(message.body));
         }, {});
 
-        stompClient.send('/app/session/' + roomCode + '/register', {},
-            JSON.stringify({ participantId }));
+        // Fehler zu eigenen Aktionen (z. B. fehlende Rechte) kommen nur an diese Verbindung
+        stompClient.subscribe('/user/queue/errors', function (message) {
+            const err = JSON.parse(message.body);
+            showToast(err.error || globalThis.i18n.toast.errorAction, 'error');
+        });
+
+        sendWs('/register');
 
         await _ensureRegistered();
 
@@ -342,7 +348,8 @@ async function loadInitialData() {
         renderTicketSidebar();
     }
 
-    const stateResponse = await fetch(appUrl('/api/sessions/' + roomCode + '/state'));
+    const stateResponse = await fetch(appUrl('/api/sessions/' + roomCode + '/state'),
+        { headers: authHeaders() });
     if (stateResponse.ok) {
         const state = await stateResponse.json();
         if (state.currentTicketId) {
@@ -369,6 +376,15 @@ async function loadInitialData() {
             const totalCount = Object.values(players)
                 .filter(p => p.role !== 'PRODUCT_OWNER').length;
             updateVoteStatus(state.votedCount, totalCount, null);
+        }
+
+        // Eigene, noch verdeckte Karte nach Reload wiederherstellen
+        if (state.myCardValue && players[participantId]) {
+            selectedCard = state.myCardValue;
+            players[participantId].cardValue = state.myCardValue;
+            players[participantId].voted     = true;
+            document.querySelectorAll('.card-btn').forEach(btn =>
+                btn.classList.toggle('selected', btn.dataset.value === state.myCardValue));
         }
     }
 

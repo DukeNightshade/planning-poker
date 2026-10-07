@@ -37,6 +37,31 @@ function appUrl(path = '') {
 }
 
 // ====================================
+// Teilnehmer-Token
+// ====================================
+
+function getParticipantToken() {
+    return sessionStorage.getItem('participantToken') || '';
+}
+
+/** Header für REST-Aufrufe, die eine Teilnehmer-Identität brauchen. */
+function authHeaders() {
+    return { 'X-Participant-Token': getParticipantToken() };
+}
+
+/**
+ * Sendet eine STOMP-Nachricht an den Raum, inkl. Teilnehmer-Token.
+ *
+ * @param {string} path - Ziel ab dem Raum, z.B. '/vote'
+ * @param {object} [body] - Nutzdaten
+ */
+function sendWs(path, body = {}) {
+    stompClient.send('/app/session/' + roomCode + path,
+        { 'participant-token': getParticipantToken() },
+        JSON.stringify(body));
+}
+
+// ====================================
 // Hilfsfunktionen
 // ====================================
 

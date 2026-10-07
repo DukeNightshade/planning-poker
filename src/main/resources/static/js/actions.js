@@ -1,7 +1,7 @@
 /* global selectedCard, averageValue, isRevealed, players, participantId,
           participantRole, roomCode, stompClient, currentTicketId, tickets,
           isModerator, renderTable, renderSidebar, renderTicketSidebar,
-          recalculateStats, showToast */
+          recalculateStats, showToast, sendWs, authHeaders */
 
 // ====================================
 // Kartenwahl
@@ -34,8 +34,7 @@ function selectCard(button) {
     renderSidebar();
 
     if (stompClient !== null && stompClient.connected) {
-        stompClient.send('/app/session/' + roomCode + '/vote', {},
-            JSON.stringify({ participantId, cardValue: selectedCard, isDiscussion }));
+        sendWs('/vote', { cardValue: selectedCard, isDiscussion });
     } else {
         console.warn("WebSocket ist nicht verbunden! Abstimmung wurde nicht gesendet.");
         if (typeof showToast === 'function') {
@@ -56,14 +55,14 @@ function revealCards() {
     });
     const delay = groups.length * 35 + 200;
     setTimeout(() => {
-        stompClient.send('/app/session/' + roomCode + '/reveal', {}, {});
+        sendWs('/reveal');
     }, delay);
 }
 
 function resetRound() {
     const svg = document.querySelector('#pokerTable svg');
     if (!svg) {
-        stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
+        sendWs('/reset');
         return;
     }
     const vb    = svg.viewBox.baseVal;
@@ -89,7 +88,7 @@ function resetRound() {
 
     const totalDelay = groups.length * 30 + 320;
     setTimeout(() => {
-        stompClient.send('/app/session/' + roomCode + '/reset', {}, {});
+        sendWs('/reset');
     }, totalDelay);
 }
 
@@ -247,7 +246,7 @@ function updateDiscussion(id, name, cardValue) {
 async function promoteMyself() {
     const response = await fetch(
         appUrl(`/api/sessions/${roomCode}/participants/${participantId}/promote`),
-        { method: 'POST' }
+        { method: 'POST', headers: authHeaders() }
     );
     if (response.ok) {
         sessionStorage.setItem('isModerator', 'true');
@@ -260,7 +259,7 @@ async function promoteMyself() {
 async function demoteParticipant(targetParticipantId) {
     const response = await fetch(
         appUrl(`/api/sessions/${roomCode}/participants/${targetParticipantId}/demote`),
-        { method: 'POST' }
+        { method: 'POST', headers: authHeaders() }
     );
     if (!response.ok) {
         const data = await response.json();
@@ -296,9 +295,8 @@ function saveSettings() {
     const showTopic        = document.getElementById('settingShowTopic').checked;
     const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
     const autoReveal       = document.getElementById('settingAutoReveal').checked;
-    const showOnlyTotal    = document.getElementById('settingShowOnlyTotal').checked;   // NEU
-    stompClient.send('/app/session/' + roomCode + '/settings', {},
-        JSON.stringify({ showTopic, moderatorCanVote, autoReveal, showOnlyTotal }));
+    const showOnlyTotal    = document.getElementById('settingShowOnlyTotal').checked;
+    sendWs('/settings', { showTopic, moderatorCanVote, autoReveal, showOnlyTotal });
 }
 
 function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {

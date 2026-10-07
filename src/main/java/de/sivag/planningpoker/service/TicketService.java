@@ -52,6 +52,7 @@ public class TicketService {
     public Ticket selectTicket(String roomCode, Long ticketId) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
         Ticket ticket = ticketRepository.findById(ticketId)
+                .filter(t -> t.getSession().getRoomCode().equals(roomCode))
                 .orElseThrow(() -> new NoSuchElementException("Ticket nicht gefunden."));
         session.setCurrentTicketId(ticketId);
         session.setStatus(SessionStatus.WAITING);

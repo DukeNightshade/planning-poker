@@ -50,6 +50,9 @@ public class VoteService {
         if (!isDiscussion && session.getStatus() == SessionStatus.REVEALED) {
             throw new IllegalStateException("Karten bereits aufgedeckt.");
         }
+        if (!session.getEstimationMethod().isValidCard(cardValue)) {
+            throw new IllegalArgumentException("Ungültiger Kartenwert: " + cardValue);
+        }
 
         Optional<Participant> participantOpt =
                 participantRepository.findById(participantId);
@@ -106,6 +109,11 @@ public class VoteService {
 
     public List<Vote> getVotes(String roomCode) {
         return voteRepository.findBySessionRoomCode(roomCode);
+    }
+
+    public Optional<String> getOwnCardValue(String roomCode, Long participantId) {
+        return voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
+                .map(Vote::getCardValue);
     }
 
     public List<Long> getVotedParticipantIds(String roomCode) {
