@@ -1,2 +1,11 @@
-/mvnw text eol=lf
+# Zeilenenden werden im Repository immer als LF gespeichert.
+# Verhindert, dass Bearbeitungen ueber die GitLab-/GitHub-Weboberflaeche
+# ganze Dateien auf CRLF umstellen und dadurch Pseudo-Diffs erzeugen.
+# Im Arbeitsverzeichnis gilt weiterhin core.autocrlf.
+* text=auto eol=lf
+
+# Ausnahmen: Dateien, die unter Windows zwingend CRLF brauchen
 *.cmd text eol=crlf
+*.bat text eol=crlf
+
+/mvnw text eol=lf
