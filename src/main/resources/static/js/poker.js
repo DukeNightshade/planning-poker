@@ -1,4 +1,5 @@
-/* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, getBrowserId, sendWs, authHeaders */
+/* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, getBrowserId, sendWs, authHeaders,
+          leavingTable */
 
 // ====================================
 // Session-Daten aus DOM
@@ -28,6 +29,7 @@ let _reconnectAttempts = 0;
 let _wasDisconnected   = false;
 let _connecting        = false;
 let _joinDone          = false;
+let _joinModalBound    = false;
 
 // ====================================
 // Spieler aus DOM laden
@@ -75,6 +77,7 @@ if (!participantId || !getParticipantToken()) {
 
 function initSession() {
     if (isModerator) _setModeratorUi(true);
+    _setLeaveButtonVisible(true);
 
     applySettings(
         document.getElementById('settingShowTopic')?.checked        ?? false,
@@ -101,8 +104,12 @@ function showJoinModal() {
     const nameInput = document.getElementById('joinModalName');
     const btn       = document.getElementById('joinModalBtn');
 
+    if (nameInput) setTimeout(() => nameInput.focus(), 100);
+
+    // Der Dialog kann mehrfach geöffnet werden (z. B. nach "vom Tisch genommen")
+    if (_joinModalBound) return;
+    _joinModalBound = true;
     if (nameInput) {
-        setTimeout(() => nameInput.focus(), 100);
         nameInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') _handleJoinSubmit();
         });
@@ -155,11 +162,19 @@ async function _handleJoinSubmit() {
 
             const modal = document.getElementById('joinModal');
             if (modal) modal.style.display = 'none';
+            const info = document.getElementById('joinModalInfo');
+            if (info) info.style.display = 'none';
 
             initSession();
             renderTable();
             renderSidebar();
-            connect();
+            // Nach "vom Tisch genommen" besteht die Verbindung noch: nur neu registrieren
+            if (stompClient?.connected) {
+                sendWs('/register');
+                loadInitialData().catch(err => console.error('Fehler beim Laden:', err));
+            } else {
+                connect();
+            }
         } else {
             _joinDone = false;
             if (btn) btn.disabled = false;
@@ -443,6 +458,16 @@ function handlePlayerJoined(data) {
 }
 
 function handlePlayerLeft(data) {
+    if (data.participantId === participantId) {
+        if (leavingTable) {
+            // Selbst gegangen: zurück zur Startseite
+            ['participantId', 'participantToken', 'isModerator'].forEach(k => sessionStorage.removeItem(k));
+            globalThis.location.href = appUrl('/');
+        } else {
+            _handleRemovedFromTable();
+        }
+        return;
+    }
     if (players[data.participantId]) {
         const leftName = players[data.participantId].name;
         delete players[data.participantId];
@@ -485,12 +510,45 @@ function handleModeratorDemoted(data) {
 // Hilfsfunktionen
 // ====================================
 
+/** Eigener Platz wurde geräumt (selbst verlassen oder vom Moderator entfernt). */
+function _handleRemovedFromTable() {
+    delete players[participantId];
+    participantId = null;
+    isModerator   = false;
+    selectedCard  = null;
+    _joinDone     = false;
+    ['participantId', 'participantToken', 'isModerator'].forEach(k => sessionStorage.removeItem(k));
+
+    _setModeratorUi(false);
+    _setLeaveButtonVisible(false);
+    document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
+    if (!isRevealed) _refreshVoteStatus();
+    renderTable();
+    renderSidebar();
+
+    const nameInput = document.getElementById('joinModalName');
+    if (nameInput && !nameInput.value) nameInput.value = localStorage.getItem('pp_name_' + roomCode) || '';
+    const roleSelect = document.getElementById('joinModalRole');
+    if (roleSelect) roleSelect.value = participantRole;
+    const btn = document.getElementById('joinModalBtn');
+    if (btn) btn.disabled = false;
+    const info = document.getElementById('joinModalInfo');
+    if (info) info.style.display = 'block';
+
+    showJoinModal();
+}
+
 function _newPlayer(name, role) {
     return {
         name, role,
         moderator: false, voted: false,
         cardValue: null, originalCardValue: null, changed: false
     };
+}
+
+function _setLeaveButtonVisible(visible) {
+    const btn = document.getElementById('leaveBtn');
+    if (btn) btn.style.display = visible ? '' : 'none';
 }
 
 function _setModeratorUi(visible) {

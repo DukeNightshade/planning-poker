@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.config;
 
+import de.sivag.planningpoker.service.RevealService;
 import de.sivag.planningpoker.service.SessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static de.sivag.planningpoker.utility.ApiConstants.*;
 
@@ -30,6 +32,7 @@ public class WebSocketEventListener {
     private final SessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
     private final WebSocketSessionRegistry sessionRegistry;
+    private final RevealService revealService;
 
     // ====================================
     // Konstruktor
@@ -37,10 +40,12 @@ public class WebSocketEventListener {
 
     public WebSocketEventListener(@Lazy SessionService sessionService,
                                   SimpMessagingTemplate messagingTemplate,
-                                  WebSocketSessionRegistry sessionRegistry) {
+                                  WebSocketSessionRegistry sessionRegistry,
+                                  @Lazy RevealService revealService) {
         this.sessionService    = sessionService;
         this.messagingTemplate = messagingTemplate;
         this.sessionRegistry   = sessionRegistry;
+        this.revealService     = revealService;
     }
 
     // ====================================
@@ -76,6 +81,11 @@ public class WebSocketEventListener {
                                 PARTICIPANT_NAME, participantName
                         )
                 );
+
+                // Weniger Stimmberechtigte: evtl. haben jetzt alle abgestimmt
+                revealService.revealIfComplete(roomCode);
+            } catch (NoSuchElementException e) {
+                log.debug("Teilnehmer {} war bereits vom Tisch genommen", participantId);
             } catch (Exception e) {
                 log.warn("Fehler beim Entfernen des Teilnehmers {} nach Grace Period: {}",
                         participantId, e.getMessage());

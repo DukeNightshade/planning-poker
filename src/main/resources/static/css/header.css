@@ -132,3 +132,20 @@
     border-color: var(--color-accent);
     transform: translateY(-1px);
 }
+.header__leave-btn {
+    background: transparent;
+    border: 2px solid var(--color-border);
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    font-family: var(--font-main), sans-serif;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color var(--transition), color var(--transition), transform var(--transition);
+}
+.header__leave-btn:hover {
+    border-color: var(--color-red);
+    color: var(--color-red);
+    transform: translateY(-1px);
+}

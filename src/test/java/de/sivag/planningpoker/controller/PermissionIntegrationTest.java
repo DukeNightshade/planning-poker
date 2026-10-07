@@ -193,6 +193,40 @@ class PermissionIntegrationTest {
     }
 
     @Test
+    @DisplayName("Vom Tisch entfernen: Raum erfährt es neutral, Token ist danach ungültig, Auto-Reveal greift")
+    void removeFromTable_byModerator_leavesAndAutoReveals() throws Exception {
+        send("/settings", moderatorToken, Map.of("autoReveal", true));
+        assertThat(pollType("SETTINGS_UPDATE")).isNotNull();
+        send("/vote", moderatorToken, Map.of("cardValue", "5"));
+        assertThat(pollType("VOTE_UPDATE")).isNotNull();
+
+        // Lisa hat nicht abgestimmt und wird entfernt
+        send("/participant/remove", moderatorToken, Map.of("participantId", devId.toString()));
+
+        Map<String, Object> left = pollType("PLAYER_LEFT");
+        assertThat(left).isNotNull()
+                .containsEntry("participantId", devId.toString())
+                .containsEntry("participantName", "Lisa");
+        assertThat(pollType("REVEAL")).isNotNull();
+
+        send("/vote", devToken, Map.of("cardValue", "8"));
+        assertThat(errors.poll(TIMEOUT_SEC, TimeUnit.SECONDS))
+                .isNotNull().containsEntry("code", "FORBIDDEN");
+    }
+
+    @Test
+    @DisplayName("Vom Tisch entfernen: Normaler Teilnehmer darf nur sich selbst entfernen")
+    void removeFromTable_byNonModerator_onlySelf() throws Exception {
+        send("/participant/remove", devToken, Map.of("participantId", moderatorId.toString()));
+        assertThat(errors.poll(TIMEOUT_SEC, TimeUnit.SECONDS))
+                .isNotNull().containsEntry("code", "FORBIDDEN");
+
+        send("/participant/remove", devToken, Map.of("participantId", devId.toString()));
+        assertThat(pollType("PLAYER_LEFT")).isNotNull()
+                .containsEntry("participantId", devId.toString());
+    }
+
+    @Test
     @DisplayName("Vote ohne Token oder mit ungültiger Karte wird abgelehnt")
     void vote_withoutTokenOrInvalidCard_isRejected() throws Exception {
         send("/vote", null, Map.of("cardValue", "5"));

@@ -1,7 +1,7 @@
 /* global selectedCard, averageValue, isRevealed, players, participantId,
           participantRole, roomCode, stompClient, currentTicketId, tickets,
           isModerator, renderTable, renderSidebar, renderTicketSidebar,
-          recalculateStats, showToast, sendWs, authHeaders */
+          recalculateStats, showToast, showConfirm, sendWs, authHeaders */
 
 // ====================================
 // Kartenwahl
@@ -242,6 +242,26 @@ function updateDiscussion(id, name, cardValue) {
 // ====================================
 // Moderator-Verwaltung
 // ====================================
+
+// Gesetzt, wenn man selbst "Tisch verlassen" gewählt hat (danach zur Startseite)
+let leavingTable = false;
+
+function leaveTable() {
+    const labels = globalThis.i18n?.labels || {};
+    showConfirm(labels.leaveConfirm || 'Tisch wirklich verlassen?', labels.leaveAction || 'Verlassen', () => {
+        leavingTable = true;
+        sendWs('/participant/remove', { participantId });
+    });
+}
+
+function removeFromTable(targetId) {
+    const labels   = globalThis.i18n?.labels || {};
+    const name     = players[targetId]?.name || '';
+    const question = (labels.removeConfirm || '{0} vom Tisch entfernen?').replace('{0}', name);
+    showConfirm(question, labels.removeAction || 'Entfernen', () => {
+        sendWs('/participant/remove', { participantId: targetId });
+    });
+}
 
 async function promoteMyself() {
     const response = await fetch(

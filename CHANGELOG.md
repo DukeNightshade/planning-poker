@@ -10,6 +10,11 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   pro gewähltem Wert ein Stapel (anonym, Höhe = Anzahl), der häufigste Wert ist
   golden hervorgehoben; darunter "Meist · Ø" und optional der Durchschnitt je Rolle.
   Bei lauter unterschiedlichen Werten wird nichts hervorgehoben.
+- Vom Tisch entfernen: Moderatoren können Teilnehmer (z. B. abwesende) per ✕ in der
+  Teilnehmerliste entfernen, jeder kann den Tisch selbst verlassen. Für den Raum
+  erscheint das wie ein normales Verlassen; die Person kann über den Dialog direkt
+  wieder beitreten. Danach wird Auto-Reveal sofort geprüft – das gilt jetzt auch,
+  wenn jemand den Tab schließt.
 
 ### Geändert
 - Statische Dateien werden mit Inhalts-Hash ausgeliefert (`render-3f9a….js`), damit

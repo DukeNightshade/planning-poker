@@ -53,6 +53,8 @@
             <span th:text="#{nav.roomcode}">Raumcode:</span>
             <span class="join-modal__roomcode" th:text="${roomCode}"></span>
         </p>
+        <p class="join-modal__subtitle" id="joinModalInfo" style="display:none;"
+           th:text="#{session.removed.info}">Du bist nicht mehr am Tisch.</p>
         <div class="join-modal__error" id="joinModalError" role="alert"></div>
         <div class="form">
             <label class="form__label" for="joinModalName"
@@ -70,6 +72,19 @@
             </select>
             <button class="btn btn--primary" id="joinModalBtn" style="width:100%;"
                     th:text="#{home.join.submit}">Beitreten</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bestätigungsdialog (statt Browser-confirm), Inhalt setzt showConfirm() in utils.js -->
+<div id="confirmModal" class="join-modal-backdrop"
+     role="alertdialog" aria-modal="true" aria-labelledby="confirmModalText">
+    <div class="join-modal confirm-modal">
+        <h2 class="join-modal__title" id="confirmModalText"></h2>
+        <div class="confirm-modal__actions">
+            <button class="btn btn--outline" id="confirmModalCancel"
+                    th:text="#{session.confirm.cancel}">Abbrechen</button>
+            <button class="btn btn--secondary" id="confirmModalOk">OK</button>
         </div>
     </div>
 </div>
@@ -120,6 +135,12 @@
             you:          /*[[#{session.you}]]*/ 'Du',
             mostCommon:   /*[[#{session.result.most}]]*/ 'Meist',
             noVotes:      /*[[#{session.result.none}]]*/ 'Keine Stimmen',
+            leave:        /*[[#{session.leave}]]*/ 'Tisch verlassen',
+            leaveConfirm: /*[[#{session.leave.confirm}]]*/ 'Tisch wirklich verlassen?',
+            leaveAction:  /*[[#{session.leave.action}]]*/ 'Verlassen',
+            remove:       /*[[#{session.remove}]]*/ 'Vom Tisch entfernen',
+            removeConfirm: /*[[#{session.remove.confirm}]]*/ '{0} vom Tisch entfernen?',
+            removeAction: /*[[#{session.remove.action}]]*/ 'Entfernen',
             waiting:      /*[[#{session.waiting}]]*/ '',
             method:       /*[[#{session.sidebar.method}]]*/ '',
             participants: /*[[#{session.sidebar.participants}]]*/ '',
@@ -156,6 +177,8 @@
             <span class="header__roomcode" id="roomCodeDisplay" th:text="${roomCode}"></span>
             <button class="header__copy-btn" id="copyBtn"
                     onclick="copyRoomCode()" th:text="#{nav.copy}">Kopieren</button>
+            <button class="header__leave-btn" id="leaveBtn" style="display:none;"
+                    onclick="leaveTable()" th:text="#{session.leave}">Tisch verlassen</button>
             <button class="btn--icon" id="settingsBtn" style="display:none;"
                     onclick="toggleSettings()"
                     aria-label="Einstellungen öffnen" aria-expanded="false">&#9881;&#65039;</button>
