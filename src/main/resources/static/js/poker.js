@@ -190,7 +190,9 @@ async function _handleJoinSubmit() {
             let msg = globalThis.i18n?.toast?.errorJoin || 'Fehler beim Beitreten.';
             try {
                 const err = await response.json();
-                if (response.status === 400 && err.error) {
+                if (response.status === 429) {
+                    msg = globalThis.i18n?.toast?.errorRateLimit || msg;
+                } else if (response.status === 400 && err.error) {
                     if (err.error.includes('vergeben') || err.error.includes('taken')) {
                         msg = globalThis.i18n?.toast?.errorNameTaken || err.error;
                     } else if (err.error.includes('Buchstaben') || err.error.includes('letters')) {

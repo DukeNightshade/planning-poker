@@ -16,7 +16,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/planningpoker
       SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
       SPRING_DATASOURCE_USERNAME: planningpoker
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD muss in .env gesetzt sein}
+      SPRING_THYMELEAF_CACHE: "true"
       H2_CONSOLE_ENABLED: "false"
     depends_on:
       db:
@@ -31,7 +32,7 @@ services:
     environment:
       POSTGRES_DB: planningpoker
       POSTGRES_USER: planningpoker
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD muss in .env gesetzt sein}
     # Datenverzeichnis des DB-Containers liegt komplett getrennt
     # vom App-Container in einem eigenen, benannten Volume
     volumes:

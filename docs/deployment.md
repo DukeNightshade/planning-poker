@@ -43,7 +43,8 @@ dabei noch nichts.
 
 ```bash
 cp .env.example .env
-# DB_PASSWORD in .env auf einen sicheren Wert setzen
+# DB_PASSWORD in .env auf einen sicheren Wert setzen (Pflicht, sonst bricht
+# docker compose ab; ältere Installationen ohne .env nutzten "changeme")
 ```
 
 ### 3. Container starten

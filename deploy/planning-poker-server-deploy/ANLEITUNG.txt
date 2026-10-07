@@ -45,6 +45,11 @@ dasselbe Passwort stehen wie beim ersten Start. Ein geändertes
 Passwort passt nicht mehr zu den Daten im Volume, die App kommt dann
 nicht mehr an die Datenbank.
 
+Ohne .env bzw. ohne DB_PASSWORD bricht "docker compose up" mit der
+Meldung "DB_PASSWORD muss in .env gesetzt sein" ab. Wurde die
+Datenbank früher ohne .env gestartet, lief sie mit dem alten
+Standardpasswort "changeme" - dann DB_PASSWORD=changeme eintragen.
+
 
 SCHRITT 3: Container starten
 --------------------------------
