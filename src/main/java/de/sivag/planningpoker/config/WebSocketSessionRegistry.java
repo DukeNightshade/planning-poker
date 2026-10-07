@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.*;
@@ -13,10 +14,10 @@ import java.util.concurrent.*;
 public class WebSocketSessionRegistry {
 
     // ====================================
-    // Konstanten
+    // Konfiguration
     // ====================================
 
-    private static final long REMOVAL_DELAY_SECONDS = 20L;
+    private final long removalDelaySeconds;
 
     // ====================================
     // Zustand
@@ -36,6 +37,15 @@ public class WebSocketSessionRegistry {
             });
 
     // ====================================
+    // Konstruktor
+    // ====================================
+
+    public WebSocketSessionRegistry(
+            @Value("${planningpoker.reconnect-grace-seconds:20}") long removalDelaySeconds) {
+        this.removalDelaySeconds = removalDelaySeconds;
+    }
+
+    // ====================================
     // WS-Session Registry
     // ====================================
 
@@ -53,7 +63,10 @@ public class WebSocketSessionRegistry {
 
     public void scheduleRemoval(Long participantId, Runnable task) {
         cancelRemoval(participantId); // bestehenden Auftrag ggf. abbrechen
-        ScheduledFuture<?> future = scheduler.schedule(task, REMOVAL_DELAY_SECONDS, TimeUnit.SECONDS);
+        ScheduledFuture<?> future = scheduler.schedule(() -> {
+            pendingRemovals.remove(participantId);
+            task.run();
+        }, removalDelaySeconds, TimeUnit.SECONDS);
         pendingRemovals.put(participantId, future);
     }
 

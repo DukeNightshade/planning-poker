@@ -27,6 +27,6 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     boolean existsByRoomCode(String roomCode);
 
-    @Query("SELECT s.id FROM Session s WHERE s.createdAt < :cutoff")
-    List<Long> findExpiredSessionIds(@Param("cutoff") LocalDateTime cutoff);
+    @Query("SELECT s.id FROM Session s WHERE s.lastActivityAt < :cutoff")
+    List<Long> findInactiveSessionIds(@Param("cutoff") LocalDateTime cutoff);
 }

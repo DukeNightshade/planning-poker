@@ -48,6 +48,10 @@ public class Session {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    // Grundlage für das Aufräumen inaktiver Sessions
+    @Column(nullable = false)
+    private LocalDateTime lastActivityAt;
+
     @Column(nullable = false)
     private boolean showTopic = false;
 
@@ -76,7 +80,17 @@ public class Session {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.status = SessionStatus.WAITING;
+        this.createdAt      = LocalDateTime.now();
+        this.lastActivityAt = this.createdAt;
+        this.status         = SessionStatus.WAITING;
+    }
+
+    // ====================================
+    // Business Methoden
+    // ====================================
+
+    /** Markiert die Session als aktiv (verschiebt das Aufräumen). */
+    public void touch() {
+        this.lastActivityAt = LocalDateTime.now();
     }
 }

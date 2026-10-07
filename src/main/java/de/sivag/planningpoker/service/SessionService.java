@@ -98,6 +98,7 @@ public class SessionService {
     public Participant joinSession(String roomCode, String participantName,
                                    ParticipantRole role, String browserId) {
         Session session = getSessionByRoomCode(roomCode);
+        session.touch();
 
         if (session.getStatus() == SessionStatus.FINISHED) {
             throw new IllegalStateException("Session ist bereits beendet.");
@@ -147,6 +148,7 @@ public class SessionService {
                                boolean moderatorCanVote, boolean autoReveal,
                                boolean showOnlyTotal) {
         Session session = getSessionByRoomCode(roomCode);
+        session.touch();
         session.setShowTopic(showTopic);
         session.setModeratorCanVote(moderatorCanVote);
         session.setAutoReveal(autoReveal);
