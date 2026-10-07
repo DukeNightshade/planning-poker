@@ -2,15 +2,6 @@
 // Hilfsfunktionen
 // ====================================
 
-function getBrowserId() {
-    let id = localStorage.getItem('browserId');
-    if (!id) {
-        id = crypto.randomUUID();
-        localStorage.setItem('browserId', id);
-    }
-    return id;
-}
-
 function handleSessionCreated(data, moderatorName) {
     sessionStorage.setItem('participantId',   data.participantId);
     sessionStorage.setItem('participantToken', data.token);

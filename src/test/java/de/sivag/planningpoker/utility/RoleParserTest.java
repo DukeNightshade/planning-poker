@@ -4,6 +4,7 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.*;
@@ -17,82 +18,30 @@ import static org.assertj.core.api.Assertions.*;
 class RoleParserTest {
 
     // ====================================
-    // parseParticipantRole()
+    // parseRole()
     // ====================================
 
-    @Test
-    @DisplayName("parseParticipantRole: DEVELOPER wird korrekt geparst")
-    void parseParticipantRole_developer() {
-        assertThat(RoleParser.parseParticipantRole("DEVELOPER"))
-                .isEqualTo(ParticipantRole.DEVELOPER);
+    @ParameterizedTest
+    @DisplayName("parseRole: Gültige Rollen werden übernommen")
+    @ValueSource(strings = {"DEVELOPER", "TESTER", "PRODUCT_OWNER", "IT_ARCHITECT"})
+    void parseRole_validRoles_areKept(String input) {
+        assertThat(RoleParser.parseRole(input))
+                .isEqualTo(ParticipantRole.valueOf(input));
     }
 
     @Test
-    @DisplayName("parseParticipantRole: TESTER wird korrekt geparst")
-    void parseParticipantRole_tester() {
-        assertThat(RoleParser.parseParticipantRole("TESTER"))
-                .isEqualTo(ParticipantRole.TESTER);
-    }
-
-    @Test
-    @DisplayName("parseParticipantRole: PRODUCT_OWNER wird korrekt geparst")
-    void parseParticipantRole_productOwner() {
-        assertThat(RoleParser.parseParticipantRole("PRODUCT_OWNER"))
-                .isEqualTo(ParticipantRole.PRODUCT_OWNER);
-    }
-
-    @Test
-    @DisplayName("parseParticipantRole: MODERATOR fällt auf DEVELOPER zurück")
-    void parseParticipantRole_moderator_fallsBackToDeveloper() {
-        assertThat(RoleParser.parseParticipantRole("MODERATOR"))
+    @DisplayName("parseRole: MODERATOR fällt auf DEVELOPER zurück")
+    void parseRole_moderator_fallsBackToDeveloper() {
+        assertThat(RoleParser.parseRole("MODERATOR"))
                 .isEqualTo(ParticipantRole.DEVELOPER);
     }
 
     @ParameterizedTest
-    @DisplayName("parseParticipantRole: Ungültige Werte fallen auf DEVELOPER zurück")
+    @NullSource
+    @DisplayName("parseRole: Ungültige oder fehlende Werte fallen auf DEVELOPER zurück")
     @ValueSource(strings = {"", "UNKNOWN", "admin", "null", "123"})
-    void parseParticipantRole_invalidValues_fallBackToDeveloper(String input) {
-        assertThat(RoleParser.parseParticipantRole(input))
-                .isEqualTo(ParticipantRole.DEVELOPER);
-    }
-
-    // ====================================
-    // parseModeratorRole()
-    // ====================================
-
-    @Test
-    @DisplayName("parseModeratorRole: DEVELOPER wird korrekt geparst")
-    void parseModeratorRole_developer() {
-        assertThat(RoleParser.parseModeratorRole("DEVELOPER"))
-                .isEqualTo(ParticipantRole.DEVELOPER);
-    }
-
-    @Test
-    @DisplayName("parseModeratorRole: TESTER wird korrekt geparst")
-    void parseModeratorRole_tester() {
-        assertThat(RoleParser.parseModeratorRole("TESTER"))
-                .isEqualTo(ParticipantRole.TESTER);
-    }
-
-    @Test
-    @DisplayName("parseModeratorRole: MODERATOR fällt auf DEVELOPER zurück")
-    void parseModeratorRole_moderator_fallsBackToDeveloper() {
-        assertThat(RoleParser.parseModeratorRole("MODERATOR"))
-                .isEqualTo(ParticipantRole.DEVELOPER);
-    }
-
-    @Test
-    @DisplayName("parseModeratorRole: PRODUCT_OWNER wird korrekt durchgelassen")
-    void parseModeratorRole_productOwner_allowed() {
-        assertThat(RoleParser.parseModeratorRole("PRODUCT_OWNER"))
-                .isEqualTo(ParticipantRole.PRODUCT_OWNER);
-    }
-
-    @ParameterizedTest
-    @DisplayName("parseModeratorRole: Ungültige Werte fallen auf DEVELOPER zurück")
-    @ValueSource(strings = {"", "UNKNOWN", "xyz"})
-    void parseModeratorRole_invalidValues_fallBackToDeveloper(String input) {
-        assertThat(RoleParser.parseModeratorRole(input))
+    void parseRole_invalidValues_fallBackToDeveloper(String input) {
+        assertThat(RoleParser.parseRole(input))
                 .isEqualTo(ParticipantRole.DEVELOPER);
     }
 

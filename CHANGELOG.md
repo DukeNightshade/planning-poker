@@ -3,6 +3,27 @@
 Alle relevanten Änderungen an Planning Poker. Hinweise zum Update auf dem
 Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 
+## [Unreleased]
+
+### Geändert
+- Datenbankschema über Flyway-Migrationen (`db/migration`) statt `ddl-auto=update`;
+  bestehende Datenbanken (auch 1.0.1) werden beim Start automatisch nachgezogen.
+- Sessions werden nach 24 Stunden Inaktivität gelöscht statt 24 Stunden nach dem Anlegen.
+- Aufräum-Zeitraum, Cleanup-Uhrzeit und Reconnect-Wartezeit per Umgebungsvariable
+  einstellbar (`CLEANUP_MAX_IDLE_HOURS`, `CLEANUP_CRON`, `RECONNECT_GRACE_SECONDS`).
+- Testabdeckung mit JaCoCo (`mvn verify`).
+- Code aufgeräumt: gemeinsame Konstanten, `RoleParser` vereinheitlicht, doppelte
+  JavaScript-Logik zusammengeführt; Heroku-Dateien (`Procfile`, `system.properties`) entfernt.
+
+### Behoben
+- Abstimmungsanzeige zählte Moderatoren mit, auch wenn sie nicht abstimmen dürfen,
+  und wurde beim Ändern der Einstellung nicht aktualisiert.
+- Wird "Moderator darf abstimmen" ausgeschaltet, werden bereits abgegebene
+  Moderator-Stimmen verworfen und Auto-Reveal sofort geprüft.
+- Moderatoren (bei ausgeschaltetem Stimmrecht) und Product Owner können auch
+  serverseitig nicht mehr abstimmen.
+- Fehlende Rolle (`"role": null`) beim Beitreten führte zu einem Serverfehler.
+
 ## [1.1.0] – 2026-10-07
 
 ### Sicherheit

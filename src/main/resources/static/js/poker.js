@@ -1,4 +1,4 @@
-/* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, sendWs, authHeaders */
+/* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, getBrowserId, sendWs, authHeaders */
 
 // ====================================
 // Session-Daten aus DOM
@@ -74,14 +74,7 @@ if (!participantId || !getParticipantToken()) {
 // ====================================
 
 function initSession() {
-    if (isModerator) {
-        const modActions   = document.getElementById('moderatorActions');
-        const settingsBtn  = document.getElementById('settingsBtn');
-        const addTicketBtn = document.getElementById('addTicketBtn');
-        if (modActions)   modActions.style.display   = 'flex';
-        if (settingsBtn)  settingsBtn.style.display  = 'block';
-        if (addTicketBtn) addTicketBtn.style.display = 'block';
-    }
+    if (isModerator) _setModeratorUi(true);
 
     applySettings(
         document.getElementById('settingShowTopic')?.checked        ?? false,
@@ -99,19 +92,6 @@ function initSession() {
 // ====================================
 // Join Modal
 // ====================================
-
-function _getBrowserId() {
-    try {
-        let id = localStorage.getItem('browserId');
-        if (!id) {
-            id = crypto.randomUUID();
-            localStorage.setItem('browserId', id);
-        }
-        return id;
-    } catch (e) {
-        return 'fallback-' + Math.random().toString(36).substring(2);
-    }
-}
 
 function showJoinModal() {
     const modal = document.getElementById('joinModal');
@@ -153,7 +133,7 @@ async function _handleJoinSubmit() {
         const response = await fetch(appUrl('/api/sessions/' + roomCode + '/join'), {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ name, role, browserId: _getBrowserId() })
+            body:    JSON.stringify({ name, role, browserId: getBrowserId() })
         });
 
         if (response.ok) {
@@ -170,10 +150,7 @@ async function _handleJoinSubmit() {
             localStorage.setItem('pp_name_' + roomCode, name);
 
             if (!players[participantId]) {
-                players[participantId] = {
-                    name, role: participantRole, moderator: false,
-                    voted: false, cardValue: null, originalCardValue: null, changed: false
-                };
+                players[participantId] = _newPlayer(name, participantRole);
             }
 
             const modal = document.getElementById('joinModal');
@@ -233,7 +210,7 @@ async function _ensureRegistered() {
             body:    JSON.stringify({
                 name:      storedName,
                 role:      storedRole,
-                browserId: _getBrowserId()
+                browserId: getBrowserId()
             })
         });
         if (!res.ok) return;
@@ -251,15 +228,7 @@ async function _ensureRegistered() {
         sessionStorage.setItem('isModerator',     'false');
 
         if (!players[participantId]) {
-            players[participantId] = {
-                name:              storedName,
-                role:              participantRole,
-                moderator:         false,
-                voted:             false,
-                cardValue:         null,
-                originalCardValue: null,
-                changed:           false
-            };
+            players[participantId] = _newPlayer(storedName, participantRole);
         }
 
         sendWs('/register');
@@ -374,10 +343,7 @@ async function loadInitialData() {
             state.votedParticipantIds.forEach(id => {
                 if (players[id]) players[id].voted = true;
             });
-
-            const totalCount = Object.values(players)
-                .filter(p => p.role !== 'PRODUCT_OWNER').length;
-            updateVoteStatus(state.votedCount, totalCount, null);
+            _refreshVoteStatus();
         }
 
         // Eigene, noch verdeckte Karte nach Reload wiederherstellen
@@ -421,6 +387,11 @@ function handleReset() {
 
 function handleSettingsUpdate(data) {
     applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal, data.showOnlyTotal);
+    // "Moderator darf abstimmen" ändert, wer als stimmberechtigt zählt
+    if (!isRevealed) {
+        if (!data.moderatorCanVote) _clearModeratorVotes();
+        _refreshVoteStatus();
+    }
     showToast(globalThis.i18n.toast.settings, 'info', '', 2500);
 }
 
@@ -456,15 +427,7 @@ function handlePlayerJoined(data) {
     const isNew = !players[data.participantId];
 
     if (isNew) {
-        players[data.participantId] = {
-            name:              data.participantName,
-            role:              data.participantRole || 'DEVELOPER',
-            moderator:         false,
-            voted:             false,
-            cardValue:         null,
-            originalCardValue: null,
-            changed:           false
-        };
+        players[data.participantId] = _newPlayer(data.participantName, data.participantRole || 'DEVELOPER');
         if (data.participantId !== participantId) {
             showToast(
                 globalThis.i18n.toast.joined.replace('{0}', data.participantName),
@@ -476,9 +439,7 @@ function handlePlayerJoined(data) {
         players[data.participantId].role = data.participantRole || players[data.participantId].role;
     }
 
-    const votedCount = Object.values(players).filter(p => p.voted).length;
-    const totalCount = Object.values(players).filter(p => p.role !== 'PRODUCT_OWNER').length;
-    updateVoteStatus(votedCount, totalCount, null);
+    _refreshVoteStatus();
 }
 
 function handlePlayerLeft(data) {
@@ -490,9 +451,7 @@ function handlePlayerLeft(data) {
             'warning', '', 3000
         );
     }
-    const votedCount = Object.values(players).filter(p => p.voted).length;
-    const totalCount = Object.values(players).filter(p => p.role !== 'PRODUCT_OWNER').length;
-    updateVoteStatus(votedCount, totalCount, null);
+    _refreshVoteStatus();
 }
 
 function handleModeratorPromoted(data) {
@@ -501,12 +460,7 @@ function handleModeratorPromoted(data) {
     }
     if (data.participantId === participantId) {
         isModerator = true;
-        const modActions   = document.getElementById('moderatorActions');
-        const settingsBtn  = document.getElementById('settingsBtn');
-        const addTicketBtn = document.getElementById('addTicketBtn');
-        if (modActions)   modActions.style.display   = 'flex';
-        if (settingsBtn)  settingsBtn.style.display  = 'block';
-        if (addTicketBtn) addTicketBtn.style.display = 'block';
+        _setModeratorUi(true);
     } else {
         showToast(
             globalThis.i18n.toast.moderatorPromoted.replace('{0}', data.participantName),
@@ -523,12 +477,50 @@ function handleModeratorDemoted(data) {
     if (data.participantId === participantId) {
         isModerator = false;
         sessionStorage.setItem('isModerator', 'false');
-        const modActions   = document.getElementById('moderatorActions');
-        const settingsBtn  = document.getElementById('settingsBtn');
-        const addTicketBtn = document.getElementById('addTicketBtn');
-        if (modActions)   modActions.style.display   = 'none';
-        if (settingsBtn)  settingsBtn.style.display  = 'none';
-        if (addTicketBtn) addTicketBtn.style.display = 'none';
+        _setModeratorUi(false);
     }
     renderSidebar();
+}
+// ====================================
+// Hilfsfunktionen
+// ====================================
+
+function _newPlayer(name, role) {
+    return {
+        name, role,
+        moderator: false, voted: false,
+        cardValue: null, originalCardValue: null, changed: false
+    };
+}
+
+function _setModeratorUi(visible) {
+    [['moderatorActions', 'flex'], ['settingsBtn', 'block'], ['addTicketBtn', 'block']]
+        .forEach(([id, display]) => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = visible ? display : 'none';
+        });
+}
+
+/** Der Server verwirft Moderator-Stimmen, sobald Moderatoren nicht mehr abstimmen dürfen. */
+function _clearModeratorVotes() {
+    Object.entries(players).forEach(([id, p]) => {
+        const isSelf = id === participantId;
+        if (!(p.moderator || (isSelf && isModerator))) return;
+        p.voted     = false;
+        p.cardValue = null;
+        if (isSelf) {
+            selectedCard = null;
+            document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
+        }
+    });
+}
+
+/** Zählt die Stimmen lokal – gleiche Regel wie der Server (PO und ggf. Moderatoren zählen nicht). */
+function _refreshVoteStatus() {
+    const moderatorCanVote = document.getElementById('settingModeratorCanVote')?.checked ?? true;
+    const voters = Object.entries(players)
+        .filter(([id, p]) => p.role !== 'PRODUCT_OWNER'
+            && (moderatorCanVote || !(p.moderator || (id === participantId && isModerator))))
+        .map(([, p]) => p);
+    updateVoteStatus(voters.filter(p => p.voted).length, voters.length, null);
 }

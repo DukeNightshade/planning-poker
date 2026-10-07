@@ -1,9 +1,11 @@
 package de.sivag.planningpoker.service;
 
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Vote;
 import de.sivag.planningpoker.model.Ticket;
+import de.sivag.planningpoker.model.enums.ParticipantRole;
 import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.model.enums.TicketStatus;
 import de.sivag.planningpoker.repository.ParticipantRepository;
@@ -64,6 +66,13 @@ public class VoteService {
         }
         Participant participant = participantOpt.get();
 
+        if (participant.getRole() == ParticipantRole.PRODUCT_OWNER) {
+            throw new ForbiddenException("Der Product Owner stimmt nicht ab.");
+        }
+        if (participant.isModerator() && !session.isModeratorCanVote()) {
+            throw new ForbiddenException("Moderatoren dürfen in dieser Session nicht abstimmen.");
+        }
+
         voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
                 .ifPresent(existing -> {
                     voteRepository.delete(existing);
@@ -108,6 +117,26 @@ public class VoteService {
         session.touch();
         session.setStatus(SessionStatus.WAITING);
         voteRepository.deleteBySessionRoomCode(roomCode);
+    }
+
+    /**
+     * Verwirft die Stimmen aller Moderatoren der laufenden Runde, z. B. wenn
+     * "Moderator darf abstimmen" ausgeschaltet wird. Nach dem Aufdecken bleibt
+     * das Ergebnis unangetastet.
+     *
+     * @return Anzahl der verworfenen Stimmen
+     */
+    @Transactional
+    public int removeModeratorVotes(String roomCode) {
+        Session session = sessionService.getSessionByRoomCode(roomCode);
+        if (session.getStatus() == SessionStatus.REVEALED) return 0;
+
+        List<Vote> moderatorVotes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode)
+                .stream()
+                .filter(v -> v.getParticipant().isModerator())
+                .toList();
+        voteRepository.deleteAll(moderatorVotes);
+        return moderatorVotes.size();
     }
 
     public List<Vote> getVotes(String roomCode) {

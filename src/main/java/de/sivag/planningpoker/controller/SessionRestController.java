@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import static de.sivag.planningpoker.utility.ApiConstants.*;
+
 /**
  * REST-Controller für Session-Operationen.
  *
@@ -55,7 +57,7 @@ public class SessionRestController {
         String browserId     = (String) body.get("browserId");
         EstimationMethod method = EstimationMethod.valueOf(
                 (String) body.get(METHOD));
-        ParticipantRole moderatorRole = RoleParser.parseModeratorRole(
+        ParticipantRole moderatorRole = RoleParser.parseRole(
                 (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
 
         @SuppressWarnings("unchecked")
@@ -82,7 +84,7 @@ public class SessionRestController {
                 "roomCode",      session.getRoomCode(),
                 METHOD,        session.getEstimationMethod().name(),
                 "status",        session.getStatus().name(),
-                "participantId", moderator.getId(),
+                PARTICIPANT_ID, moderator.getId(),
                 "moderatorRole", moderatorRole.name(),
                 "token",         moderator.getToken()
         ));
@@ -91,7 +93,7 @@ public class SessionRestController {
     @GetMapping("/{roomCode}/state")
     public ResponseEntity<Map<String, Object>> getState(
             @PathVariable String roomCode,
-            @RequestHeader(value = "X-Participant-Token", required = false) String token) {
+            @RequestHeader(value = REST_TOKEN_HEADER, required = false) String token) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
         String currentTicketTitle = ticketService.getCurrentTicketTitle(
                 roomCode, session.getCurrentTicketId());
@@ -128,9 +130,9 @@ public class SessionRestController {
             List<Map<String, Object>> votes = voteService.getVotesWithParticipant(roomCode)
                     .stream()
                     .map(v -> Map.<String, Object>of(
-                            "participantId",   v.getParticipant().getId().toString(),
-                            "participantName", v.getParticipant().getName(),
-                            "participantRole", v.getParticipant().getRole().name(),
+                            PARTICIPANT_ID,   v.getParticipant().getId().toString(),
+                            PARTICIPANT_NAME, v.getParticipant().getName(),
+                            PARTICIPANT_ROLE, v.getParticipant().getRole().name(),
                             "cardValue",       v.getCardValue()
                     ))
                     .toList();

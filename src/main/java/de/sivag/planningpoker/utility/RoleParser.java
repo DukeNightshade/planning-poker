@@ -6,7 +6,7 @@ import de.sivag.planningpoker.model.enums.ParticipantRole;
  * Utility-Klasse zur sicheren Konvertierung von Rollen-Strings
  *
  * @author Nico Hoffmann
- * @version 1.0
+ * @version 1.1
  */
 public final class RoleParser {
 
@@ -22,23 +22,16 @@ public final class RoleParser {
     // Utility Methoden
     // ====================================
 
-    public static ParticipantRole parseParticipantRole(String roleStr) {
+    /**
+     * Wandelt den Rollen-String aus einem Request in eine Teilnehmerrolle um.
+     * MODERATOR ist keine wählbare Rolle (Moderator ist ein Flag), ungültige
+     * oder fehlende Werte fallen auf DEVELOPER zurück.
+     */
+    public static ParticipantRole parseRole(String roleStr) {
+        if (roleStr == null) return ParticipantRole.DEVELOPER;
         try {
             ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            return role == ParticipantRole.MODERATOR
-                    ? ParticipantRole.DEVELOPER : role;
-        } catch (IllegalArgumentException e) {
-            return ParticipantRole.DEVELOPER;
-        }
-    }
-
-    public static ParticipantRole parseModeratorRole(String roleStr) {
-        try {
-            ParticipantRole role = ParticipantRole.valueOf(roleStr);
-            if (role == ParticipantRole.MODERATOR) {
-                return ParticipantRole.DEVELOPER;
-            }
-            return role;
+            return role == ParticipantRole.MODERATOR ? ParticipantRole.DEVELOPER : role;
         } catch (IllegalArgumentException e) {
             return ParticipantRole.DEVELOPER;
         }

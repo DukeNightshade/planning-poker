@@ -6,6 +6,7 @@ import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.Vote;
+import de.sivag.planningpoker.model.enums.SessionStatus;
 import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
 import de.sivag.planningpoker.service.VoteService;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 import java.util.Map;
 
+import static de.sivag.planningpoker.utility.ApiConstants.*;
+
 /**
  * WebSocket-Controller für Echtzeit-Kommunikation.
  *
@@ -37,12 +40,8 @@ public class PokerWsController {
     // Konstanten
     // ====================================
 
-    private static final String TOPIC_SESSION    = "/topic/session/";
-    private static final String PARTICIPANT_ID   = "participantId";
-    private static final String PARTICIPANT_NAME = "participantName";
     private static final String CARD_VALUE       = "cardValue";
     private static final String TITLE            = "title";
-    private static final String TOKEN_HEADER     = "participant-token";
 
     // ====================================
     // Abhängigkeiten
@@ -61,7 +60,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/register")
     public void register(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
             SimpMessageHeaderAccessor headerAccessor) {
 
         // Veraltetes Token (Teilnehmer nach Grace Period entfernt) ist hier kein Fehler:
@@ -87,7 +86,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/vote")
     public void submitVote(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
             @Payload Map<String, String> payload) {
 
         // Abgestimmt wird immer als der Teilnehmer hinter dem Token, nie per Payload-ID
@@ -110,27 +109,13 @@ public class PokerWsController {
             return;
         }
 
-        // Teilnehmer in der Grace Period (Verbindung getrennt) zählen nicht mit
-        List<Long> votingIds = sessionService.getVotingParticipants(roomCode)
-                .stream()
-                .map(Participant::getId)
-                .filter(id -> !sessionRegistry.isRemovalPending(id))
-                .toList();
-        List<Long> votedIds = voteService.getVotedParticipantIds(roomCode);
+        if (revealIfComplete(roomCode)) return;
 
-        int     totalParticipants = votingIds.size();
-        int     votedCount        = (int) votingIds.stream().filter(votedIds::contains).count();
-        Session session           = sessionService.getSessionByRoomCode(roomCode);
-
-        if (session.isAutoReveal() && totalParticipants > 0 && votedCount >= totalParticipants) {
-            broadcastReveal(roomCode, voteService.revealCards(roomCode));
-            return;
-        }
-
+        VoteCount count = countVotes(roomCode);
         broadcast(roomCode, Map.of(
                 "type",       "VOTE_UPDATE",
-                "votedCount", votedCount,
-                "totalCount", totalParticipants,
+                "votedCount", count.voted(),
+                "totalCount", count.total(),
                 "voterId",    participantId.toString()
         ));
     }
@@ -138,7 +123,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/reveal")
     public void revealCards(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token) {
+            @Header(name = WS_TOKEN_HEADER, required = false) String token) {
 
         sessionService.requireModerator(roomCode, token);
         broadcastReveal(roomCode, voteService.revealCards(roomCode));
@@ -147,7 +132,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/reset")
     public void resetRound(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token) {
+            @Header(name = WS_TOKEN_HEADER, required = false) String token) {
 
         sessionService.requireModerator(roomCode, token);
         voteService.resetRound(roomCode);
@@ -157,7 +142,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/settings")
     public void updateSettings(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
             @Payload Map<String, Object> payload) {
 
         sessionService.requireModerator(roomCode, token);
@@ -170,6 +155,11 @@ public class PokerWsController {
 
         sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal, showOnlyTotal);
 
+        // Dürfen Moderatoren nicht mehr abstimmen, zählen ihre bisherigen Stimmen nicht
+        if (!moderatorCanVote) {
+            voteService.removeModeratorVotes(roomCode);
+        }
+
         broadcast(roomCode, Map.of(
                 "type",             "SETTINGS_UPDATE",
                 "showTopic",        showTopic,
@@ -177,12 +167,15 @@ public class PokerWsController {
                 "autoReveal",       autoReveal,
                 "showOnlyTotal",    showOnlyTotal
         ));
+
+        // Weniger Stimmberechtigte oder Auto-Reveal neu an: evtl. haben jetzt alle abgestimmt
+        revealIfComplete(roomCode);
     }
 
     @MessageMapping("/session/{roomCode}/ticket/add")
     public void addTicket(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
             @Payload Map<String, String> payload) {
 
         sessionService.requireModerator(roomCode, token);
@@ -200,7 +193,7 @@ public class PokerWsController {
     @MessageMapping("/session/{roomCode}/ticket/select")
     public void selectTicket(
             @DestinationVariable String roomCode,
-            @Header(name = TOKEN_HEADER, required = false) String token,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
             @Payload Map<String, String> payload) {
 
         sessionService.requireModerator(roomCode, token);
@@ -219,6 +212,31 @@ public class PokerWsController {
     // Hilfsmethoden
     // ====================================
 
+    private record VoteCount(int voted, int total) {}
+
+    /** Zählt abgegebene Stimmen der Stimmberechtigten; getrennte Teilnehmer (Grace Period) zählen nicht. */
+    private VoteCount countVotes(String roomCode) {
+        List<Long> votingIds = sessionService.getVotingParticipants(roomCode)
+                .stream()
+                .map(Participant::getId)
+                .filter(id -> !sessionRegistry.isRemovalPending(id))
+                .toList();
+        List<Long> votedIds = voteService.getVotedParticipantIds(roomCode);
+        return new VoteCount((int) votingIds.stream().filter(votedIds::contains).count(), votingIds.size());
+    }
+
+    /** Deckt bei aktivem Auto-Reveal auf, sobald alle Stimmberechtigten abgestimmt haben. */
+    private boolean revealIfComplete(String roomCode) {
+        Session session = sessionService.getSessionByRoomCode(roomCode);
+        if (!session.isAutoReveal() || session.getStatus() == SessionStatus.REVEALED) return false;
+
+        VoteCount count = countVotes(roomCode);
+        if (count.total() == 0 || count.voted() < count.total()) return false;
+
+        broadcastReveal(roomCode, voteService.revealCards(roomCode));
+        return true;
+    }
+
     private static boolean flag(Map<String, Object> payload, String key, boolean fallback) {
         Object value = payload.get(key);
         return value instanceof Boolean b ? b : fallback;
@@ -233,7 +251,7 @@ public class PokerWsController {
                 "type",  "REVEAL",
                 "votes", votes.stream().map(v -> Map.of(
                         PARTICIPANT_NAME,  v.getParticipant().getName(),
-                        "participantRole", v.getParticipant().getRole().name(),
+                        PARTICIPANT_ROLE, v.getParticipant().getRole().name(),
                         CARD_VALUE,        v.getCardValue()
                 )).toList()
         ));
