@@ -6,7 +6,7 @@
 # Aufruf aus dem Projektverzeichnis:  pwsh deploy/build-package.ps1
 
 param(
-    [string]$Version = "1.0.1"
+    [string]$Version = "1.1.0"
 )
 
 $ErrorActionPreference = "Stop"

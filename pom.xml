@@ -12,7 +12,7 @@
 
     <groupId>de.sivag</groupId>
     <artifactId>planning-poker</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
     <name>planning-poker</name>
     <description>Webbasierte Planning Poker Anwendung – IHK Abschlussprüfung Sommer 2026</description>
 
