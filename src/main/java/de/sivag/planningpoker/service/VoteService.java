@@ -75,7 +75,14 @@ public class VoteService {
             session.setStatus(SessionStatus.VOTING);
         }
 
-        return voteRepository.save(vote);
+        Vote saved = voteRepository.save(vote);
+
+        // Änderungen in der Diskussion fließen in die gespeicherte Schätzung ein
+        if (isDiscussion && session.getStatus() == SessionStatus.REVEALED) {
+            updateTicketEstimate(session, voteRepository.findBySessionRoomCodeWithParticipant(roomCode));
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -85,10 +92,7 @@ public class VoteService {
         List<Vote> votes = voteRepository
                 .findBySessionRoomCodeWithParticipant(roomCode);
 
-        if (session.getCurrentTicketId() != null) {
-            ticketRepository.findById(session.getCurrentTicketId())
-                    .ifPresent(ticket -> saveEstimateToTicket(ticket, votes));
-        }
+        updateTicketEstimate(session, votes);
 
         return votes;
     }
@@ -115,6 +119,12 @@ public class VoteService {
     // ====================================
     // Utility Methoden
     // ====================================
+
+    private void updateTicketEstimate(Session session, List<Vote> votes) {
+        if (session.getCurrentTicketId() == null) return;
+        ticketRepository.findById(session.getCurrentTicketId())
+                .ifPresent(ticket -> saveEstimateToTicket(ticket, votes));
+    }
 
     private void saveEstimateToTicket(Ticket ticket, List<Vote> votes) {
         OptionalDouble avg = votes.stream()

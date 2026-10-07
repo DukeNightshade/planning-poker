@@ -66,6 +66,10 @@ public class WebSocketSessionRegistry {
         return false;
     }
 
+    public boolean isRemovalPending(Long participantId) {
+        return pendingRemovals.containsKey(participantId);
+    }
+
     // ====================================
     // Record
     // ====================================

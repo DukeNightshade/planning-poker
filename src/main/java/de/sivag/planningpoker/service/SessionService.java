@@ -70,10 +70,15 @@ public class SessionService {
         Session session = buildSession(moderatorName, method, moderatorRole, browserId);
         session.setShowTopic(true);
 
+        List<String> titles = ticketTitles.stream()
+                .filter(t -> t != null && !t.isBlank())
+                .map(StringUtils::sanitizeTicketTitle)
+                .toList();
+
         Ticket firstTicket = null;
-        for (int i = 0; i < ticketTitles.size(); i++) {
+        for (int i = 0; i < titles.size(); i++) {
             Ticket ticket = new Ticket();
-            ticket.setTitle(ticketTitles.get(i));
+            ticket.setTitle(titles.get(i));
             ticket.setSession(session);
             ticket.setOrderIndex(i);
             Ticket saved = ticketRepository.save(ticket);
@@ -189,9 +194,11 @@ public class SessionService {
     }
 
     public List<Participant> getVotingParticipants(String roomCode) {
+        boolean moderatorCanVote = getSessionByRoomCode(roomCode).isModeratorCanVote();
         return participantRepository.findBySessionRoomCode(roomCode)
                 .stream()
                 .filter(p -> p.getRole() != ParticipantRole.PRODUCT_OWNER)
+                .filter(p -> moderatorCanVote || !p.isModerator())
                 .toList();
     }
 

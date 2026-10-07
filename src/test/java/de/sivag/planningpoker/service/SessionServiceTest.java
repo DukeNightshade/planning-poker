@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -129,6 +130,51 @@ class SessionServiceTest {
                 List.of("Story A", "Story B"), BROWSER_ID);
 
         verify(ticketRepository, times(2)).save(any(Ticket.class));
+    }
+
+    @Test
+    @DisplayName("createSessionWithTickets: Titel werden bereinigt, leere Titel übersprungen")
+    void createSessionWithTickets_sanitizesTitles() {
+        when(sessionRepository.existsByRoomCode(anyString())).thenReturn(false);
+        when(sessionRepository.save(any(Session.class))).thenReturn(testSession);
+        when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(i -> i.getArgument(0));
+
+        sessionService.createSessionWithTickets(
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER,
+                List.of("  Story A  ", "   ", "x".repeat(300)), BROWSER_ID);
+
+        ArgumentCaptor<Ticket> captor = ArgumentCaptor.forClass(Ticket.class);
+        verify(ticketRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getTitle()).isEqualTo("Story A");
+        assertThat(captor.getAllValues().get(1).getTitle()).hasSize(255);
+    }
+
+    // ====================================
+    // getVotingParticipants()
+    // ====================================
+
+    @Test
+    @DisplayName("getVotingParticipants: Product Owner zählt nie, Moderator nur wenn er abstimmen darf")
+    void getVotingParticipants_respectsModeratorCanVote() {
+        Participant dev = new Participant();
+        dev.setId(2L);
+        dev.setRole(ParticipantRole.DEVELOPER);
+        Participant po = new Participant();
+        po.setId(3L);
+        po.setRole(ParticipantRole.PRODUCT_OWNER);
+
+        when(sessionRepository.findByRoomCode("ABCD1234")).thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCode("ABCD1234"))
+                .thenReturn(List.of(testModerator, dev, po));
+
+        testSession.setModeratorCanVote(true);
+        assertThat(sessionService.getVotingParticipants("ABCD1234"))
+                .containsExactly(testModerator, dev);
+
+        testSession.setModeratorCanVote(false);
+        assertThat(sessionService.getVotingParticipants("ABCD1234"))
+                .containsExactly(dev);
     }
 
     // ====================================

@@ -198,7 +198,7 @@
         <h3 class="sidebar__title" th:text="#{tickets.title}">Tickets</h3>
         <ul class="ticket-sidebar__list" id="ticketSidebarList"></ul>
         <div id="addTicketForm" style="display:none; margin-top: 0.75rem;">
-            <input class="form__input" type="text" id="newTicketInput"
+            <input class="form__input" type="text" id="newTicketInput" maxlength="255"
                    th:placeholder="#{tickets.input.placeholder}"
                    onkeydown="if(event.key==='Enter') submitNewTicket()">
             <div class="ticket-form__actions">

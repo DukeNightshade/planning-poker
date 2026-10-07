@@ -113,11 +113,19 @@ public class PokerWsController {
             return;
         }
 
-        int     totalParticipants = sessionService.getVotingParticipants(roomCode).size();
-        int     votedCount        = voteService.getVotes(roomCode).size();
+        // Teilnehmer in der Grace Period (Verbindung getrennt) zählen nicht mit
+        List<Long> votingIds = sessionService.getVotingParticipants(roomCode)
+                .stream()
+                .map(Participant::getId)
+                .filter(id -> !sessionRegistry.isRemovalPending(id))
+                .toList();
+        List<Long> votedIds = voteService.getVotedParticipantIds(roomCode);
+
+        int     totalParticipants = votingIds.size();
+        int     votedCount        = (int) votingIds.stream().filter(votedIds::contains).count();
         Session session           = sessionService.getSessionByRoomCode(roomCode);
 
-        if (session.isAutoReveal() && votedCount >= totalParticipants) {
+        if (session.isAutoReveal() && totalParticipants > 0 && votedCount >= totalParticipants) {
             broadcastReveal(roomCode, voteService.revealCards(roomCode));
             return;
         }
@@ -146,10 +154,12 @@ public class PokerWsController {
             @DestinationVariable String roomCode,
             @Payload Map<String, Object> payload) {
 
-        boolean showTopic        = (boolean) payload.get("showTopic");
-        boolean moderatorCanVote = (boolean) payload.get("moderatorCanVote");
-        boolean autoReveal       = (boolean) payload.get("autoReveal");
-        boolean showOnlyTotal    = (boolean) payload.get("showOnlyTotal");   // NEU
+        Session current = sessionService.getSessionByRoomCode(roomCode);
+
+        boolean showTopic        = flag(payload, "showTopic",        current.isShowTopic());
+        boolean moderatorCanVote = flag(payload, "moderatorCanVote", current.isModeratorCanVote());
+        boolean autoReveal       = flag(payload, "autoReveal",       current.isAutoReveal());
+        boolean showOnlyTotal    = flag(payload, "showOnlyTotal",    current.isShowOnlyTotal());
 
         sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal, showOnlyTotal);
 
@@ -158,7 +168,7 @@ public class PokerWsController {
                 "showTopic",        showTopic,
                 "moderatorCanVote", moderatorCanVote,
                 "autoReveal",       autoReveal,
-                "showOnlyTotal",    showOnlyTotal   // NEU
+                "showOnlyTotal",    showOnlyTotal
         ));
     }
 
@@ -197,6 +207,11 @@ public class PokerWsController {
     // ====================================
     // Hilfsmethoden
     // ====================================
+
+    private static boolean flag(Map<String, Object> payload, String key, boolean fallback) {
+        Object value = payload.get(key);
+        return value instanceof Boolean b ? b : fallback;
+    }
 
     private void broadcast(String roomCode, Map<String, ?> message) {
         messagingTemplate.convertAndSend(TOPIC_SESSION + roomCode, message);
