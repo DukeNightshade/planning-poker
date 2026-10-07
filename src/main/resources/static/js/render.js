@@ -1,6 +1,7 @@
 /* global participantId, isModerator, isRevealed, players, tickets, currentTicketId,
           ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
-          selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD  */
+          selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD,
+          compareCardValues, voteDistribution  */
 
 // ====================================
 // Hilfsfunktionen — Auflösung
@@ -96,7 +97,7 @@ function renderTable() {
 
     const svgDesc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
     svgDesc.textContent = isRevealed
-        ? 'Abstimmungsergebnis: Karten wurden aufgedeckt.'
+        ? _describeResult()
         : `Laufende Abstimmung. ${Object.values(players).filter(p => p.voted).length} von ${total} haben abgestimmt.`;
     svg.appendChild(svgDesc);
 
@@ -104,7 +105,7 @@ function renderTable() {
     _appendTableEllipse(svg, cx, cy, tableRx, tableRy);
 
     if (isRevealed) {
-        _renderTableStats(svg, cx, cy, recalculateStats());
+        _renderResult(svg, cx, cy, tableRx, tableRy);
     } else {
         _appendVoteStatus(svg, cx, cy);
         _appendProgressBar(svg, cx, cy);
@@ -195,129 +196,131 @@ function _appendProgressBar(svg, cx, cy) {
 }
 
 // ====================================
-// SVG Hilfsfunktionen — Stats
+// SVG Hilfsfunktionen — Ergebnis (Kartenstapel)
 // ====================================
 
-function _renderStatBlock(svg, x, y, label, avg, spreadValue, color) {
-    const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    labelText.setAttribute('x', x);
-    labelText.setAttribute('y',  String(y - 18));
-    labelText.setAttribute('text-anchor', 'middle');
-    labelText.setAttribute('fill', color);
-    labelText.setAttribute('font-size', '11');
-    labelText.setAttribute('font-weight', '700');
-    labelText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-    labelText.textContent = label;
-    svg.appendChild(labelText);
+const SVG_NS      = 'http://www.w3.org/2000/svg';
+const FONT_FAMILY = 'Fira Sans, Lucida Sans, sans-serif';
+const STACK_GOLD  = '#facc15';
+const MAX_LAYERS  = 5;
 
-    const avgText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    avgText.setAttribute('x', x);
-    avgText.setAttribute('y', y + 8);
-    avgText.setAttribute('text-anchor', 'middle');
-    avgText.setAttribute('fill', 'white');
-    avgText.setAttribute('font-size', '22');
-    avgText.setAttribute('font-weight', '700');
-    avgText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-    avgText.textContent = `Ø ${avg}`;
-    svg.appendChild(avgText);
-
-    if (spreadValue !== null) {
-        const spreadText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        spreadText.setAttribute('x', x);
-        spreadText.setAttribute('y', y + 26);
-        spreadText.setAttribute('text-anchor', 'middle');
-        spreadText.setAttribute('fill', 'rgba(255,255,255,0.55)');
-        spreadText.setAttribute('font-size', '11');
-        spreadText.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-        spreadText.textContent = `↕ ${spreadValue}`;
-        svg.appendChild(spreadText);
-    }
+function _svgText(x, y, content, attrs) {
+    const t = document.createElementNS(SVG_NS, 'text');
+    t.setAttribute('x', String(x));
+    t.setAttribute('y', String(y));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-family', FONT_FAMILY);
+    Object.entries(attrs).forEach(([k, v]) => t.setAttribute(k, String(v)));
+    t.textContent = content;
+    return t;
 }
 
-function _renderTableStats(svg, cx, cy, stats) {
-    if (!stats.devAvg && !stats.testerAvg && !stats.architectAvg) {
-        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        t.setAttribute('x', cx);
-        t.setAttribute('y', cy + 6);
-        t.setAttribute('text-anchor', 'middle');
-        t.setAttribute('fill', 'rgba(255,255,255,0.6)');
-        t.setAttribute('font-size', '14');
-        t.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-        t.textContent = 'Keine numerischen Werte';
-        svg.appendChild(t);
+/**
+ * Nach dem Aufdecken: in der Tischmitte ein Kartenstapel pro gewähltem Wert
+ * (anonym, Höhe = Anzahl), darunter häufigster Wert und Durchschnitt.
+ */
+function _renderResult(svg, cx, cy, tableRx, tableRy) {
+    const { stacks, mostCommon } = voteDistribution();
+
+    if (stacks.length === 0) {
+        svg.appendChild(_svgText(cx, cy + 6, globalThis.i18n?.labels?.noVotes || 'Keine Stimmen',
+            { fill: 'rgba(255,255,255,0.6)', 'font-size': 14 }));
         return;
     }
 
-    if (showOnlyTotal) {
-        _renderOverallOnly(svg, cx, cy, stats.overallAvg);
-        return;
-    }
+    const baseline = cy + tableRy * 0.12;
+    _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon);
+    _appendResultSummary(svg, cx, baseline + Math.max(tableRy * 0.38, 34), mostCommon);
+}
 
-    const activeGroups = [
-        stats.devAvg       ? { label: '⚙ Dev',  avg: stats.devAvg,       spreadValue: stats.devSpread,       color: '#60a5fa' } : null,
-        stats.testerAvg    ? { label: '✓ Test', avg: stats.testerAvg,    spreadValue: stats.testerSpread,    color: '#4ade80' } : null,
-        stats.architectAvg ? { label: '🏗 Arch', avg: stats.architectAvg, spreadValue: stats.architectSpread, color: '#f9a825' } : null,
-    ].filter(Boolean);
+function _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon) {
+    const dark   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    const slotW  = (tableRx * 1.5) / stacks.length;
+    const cardW  = Math.max(14, Math.min(26, slotW * 0.62));
+    const cardH  = Math.round(cardW * 1.4);
+    const layerY = Math.max(2, Math.round(cardW * 0.13));
+    const startX = cx - (slotW * (stacks.length - 1)) / 2;
 
-    const totalWidth = 110;
-    const startX = cx - (totalWidth * (activeGroups.length - 1)) / 2;
+    stacks.forEach((stack, i) => {
+        const x       = startX + i * slotW;
+        const isSkip  = stack.value === SKIP_CARD;
+        const isTop   = mostCommon.includes(stack.value);
+        const { cfg } = isSkip ? _skipCardConfig(dark) : _revealedCardConfig(false, dark);
+        const layers  = Math.min(stack.count, MAX_LAYERS);
 
-    activeGroups.forEach((group, i) => {
-        _renderStatBlock(svg, startX + i * totalWidth, cy - 20, group.label, group.avg, group.spreadValue, group.color);
+        const g = document.createElementNS(SVG_NS, 'g');
+        g.setAttribute('class', 'result-stack');
+
+        for (let l = 0; l < layers; l++) {
+            const isFront = l === layers - 1;
+            const card = document.createElementNS(SVG_NS, 'rect');
+            card.setAttribute('x',      String(x - cardW / 2 + l));
+            card.setAttribute('y',      String(baseline - cardH - l * layerY));
+            card.setAttribute('width',  String(cardW));
+            card.setAttribute('height', String(cardH));
+            card.setAttribute('rx',     String(Math.max(3, cardW * 0.18)));
+            card.setAttribute('fill',   cfg.fill);
+            card.setAttribute('stroke', isFront && isTop ? STACK_GOLD : cfg.stroke);
+            card.setAttribute('stroke-width', isFront && isTop ? '2.5' : '1.2');
+            g.appendChild(card);
+        }
+
+        const frontY = baseline - cardH / 2 - (layers - 1) * layerY;
+        g.appendChild(_svgText(x + layers - 1, frontY, stack.value, {
+            fill: cfg.textFill, 'font-size': Math.round(cardW * 0.5),
+            'font-weight': 700, 'dominant-baseline': 'middle'
+        }));
+
+        g.appendChild(_svgText(x, baseline + 14, `×${stack.count}`, {
+            fill: isTop ? STACK_GOLD : 'rgba(255,255,255,0.7)',
+            'font-size': 11, 'font-weight': isTop ? 700 : 500
+        }));
+
+        svg.appendChild(g);
     });
+}
 
-    if (stats.overallAvg !== null) {
-        const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        divider.setAttribute('x1', String(cx - 60));
-        divider.setAttribute('y1', String(cy + 28));
-        divider.setAttribute('x2', String(cx + 60));
-        divider.setAttribute('y2', String(cy + 28));
-        divider.setAttribute('stroke', 'rgba(255,255,255,0.2)');
-        divider.setAttribute('stroke-width', '1');
-        svg.appendChild(divider);
+function _appendResultSummary(svg, cx, y, mostCommon) {
+    const stats  = recalculateStats();
+    const labels = globalThis.i18n?.labels || {};
+    const parts  = [];
+    if (mostCommon.length > 0) parts.push(`${labels.mostCommon || 'Meist'}: ${mostCommon.join(' / ')}`);
+    if (stats.overallAvg !== null) parts.push(`Ø ${stats.overallAvg}`);
 
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', cx);
-        label.setAttribute('y', String(cy + 44));
-        label.setAttribute('text-anchor', 'middle');
-        label.setAttribute('fill', 'rgba(255,255,255,0.5)');
-        label.setAttribute('font-size', '11');
-        label.setAttribute('font-weight', '600');
-        label.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-        label.textContent = `Gesamt Ø ${stats.overallAvg}`;
-        svg.appendChild(label);
+    if (parts.length > 0) {
+        svg.appendChild(_svgText(cx, y, parts.join('  ·  '),
+            { fill: 'white', 'font-size': 14, 'font-weight': 700 }));
     }
+
+    // Optional: Durchschnitt je Rolle in den Rollenfarben
+    if (showOnlyTotal) return;
+    const roles = [
+        { label: '⚙', avg: stats.devAvg,       color: '#60a5fa' },
+        { label: '✓', avg: stats.testerAvg,    color: '#4ade80' },
+        { label: '🏗', avg: stats.architectAvg, color: '#f9a825' }
+    ].filter(r => r.avg !== null);
+    if (roles.length < 2) return;
+
+    const line = _svgText(cx, y + 18, '', { 'font-size': 11, 'font-weight': 600 });
+    roles.forEach((r, i) => {
+        const span = document.createElementNS(SVG_NS, 'tspan');
+        span.setAttribute('fill', r.color);
+        span.textContent = `${i > 0 ? '   ' : ''}${r.label} Ø ${r.avg}`;
+        line.appendChild(span);
+    });
+    svg.appendChild(line);
+}
+
+/** Text-Zusammenfassung der Verteilung für Screenreader (SVG-desc). */
+function _describeResult() {
+    const { stacks } = voteDistribution();
+    if (stacks.length === 0) return 'Abstimmungsergebnis: keine Stimmen.';
+    return 'Abstimmungsergebnis: ' + stacks.map(s => `${s.count}× ${s.value}`).join(', ') + '.';
 }
 
 // ====================================
 // SVG Hilfsfunktionen — Spielerkarten
 // ====================================
-
-function _renderOverallOnly(svg, cx, cy, overallAvg) {
-    if (overallAvg === null) return;
-
-    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    label.setAttribute('x', cx);
-    label.setAttribute('y', String(cy - 14));
-    label.setAttribute('text-anchor', 'middle');
-    label.setAttribute('fill', 'rgba(255,255,255,0.7)');
-    label.setAttribute('font-size', '13');
-    label.setAttribute('font-weight', '700');
-    label.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-    label.textContent = 'Gesamt';
-    svg.appendChild(label);
-
-    const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    value.setAttribute('x', cx);
-    value.setAttribute('y', String(cy + 20));
-    value.setAttribute('text-anchor', 'middle');
-    value.setAttribute('fill', 'white');
-    value.setAttribute('font-size', '34');
-    value.setAttribute('font-weight', '700');
-    value.setAttribute('font-family', 'Fira Sans, Lucida Sans, sans-serif');
-    value.textContent = `Ø ${overallAvg}`;
-    svg.appendChild(value);
-}
 
 function _appendPlayerCard(svg, id, player, pos, cardSize) {
     const { px, py }                     = pos;
@@ -547,14 +550,7 @@ function renderSidebar() {
 
     const sorted = [...playerList].sort(([, a], [, b]) => {
         if (isRevealed && a.cardValue && b.cardValue) {
-            // Skip wird ans Ende sortiert
-            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8',
-                '13', '16', '20', '21', '32', '40', '64', '100',
-                'XS', 'S', 'M', 'L', 'XL', 'XXL', SKIP_CARD];
-            const ai = order.indexOf(a.cardValue);
-            const bi = order.indexOf(b.cardValue);
-            if (ai !== -1 && bi !== -1) return ai - bi;
-            return a.cardValue.localeCompare(b.cardValue);
+            return compareCardValues(a.cardValue, b.cardValue);
         }
         return a.name.localeCompare(b.name);
     });

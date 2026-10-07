@@ -5,7 +5,15 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 
 ## [Unreleased]
 
+### Neu
+- Ergebnisdarstellung mit Kartenstapeln: Nach dem Aufdecken liegt in der Tischmitte
+  pro gewähltem Wert ein Stapel (anonym, Höhe = Anzahl), der häufigste Wert ist
+  golden hervorgehoben; darunter "Meist · Ø" und optional der Durchschnitt je Rolle.
+  Bei lauter unterschiedlichen Werten wird nichts hervorgehoben.
+
 ### Geändert
+- Statische Dateien werden mit Inhalts-Hash ausgeliefert (`render-3f9a….js`), damit
+  Browser nach einem Update keine alten und neuen Skripte mischen.
 - Datenbankschema über Flyway-Migrationen (`db/migration`) statt `ddl-auto=update`;
   bestehende Datenbanken (auch 1.0.1) werden beim Start automatisch nachgezogen.
 - Sessions werden nach 24 Stunden Inaktivität gelöscht statt 24 Stunden nach dem Anlegen.

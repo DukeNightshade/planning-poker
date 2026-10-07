@@ -16,8 +16,20 @@ const ROLE_COLORS = {
     IT_ARCHITECT: '#0891b2'
 };
 
-// Wert der Skip-Karte – muss zu den Decks in session.html passen
+// Wert der Skip-Karte – muss zu den Decks in EstimationMethod passen
 const SKIP_CARD = '-';
+
+// Anzeige-Reihenfolge aller Kartenwerte; Skip steht immer am Ende
+const CARD_ORDER = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8',
+    '13', '16', '20', '21', '32', '40', '64', '100',
+    'XS', 'S', 'M', 'L', 'XL', 'XXL', SKIP_CARD];
+
+function compareCardValues(a, b) {
+    const ai = CARD_ORDER.indexOf(a);
+    const bi = CARD_ORDER.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    return String(a).localeCompare(String(b));
+}
 
 // ====================================
 // Basis-Pfad
