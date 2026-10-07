@@ -37,7 +37,7 @@ Planning Poker ist eine Methode, mit der agile Teams gemeinsam den Aufwand für 
 **Anpassung & Komfort**
 - ⚙️ **Einstellbare Optionen** – z. B. ob Tickets angezeigt werden, ob der Moderator mitschätzen darf, automatisches Aufdecken sowie Anzeige des Gesamtdurchschnitts oder der Werte je Rolle.
 - 🌐 **Zweisprachig** – Oberfläche auf Deutsch und Englisch, jederzeit umschaltbar.
-- 🧹 **Automatische Aufräumung** – Sessions, die älter als 24 Stunden sind, werden automatisch gelöscht.
+- 🧹 **Automatische Aufräumung** – Sessions ohne Aktivität seit 24 Stunden werden automatisch gelöscht (konfigurierbar).
 
 ---
 

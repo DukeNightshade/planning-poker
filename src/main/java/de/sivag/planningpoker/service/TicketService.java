@@ -39,6 +39,7 @@ public class TicketService {
     @Transactional
     public Ticket addTicket(String roomCode, String title) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        session.touch();
 
         Ticket ticket = new Ticket();
         ticket.setTitle(StringUtils.sanitizeTicketTitle(title));
@@ -51,6 +52,7 @@ public class TicketService {
     @Transactional
     public Ticket selectTicket(String roomCode, Long ticketId) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        session.touch();
         Ticket ticket = ticketRepository.findById(ticketId)
                 .filter(t -> t.getSession().getRoomCode().equals(roomCode))
                 .orElseThrow(() -> new NoSuchElementException("Ticket nicht gefunden."));

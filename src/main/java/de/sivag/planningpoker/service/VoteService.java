@@ -47,6 +47,7 @@ public class VoteService {
     public Vote submitVote(String roomCode, Long participantId,
                            String cardValue, boolean isDiscussion) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        session.touch();
         if (!isDiscussion && session.getStatus() == SessionStatus.REVEALED) {
             throw new IllegalStateException("Karten bereits aufgedeckt.");
         }
@@ -91,6 +92,7 @@ public class VoteService {
     @Transactional
     public List<Vote> revealCards(String roomCode) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        session.touch();
         session.setStatus(SessionStatus.REVEALED);
         List<Vote> votes = voteRepository
                 .findBySessionRoomCodeWithParticipant(roomCode);
@@ -103,6 +105,7 @@ public class VoteService {
     @Transactional
     public void resetRound(String roomCode) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
+        session.touch();
         session.setStatus(SessionStatus.WAITING);
         voteRepository.deleteBySessionRoomCode(roomCode);
     }

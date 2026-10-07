@@ -56,6 +56,25 @@ Die Umschaltung erfolgt ausschließlich über Umgebungsvariablen mit
 Fallback auf H2, sodass kein Code-Pfad für die Umgebung unterschieden werden
 muss.
 
+### Schema-Migrationen mit Flyway
+
+Das Schema entsteht aus den Skripten unter `src/main/resources/db/migration`
+(`V1__baseline.sql`, `V2__...`). Hibernate legt nichts mehr an, sondern prüft
+beim Start nur noch, ob Entities und Schema zusammenpassen
+(`ddl-auto=validate`).
+
+Bis Version 1.1.0 hat Hibernate das Schema per `ddl-auto=update` erzeugt.
+Solche bestehenden Datenbanken hängt Flyway bei Version 0 ein
+(`baseline-version=0`). `V1` ist idempotent geschrieben (`IF NOT EXISTS`) und
+ergänzt dort nur, was fehlt, z. B. die Token-Spalte einer 1.0.1-Datenbank.
+
+Begründung: `ddl-auto=update` legt nur an, ändert aber nie Typen, Constraints
+oder Daten und ist nicht nachvollziehbar. Migrationen sind versioniert,
+reviewbar und laufen in allen Umgebungen gleich.
+
+Neue Schema-Änderungen kommen immer als neue Datei `V<n>__beschreibung.sql`
+dazu; bereits ausgelieferte Skripte werden nie geändert.
+
 ## Containerisierung
 
 ### Multi-Stage-Build
