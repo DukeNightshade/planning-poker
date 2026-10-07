@@ -3,32 +3,44 @@ PLANNING POKER – DEPLOYMENT AUF DEM SERVER
 
 Übergeben von: Nico (IHK-Azubi)
 Projekt: Planning Poker Webanwendung (Spring Boot)
-Version: 1.0.1
+Version: 1.1.0
 
 
-WAS IST NEU IN 1.0.1
+WAS IST NEU IN 1.1.0
 ----------------------
-Behoben: Hinter dem Reverse Proxy unter /planning-poker/ wurden CSS,
-JavaScript und Bilder nicht geladen (der Browser hat sie unter
-/css/style.css statt /planning-poker/css/style.css angefragt).
+Sicherheit:
+- Moderator-Aktionen (Aufdecken, neue Runde, Einstellungen, Tickets)
+  werden jetzt vom Server geprüft, nicht mehr nur in der Oberfläche.
+- Jeder Teilnehmer bekommt beim Beitreten ein geheimes Token.
+  Abstimmen im Namen anderer ist damit nicht mehr möglich.
+- Schriftart und JavaScript-Bibliotheken werden vom eigenen Server
+  ausgeliefert statt von Google Fonts / jsDelivr (DSGVO).
+- Security-Header (CSP u. a.) und eine Begrenzung, wie oft pro Minute
+  Sessions erstellt bzw. betreten werden können.
+- DB_PASSWORD in der .env ist jetzt Pflicht (siehe SCHRITT 2).
 
-Die Anwendung baut ihre eigenen Links jetzt anhand des Prefixes
-zusammen, den der Reverse Proxy per X-Forwarded-Prefix mitliefert.
-Deshalb ist zusätzlich zum Update EINE Zeile in der Proxy-
-Konfiguration nötig -> siehe SCHRITT 5. Ohne diese Zeile verhält
-sich die neue Version genauso wie die alte.
+Fehlerbehebungen:
+- Die Skip-Karte "-" wird korrekt grau dargestellt.
+- Auto-Reveal funktioniert auch, wenn der Moderator nicht mitstimmt.
+- Kartenwechsel in der Diskussion werden als Schätzung gespeichert.
+- Ticket-Titel mit "&" oder Links mit Parametern werden korrekt
+  angezeigt; zu lange Titel führen nicht mehr zu einem Fehler.
+- Nach dem Neuladen der Seite ist die eigene Karte wieder sichtbar.
+
+Bitte vor dem Update den Abschnitt "UPDATE VON VERSION 1.0.1 AUF
+1.1.0" weiter unten lesen.
 
 
 INHALT DIESES PAKETS
 ----------------------
-- planning-poker-1.0.1.tar  -> das fertige Docker-Image der Anwendung
+- planning-poker-1.1.0.tar  -> das fertige Docker-Image der Anwendung
 - docker-compose.yml        -> Konfiguration, wie App + Datenbank zusammenlaufen
 - .env.example              -> Vorlage für das Datenbank-Passwort
 
 
 SCHRITT 1: Docker-Image aus der .tar-Datei laden
 ----------------------------------------------------
-  docker load -i planning-poker-1.0.1.tar
+  docker load -i planning-poker-1.1.0.tar
 
 
 SCHRITT 2: Datenbank-Passwort konfigurieren
@@ -98,6 +110,11 @@ Bei nginx (im location-Block für /planning-poker/):
 
   proxy_set_header X-Forwarded-Prefix /planning-poker;
   proxy_set_header X-Forwarded-Proto  $scheme;
+  proxy_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
+
+X-Forwarded-For liefert die echte IP der Nutzer (Apache setzt den
+Header automatisch). Ohne ihn sieht die App nur die IP des Proxys,
+und die Begrenzung pro Minute gilt dann für alle Nutzer zusammen.
 
 Danach den Proxy neu laden (z.B. "apachectl graceful" bzw.
 "nginx -s reload").
@@ -171,18 +188,29 @@ Volume einsehen:
   docker volume ls
 
 
-UPDATE VON VERSION 1.0.0 AUF 1.0.1
+UPDATE VON VERSION 1.0.1 AUF 1.1.0
 ---------------------------------------
+VORHER PRÜFEN: Gibt es im Deploy-Verzeichnis eine ".env" mit
+DB_PASSWORD? Ohne sie startet 1.1.0 nicht (siehe SCHRITT 2). Lief
+die Datenbank bisher ohne .env, dann DB_PASSWORD=changeme eintragen.
+
+Am besten außerhalb laufender Schätzrunden updaten: Wer während des
+Updates in einer Session ist, muss danach einmal neu beitreten, und
+Sessions aus 1.0.1 sollten neu angelegt werden.
+
   docker compose down
-  docker load -i planning-poker-1.0.1.tar
+  docker load -i planning-poker-1.1.0.tar
   docker compose up -d
 
 Die docker-compose.yml aus diesem Paket zeigt bereits auf das Image
-"planning-poker:1.0.1", also die neue Version. Anschließend noch
-SCHRITT 5 am Proxy erledigen, sonst bleibt der Fehler bestehen.
+"planning-poker:1.1.0". Die neue Datenbank-Spalte für das
+Teilnehmer-Token legt die Anwendung beim Start selbst an.
 
-Das alte Image kann danach aufgeräumt werden:
-  docker image rm planning-poker:latest
+Bei nginx zusätzlich die X-Forwarded-For-Zeile aus SCHRITT 5
+ergänzen, bei Apache ist nichts zu tun.
+
+Das alte Image kann aufgeräumt werden, sobald 1.1.0 läuft:
+  docker image rm planning-poker:1.0.1
 
 Die Datenbank-Inhalte bleiben bei allem unangetastet, da sie im
 separaten Volume liegen und vom Image komplett unabhängig sind.
@@ -192,11 +220,12 @@ ZURÜCK AUF DIE ALTE VERSION
 --------------------------------
 Falls etwas nicht funktioniert: in der docker-compose.yml die Zeile
 
-  image: planning-poker:1.0.1
+  image: planning-poker:1.1.0
 
 wieder auf
 
-  image: planning-poker:latest
+  image: planning-poker:1.0.1
 
 ändern und "docker compose up -d" ausführen. Das alte Image ist dann
-noch vorhanden, solange es nicht gelöscht wurde.
+noch vorhanden, solange es nicht gelöscht wurde. Die zusätzliche
+Token-Spalte in der Datenbank stört 1.0.1 nicht.

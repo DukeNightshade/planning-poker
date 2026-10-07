@@ -1,7 +1,7 @@
 services:
 
   app:
-    image: planning-poker:1.0.1
+    image: planning-poker:1.1.0
     container_name: planning-poker-app
     restart: unless-stopped
     ports:
