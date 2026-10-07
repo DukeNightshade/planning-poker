@@ -1,6 +1,6 @@
 /* global participantId, isModerator, isRevealed, players, tickets, currentTicketId,
           ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
-          selectTicket, promoteMyself, demoteParticipant, showOnlyTotal  */
+          selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD  */
 
 // ====================================
 // Hilfsfunktionen — Auflösung
@@ -487,9 +487,9 @@ function _skipCardConfig(dark) {
 
 function _resolveCardConfig(player, isSelf, hasVoted) {
     const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (isRevealed && player.cardValue === '–') return _skipCardConfig(dark);
+    if (isRevealed && player.cardValue === SKIP_CARD) return _skipCardConfig(dark);
     if (isRevealed && player.cardValue) return _revealedCardConfig(player.changed, dark);
-    if (isSelf && player.cardValue === '–') return _skipCardConfig(dark);
+    if (isSelf && player.cardValue === SKIP_CARD) return _skipCardConfig(dark);
     if (hasVoted)                        return _votedCardConfig(dark);
     if (isSelf)                          return _selfCardConfig(dark);
     return _otherCardConfig(dark);
@@ -547,10 +547,10 @@ function renderSidebar() {
 
     const sorted = [...playerList].sort(([, a], [, b]) => {
         if (isRevealed && a.cardValue && b.cardValue) {
-            // '–' (Skip) wird ans Ende sortiert
-            const order = ['?', '☕', '–', '0', '0.5', '1', '2', '3', '4', '5', '8',
-                '13', '16', '20', '32', '40', '64', '100',
-                'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+            // Skip wird ans Ende sortiert
+            const order = ['?', '☕', '0', '0.5', '1', '2', '3', '4', '5', '8',
+                '13', '16', '20', '21', '32', '40', '64', '100',
+                'XS', 'S', 'M', 'L', 'XL', 'XXL', SKIP_CARD];
             const ai = order.indexOf(a.cardValue);
             const bi = order.indexOf(b.cardValue);
             if (ai !== -1 && bi !== -1) return ai - bi;
@@ -628,7 +628,7 @@ function _buildSidebarItem(id, player, activeModerators) {
 
 function _buildStatusOrValue(player, hasVoted) {
     if (isRevealed && player.cardValue) {
-        const isSkip = player.cardValue === '–';
+        const isSkip = player.cardValue === SKIP_CARD;
         const extraClass = isSkip
             ? 'style="color:var(--color-text-light); background:var(--color-grey); border-color:var(--color-border);"'
             : (player.changed ? 'class="sidebar__card-value sidebar__card-value--changed"' : 'class="sidebar__card-value"');

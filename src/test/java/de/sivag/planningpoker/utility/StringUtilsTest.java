@@ -3,7 +3,7 @@ package de.sivag.planningpoker.utility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -16,50 +16,49 @@ import static org.assertj.core.api.Assertions.*;
 class StringUtilsTest {
 
     // ====================================
-    // sanitize()
+    // sanitizeTicketTitle()
     // ====================================
 
     @Test
-    @DisplayName("sanitize: Normaler Text bleibt unverändert")
-    void sanitize_normalText_unchanged() {
-        assertThat(StringUtils.sanitize("Nico Hoffmann"))
-                .isEqualTo("Nico Hoffmann");
-    }
-
-    @Test
-    @DisplayName("sanitize: null wird zu leerem String")
-    void sanitize_null_returnsEmptyString() {
-        assertThat(StringUtils.sanitize("")).isEmpty();
-    }
-
-    @Test
-    @DisplayName("sanitize: Leerer String bleibt leer")
-    void sanitize_emptyString_returnsEmptyString() {
-        assertThat(StringUtils.sanitize("")).isEmpty();
+    @DisplayName("sanitizeTicketTitle: Normaler Text bleibt unverändert")
+    void sanitizeTicketTitle_normalText_unchanged() {
+        assertThat(StringUtils.sanitizeTicketTitle("Story A"))
+                .isEqualTo("Story A");
     }
 
     @ParameterizedTest
-    @DisplayName("sanitize: HTML-Sonderzeichen werden korrekt ersetzt")
-    @CsvSource({
-            "<script>,               &lt;script&gt;",
-            "<img src=x onerror=1>,  &lt;img src=x onerror=1&gt;",
-            "Max & Moritz,           Max &amp; Moritz",
-            "Say \"hello\",          Say &quot;hello&quot;",
-            "It's fine,              It&#x27;s fine"
+    @DisplayName("sanitizeTicketTitle: Sonderzeichen und URLs bleiben Klartext (Escaping im Client)")
+    @ValueSource(strings = {
+            "Max & Moritz",
+            "<script>alert('XSS')</script>",
+            "https://jira.example.com/browse/PP-1?a=1&b=2"
     })
-    void sanitize_htmlCharacters_areEscaped(String input, String expected) {
-        assertThat(StringUtils.sanitize(input.trim()))
-                .isEqualTo(expected.trim());
+    void sanitizeTicketTitle_specialCharacters_keptAsPlainText(String input) {
+        assertThat(StringUtils.sanitizeTicketTitle(input)).isEqualTo(input);
     }
 
     @Test
-    @DisplayName("sanitize: XSS-Angriff wird vollständig neutralisiert")
-    void sanitize_xssAttack_isNeutralized() {
-        String xss = "<script>alert('XSS')</script>";
-        assertThat(StringUtils.sanitize(xss))
-                .isEqualTo("&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;")
-                .doesNotContain("<")
-                .doesNotContain(">");
+    @DisplayName("sanitizeTicketTitle: Leerzeichen und Steuerzeichen werden bereinigt")
+    void sanitizeTicketTitle_whitespaceAndControlChars_cleaned() {
+        assertThat(StringUtils.sanitizeTicketTitle("  Story\tA\n "))
+                .isEqualTo("Story A");
+    }
+
+    @Test
+    @DisplayName("sanitizeTicketTitle: Zu lange Titel werden gekürzt")
+    void sanitizeTicketTitle_tooLong_isTruncated() {
+        String longTitle = "x".repeat(StringUtils.MAX_TITLE_LENGTH + 50);
+        assertThat(StringUtils.sanitizeTicketTitle(longTitle))
+                .hasSize(StringUtils.MAX_TITLE_LENGTH);
+    }
+
+    @Test
+    @DisplayName("sanitizeTicketTitle: Leerer Titel wirft IllegalArgumentException")
+    void sanitizeTicketTitle_blank_throwsException() {
+        assertThatThrownBy(() -> StringUtils.sanitizeTicketTitle("   "))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> StringUtils.sanitizeTicketTitle(null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     // ====================================

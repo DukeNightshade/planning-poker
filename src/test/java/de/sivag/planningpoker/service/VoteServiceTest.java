@@ -143,6 +143,53 @@ class VoteServiceTest {
                 voteService.submitVote("ABCD1234", 1L, "8", true));
     }
 
+    @Test
+    @DisplayName("submitVote: Änderung im Diskussionsmodus aktualisiert die Ticket-Schätzung")
+    void submitVote_discussionMode_updatesTicketEstimate() {
+        Ticket ticket = new Ticket();
+        ticket.setId(1L);
+        ticket.setFinalEstimate("5");
+        testSession.setStatus(SessionStatus.REVEALED);
+        testSession.setCurrentTicketId(1L);
+
+        Vote changed = new Vote();
+        changed.setCardValue("13");
+        changed.setParticipant(testParticipant);
+
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
+        when(participantRepository.findById(1L))
+                .thenReturn(Optional.of(testParticipant));
+        when(voteRepository.findBySessionRoomCodeAndParticipantId(any(), any()))
+                .thenReturn(Optional.of(testVote));
+        when(voteRepository.save(any(Vote.class))).thenReturn(changed);
+        when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
+                .thenReturn(List.of(changed));
+        when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+        voteService.submitVote("ABCD1234", 1L, "13", true);
+
+        assertThat(ticket.getFinalEstimate()).isEqualTo("13");
+        verify(ticketRepository).save(ticket);
+    }
+
+    @Test
+    @DisplayName("submitVote: Normaler Vote ändert keine Ticket-Schätzung")
+    void submitVote_normalVote_doesNotTouchTicket() {
+        testSession.setCurrentTicketId(1L);
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
+        when(participantRepository.findById(1L))
+                .thenReturn(Optional.of(testParticipant));
+        when(voteRepository.findBySessionRoomCodeAndParticipantId(any(), any()))
+                .thenReturn(Optional.empty());
+        when(voteRepository.save(any(Vote.class))).thenReturn(testVote);
+
+        voteService.submitVote("ABCD1234", 1L, "5", false);
+
+        verifyNoInteractions(ticketRepository);
+    }
+
     // ====================================
     // revealCards()
     // ====================================

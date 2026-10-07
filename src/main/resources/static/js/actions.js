@@ -230,6 +230,12 @@ function updateDiscussion(id, name, cardValue) {
     }
     const stats  = recalculateStats();
     averageValue = stats.overallAvg;
+
+    if (currentTicketId && tickets[currentTicketId]) {
+        tickets[currentTicketId].finalEstimate = stats.overallAvg ?? '–';
+        renderTicketSidebar();
+    }
+
     renderTable();
     renderSidebar();
 }

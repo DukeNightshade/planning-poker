@@ -41,7 +41,7 @@ public class TicketService {
         Session session = sessionService.getSessionByRoomCode(roomCode);
 
         Ticket ticket = new Ticket();
-        ticket.setTitle(StringUtils.sanitize(title));
+        ticket.setTitle(StringUtils.sanitizeTicketTitle(title));
         ticket.setSession(session);
         ticket.setOrderIndex(ticketRepository.countBySessionRoomCode(roomCode));
 

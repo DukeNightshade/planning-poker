@@ -12,7 +12,8 @@ public final class StringUtils {
     // Konstanten
     // ====================================
 
-    private static final int MAX_NAME_LENGTH = 50;
+    private static final int MAX_NAME_LENGTH  = 50;
+    public  static final int MAX_TITLE_LENGTH = 255;
 
     // ====================================
     // Konstruktor
@@ -27,19 +28,25 @@ public final class StringUtils {
     // ====================================
 
     /**
-     * Bereinigt einen Ticket-Titel gegen XSS.
+     * Bereinigt einen Ticket-Titel. Gespeichert wird Klartext – das
+     * HTML-Escaping übernimmt der Client beim Rendern.
      *
-     * @param input der zu bereinigende String
-     * @return bereinigter String, oder leerer String bei null
+     * @param input der Roh-Titel
+     * @return getrimmter Titel ohne Steuerzeichen, max. {@value #MAX_TITLE_LENGTH} Zeichen
+     * @throws IllegalArgumentException wenn der Titel leer ist
      */
-    public static String sanitize(String input) {
-        if (input == null) return "";
-        return input
-                .replace("&",  "&amp;")
-                .replace("<",  "&lt;")
-                .replace(">",  "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'",  "&#x27;");
+    public static String sanitizeTicketTitle(String input) {
+        if (input == null || input.isBlank()) {
+            throw new IllegalArgumentException("Ticket-Titel darf nicht leer sein.");
+        }
+
+        String cleaned = input.replaceAll("\\p{Cntrl}", " ").trim();
+
+        if (cleaned.length() > MAX_TITLE_LENGTH) {
+            cleaned = cleaned.substring(0, MAX_TITLE_LENGTH).trim();
+        }
+
+        return cleaned;
     }
 
     /**

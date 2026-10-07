@@ -16,6 +16,9 @@ const ROLE_COLORS = {
     IT_ARCHITECT: '#0891b2'
 };
 
+// Wert der Skip-Karte – muss zu den Decks in session.html passen
+const SKIP_CARD = '-';
+
 // ====================================
 // Basis-Pfad
 // ====================================

@@ -135,7 +135,7 @@ function addTicketField() {
     entry.className = 'ticket-entry';
     const placeholder = document.getElementById('ticketPlaceholder')?.textContent || 'Ticket-Titel eingeben';
     entry.innerHTML = `
-        <input class="form__input ticket-input" type="text" placeholder="${placeholder}">
+        <input class="form__input ticket-input" type="text" maxlength="255" placeholder="${placeholder}">
         <button type="button" class="btn--remove" onclick="removeTicket(this)">&#x2715;</button>
     `;
     list.appendChild(entry);

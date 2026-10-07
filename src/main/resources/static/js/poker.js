@@ -415,7 +415,7 @@ function handleTicketAdded(data) {
         topicBar.style.display = 'flex';
     }
     renderTicketSidebar();
-    showToast(globalThis.i18n.toast.ticketAdded + ' ' + escapeHtml(data.title), 'success', '', 3000);
+    showToast(globalThis.i18n.toast.ticketAdded + ' ' + data.title, 'success', '', 3000);
 }
 
 function handleTicketSelected(data) {
@@ -427,7 +427,7 @@ function handleTicketSelected(data) {
     if (topicBar && showTopicEl) topicBar.style.display = showTopicEl.checked ? 'flex' : 'none';
     resetUI();
     renderTicketSidebar();
-    showToast(globalThis.i18n.toast.ticketSelected + ' ' + escapeHtml(data.title), 'info', '', 2500);
+    showToast(globalThis.i18n.toast.ticketSelected + ' ' + data.title, 'info', '', 2500);
 }
 
 function handleVoteUpdate(data) {
@@ -449,7 +449,7 @@ function handlePlayerJoined(data) {
         };
         if (data.participantId !== participantId) {
             showToast(
-                globalThis.i18n.toast.joined.replace('{0}', escapeHtml(data.participantName)),
+                globalThis.i18n.toast.joined.replace('{0}', data.participantName),
                 'info', getRoleLabel(data.participantRole), 3000
             );
         }
@@ -468,7 +468,7 @@ function handlePlayerLeft(data) {
         const leftName = players[data.participantId].name;
         delete players[data.participantId];
         showToast(
-            globalThis.i18n.toast.left.replace('{0}', escapeHtml(leftName)),
+            globalThis.i18n.toast.left.replace('{0}', leftName),
             'warning', '', 3000
         );
     }
@@ -491,7 +491,7 @@ function handleModeratorPromoted(data) {
         if (addTicketBtn) addTicketBtn.style.display = 'block';
     } else {
         showToast(
-            globalThis.i18n.toast.moderatorPromoted.replace('{0}', escapeHtml(data.participantName)),
+            globalThis.i18n.toast.moderatorPromoted.replace('{0}', data.participantName),
             'info', '', 3000
         );
     }
