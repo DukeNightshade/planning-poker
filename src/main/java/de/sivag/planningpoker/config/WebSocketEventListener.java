@@ -11,6 +11,8 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Map;
 
+import static de.sivag.planningpoker.utility.ApiConstants.*;
+
 /**
  * Listener für WebSocket-Verbindungsereignisse.
  *
@@ -67,11 +69,11 @@ public class WebSocketEventListener {
                         participantName, roomCode);
 
                 messagingTemplate.convertAndSend(
-                        "/topic/session/" + roomCode,
+                        TOPIC_SESSION + roomCode,
                         Map.of(
                                 "type",            "PLAYER_LEFT",
-                                "participantId",   participantId.toString(),
-                                "participantName", participantName
+                                PARTICIPANT_ID,   participantId.toString(),
+                                PARTICIPANT_NAME, participantName
                         )
                 );
             } catch (Exception e) {

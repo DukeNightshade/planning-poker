@@ -168,6 +168,31 @@ class PermissionIntegrationTest {
     }
 
     @Test
+    @DisplayName("Moderator-Stimmrecht aus: Moderator-Stimme fällt weg, Auto-Reveal deckt auf")
+    @SuppressWarnings("unchecked")
+    void disablingModeratorVote_dropsVote_andAutoReveals() throws Exception {
+        send("/vote", moderatorToken, Map.of("cardValue", "5"));
+        send("/vote", devToken,       Map.of("cardValue", "8"));
+        assertThat(pollType("VOTE_UPDATE")).isNotNull();
+        assertThat(pollType("VOTE_UPDATE")).isNotNull();
+
+        send("/settings", moderatorToken, Map.of("moderatorCanVote", false, "autoReveal", true));
+
+        assertThat(pollType("SETTINGS_UPDATE")).isNotNull();
+        Map<String, Object> reveal = pollType("REVEAL");
+        assertThat(reveal).isNotNull();
+        List<Map<String, Object>> votes = (List<Map<String, Object>>) reveal.get("votes");
+        assertThat(votes).extracting(v -> v.get("participantName")).containsExactly("Lisa");
+
+        // Danach darf der Moderator nicht mehr abstimmen
+        send("/reset", moderatorToken, Map.of());
+        assertThat(pollType("RESET")).isNotNull();
+        send("/vote", moderatorToken, Map.of("cardValue", "3"));
+        assertThat(errors.poll(TIMEOUT_SEC, TimeUnit.SECONDS))
+                .isNotNull().containsEntry("code", "FORBIDDEN");
+    }
+
+    @Test
     @DisplayName("Vote ohne Token oder mit ungültiger Karte wird abgelehnt")
     void vote_withoutTokenOrInvalidCard_isRejected() throws Exception {
         send("/vote", null, Map.of("cardValue", "5"));
@@ -207,6 +232,16 @@ class PermissionIntegrationTest {
     // ====================================
     // Hilfsmethoden
     // ====================================
+
+    /** Wartet auf die nächste Raum-Nachricht des angegebenen Typs (andere werden übersprungen). */
+    private Map<String, Object> pollType(String type) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + TIMEOUT_SEC * 1000;
+        while (System.currentTimeMillis() < deadline) {
+            Map<String, Object> message = topic.poll(deadline - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+            if (message != null && type.equals(message.get("type"))) return message;
+        }
+        return null;
+    }
 
     private void send(String path, String token, Map<String, ?> body) {
         StompHeaders headers = new StompHeaders();

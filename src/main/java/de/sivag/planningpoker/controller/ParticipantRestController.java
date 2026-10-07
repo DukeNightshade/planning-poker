@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import static de.sivag.planningpoker.utility.ApiConstants.*;
+
 /**
  * REST-Controller für Teilnehmer-Operationen.
  *
@@ -28,10 +30,6 @@ public class ParticipantRestController {
     // Konstanten
     // ====================================
 
-    private static final String TOPIC_SESSION    = "/topic/session/";
-    private static final String PARTICIPANT_ID   = "participantId";
-    private static final String PARTICIPANT_NAME = "participantName";
-    private static final String TOKEN_HEADER     = "X-Participant-Token";
 
     // ====================================
     // Abhängigkeiten
@@ -51,7 +49,7 @@ public class ParticipantRestController {
 
         String name      = body.get("name");
         String browserId = body.get("browserId");
-        ParticipantRole role = RoleParser.parseParticipantRole(
+        ParticipantRole role = RoleParser.parseRole(
                 body.getOrDefault("role", "DEVELOPER"));
 
         Participant participant = sessionService.joinSession(roomCode, name, role, browserId);
@@ -65,7 +63,7 @@ public class ParticipantRestController {
                         "type",            "PLAYER_JOINED",
                         PARTICIPANT_ID,    participant.getId().toString(),
                         PARTICIPANT_NAME,  participant.getName(),
-                        "participantRole", participant.getRole().name()
+                        PARTICIPANT_ROLE, participant.getRole().name()
                 )
         );
 
@@ -81,7 +79,7 @@ public class ParticipantRestController {
     public ResponseEntity<Map<String, Object>> promoteToModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId,
-            @RequestHeader(value = TOKEN_HEADER, required = false) String token) {
+            @RequestHeader(value = REST_TOKEN_HEADER, required = false) String token) {
 
         Participant caller = sessionService.authenticate(roomCode, token);
         Participant participant =
@@ -109,7 +107,7 @@ public class ParticipantRestController {
     public ResponseEntity<Map<String, Object>> demoteFromModerator(
             @PathVariable String roomCode,
             @PathVariable Long participantId,
-            @RequestHeader(value = TOKEN_HEADER, required = false) String token) {
+            @RequestHeader(value = REST_TOKEN_HEADER, required = false) String token) {
 
         Participant caller = sessionService.authenticate(roomCode, token);
         Participant participant =

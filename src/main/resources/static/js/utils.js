@@ -37,6 +37,24 @@ function appUrl(path = '') {
 }
 
 // ====================================
+// Browser-Kennung
+// ====================================
+
+/** Stabile Kennung dieses Browsers, damit ein Reload denselben Teilnehmer wiederfindet. */
+function getBrowserId() {
+    try {
+        let id = localStorage.getItem('browserId');
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem('browserId', id);
+        }
+        return id;
+    } catch (e) {
+        return 'fallback-' + Math.random().toString(36).substring(2);
+    }
+}
+
+// ====================================
 // Teilnehmer-Token
 // ====================================
 

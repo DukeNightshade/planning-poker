@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.service;
 
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
@@ -184,6 +185,62 @@ class VoteServiceTest {
         assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "XL", false))
                 .isInstanceOf(IllegalArgumentException.class);
         verify(voteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("submitVote: Moderator wird abgelehnt, wenn Moderatoren nicht abstimmen dürfen")
+    void submitVote_moderatorNotAllowed_forbidden() {
+        testParticipant.setModerator(true);
+        testSession.setModeratorCanVote(false);
+        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
+        when(participantRepository.findById(1L)).thenReturn(Optional.of(testParticipant));
+
+        assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "5", false))
+                .isInstanceOf(ForbiddenException.class);
+        verify(voteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("submitVote: Product Owner wird abgelehnt")
+    void submitVote_productOwner_forbidden() {
+        testParticipant.setRole(ParticipantRole.PRODUCT_OWNER);
+        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
+        when(participantRepository.findById(1L)).thenReturn(Optional.of(testParticipant));
+
+        assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "5", false))
+                .isInstanceOf(ForbiddenException.class);
+        verify(voteRepository, never()).save(any());
+    }
+
+    // ====================================
+    // removeModeratorVotes()
+    // ====================================
+
+    @Test
+    @DisplayName("removeModeratorVotes: Nur Stimmen von Moderatoren werden gelöscht")
+    void removeModeratorVotes_deletesOnlyModeratorVotes() {
+        Participant moderator = new Participant();
+        moderator.setId(2L);
+        moderator.setModerator(true);
+        Vote moderatorVote = new Vote();
+        moderatorVote.setParticipant(moderator);
+
+        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
+        when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
+                .thenReturn(List.of(testVote, moderatorVote));
+
+        assertThat(voteService.removeModeratorVotes("ABCD1234")).isEqualTo(1);
+        verify(voteRepository).deleteAll(List.of(moderatorVote));
+    }
+
+    @Test
+    @DisplayName("removeModeratorVotes: Nach dem Aufdecken bleibt das Ergebnis unverändert")
+    void removeModeratorVotes_afterReveal_keepsVotes() {
+        testSession.setStatus(SessionStatus.REVEALED);
+        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
+
+        assertThat(voteService.removeModeratorVotes("ABCD1234")).isZero();
+        verify(voteRepository, never()).deleteAll(any());
     }
 
     @Test
