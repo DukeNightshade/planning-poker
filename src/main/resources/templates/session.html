@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="#{app.title}">Planning Poker</title>
     <link rel="icon" type="image/png" th:href="@{/images/siv-logo.png}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/vendor/fonts/fira-sans.css}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <style>
         /* Session-spezifisch: Viewport füllen, kein globales Scrollen */
@@ -101,6 +99,7 @@
             errorCopy:         /*[[#{toast.error.copy}]]*/ '',
             errorPromote:      /*[[#{toast.error.promote}]]*/ '',
             errorAction:       /*[[#{toast.error.action}]]*/ '',
+            errorRateLimit:    /*[[#{toast.error.ratelimit}]]*/ '',
             disconnected:      /*[[#{toast.warning.disconnected}]]*/ '',
             disconnectedSub:   /*[[#{toast.warning.disconnected.sub}]]*/ '',
             errorNameInvalid:  /*[[#{toast.error.name.invalid}]]*/ '',
@@ -280,8 +279,8 @@
                    data-player-moderator=${p.isModerator()}"></span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script th:src="@{/vendor/sockjs.min.js}"></script>
+<script th:src="@{/vendor/stomp.min.js}"></script>
 <script th:src="@{/js/utils.js}"></script>
 <script th:src="@{/js/stats.js}"></script>
 <script th:src="@{/js/tickets.js}"></script>

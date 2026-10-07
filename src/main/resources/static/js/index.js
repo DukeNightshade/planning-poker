@@ -44,7 +44,11 @@ document.getElementById('createForm').addEventListener('submit', async function 
         handleSessionCreated(data, moderatorName);
     } else {
         let msg = globalThis.i18n.toast.errorCreate;
-        try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        if (response.status === 429) {
+            msg = globalThis.i18n.toast.errorRateLimit;
+        } else {
+            try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        }
         showToast(msg, 'error');
     }
 });
@@ -79,7 +83,11 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         handleSessionCreated(data, moderatorName);
     } else {
         let msg = globalThis.i18n.toast.errorCreate;
-        try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        if (response.status === 429) {
+            msg = globalThis.i18n.toast.errorRateLimit;
+        } else {
+            try { const err = await response.json(); if (err.error) msg = err.error; } catch {}
+        }
         showToast(msg, 'error');
     }
 });
@@ -115,7 +123,9 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         let msg = globalThis.i18n.toast.errorJoin;
         try {
             const err = await response.json();
-            if (response.status === 400) {
+            if (response.status === 429) {
+                msg = globalThis.i18n.toast.errorRateLimit;
+            } else if (response.status === 400) {
                 if (err.error?.includes('vergeben') || err.error?.includes('taken')) {
                     msg = globalThis.i18n.toast.errorNameTaken;
                 } else if (err.error?.includes('Buchstaben') || err.error?.includes('letters')) {
