@@ -1,0 +1,197 @@
+PLANNING POKER – DEPLOYMENT AUF DEM SERVER
+================================================
+
+Übergeben von: Nico (IHK-Azubi)
+Projekt: Planning Poker Webanwendung (Spring Boot)
+Version: 1.0.1
+
+
+WAS IST NEU IN 1.0.1
+----------------------
+Behoben: Hinter dem Reverse Proxy unter /planning-poker/ wurden CSS,
+JavaScript und Bilder nicht geladen (der Browser hat sie unter
+/css/style.css statt /planning-poker/css/style.css angefragt).
+
+Die Anwendung baut ihre eigenen Links jetzt anhand des Prefixes
+zusammen, den der Reverse Proxy per X-Forwarded-Prefix mitliefert.
+Deshalb ist zusätzlich zum Update EINE Zeile in der Proxy-
+Konfiguration nötig -> siehe SCHRITT 5. Ohne diese Zeile verhält
+sich die neue Version genauso wie die alte.
+
+
+INHALT DIESES PAKETS
+----------------------
+- planning-poker-1.0.1.tar  -> das fertige Docker-Image der Anwendung
+- docker-compose.yml        -> Konfiguration, wie App + Datenbank zusammenlaufen
+- .env.example              -> Vorlage für das Datenbank-Passwort
+
+
+SCHRITT 1: Docker-Image aus der .tar-Datei laden
+----------------------------------------------------
+  docker load -i planning-poker-1.0.1.tar
+
+
+SCHRITT 2: Datenbank-Passwort konfigurieren
+-----------------------------------------------
+  cp .env.example .env
+
+Dann die Datei ".env" mit einem Editor öffnen (z.B. nano .env) und
+ein eigenes, sicheres Passwort eintragen:
+
+  DB_PASSWORD=hier-ein-sicheres-passwort-eintragen
+
+WICHTIG BEI EINEM UPDATE: Wenn die Datenbank schon läuft, muss hier
+dasselbe Passwort stehen wie beim ersten Start. Ein geändertes
+Passwort passt nicht mehr zu den Daten im Volume, die App kommt dann
+nicht mehr an die Datenbank.
+
+
+SCHRITT 3: Container starten
+--------------------------------
+  docker compose up -d
+
+Das "-d" sorgt dafür, dass alles im Hintergrund läuft und auch nach
+dem Schließen des Terminals weiterläuft.
+
+WICHTIG: Kein "--build" anhängen! Das Image liegt bereits fertig vor
+(siehe Schritt 1). "--build" würde versuchen, aus Quellcode neu zu
+bauen, der hier gar nicht vorhanden ist, das würde fehlschlagen.
+
+Dieser eine Befehl startet automatisch zwei Container:
+  - "app" -> die Planning-Poker-Anwendung selbst
+  - "db"  -> eine PostgreSQL-Datenbank für die Anwendung
+
+
+SCHRITT 4: Prüfen, ob alles läuft
+--------------------------------------
+  docker compose ps
+
+Beide Container ("app" und "db") sollten den Status "running" /
+"Up" anzeigen.
+
+Direkt am Server testen, also am Proxy vorbei:
+  http://<server-adresse>:8080
+  http://<server-adresse>:8080/actuator/health
+
+Der zweite Link sollte folgende Antwort liefern:
+  {"status":"UP", ...}
+
+Das bestätigt: Anwendung läuft UND die Datenbankverbindung steht.
+
+
+SCHRITT 5: Reverse Proxy – eine Zeile ergänzen
+--------------------------------------------------
+Damit die Anwendung ihre Links korrekt mit /planning-poker davor
+aufbaut, muss der Proxy den Prefix mitschicken.
+
+Bei Apache (in der Config für /planning-poker/):
+
+  RequestHeader set X-Forwarded-Prefix "/planning-poker"
+  RequestHeader set X-Forwarded-Proto  "https"
+
+Bei nginx (im location-Block für /planning-poker/):
+
+  proxy_set_header X-Forwarded-Prefix /planning-poker;
+  proxy_set_header X-Forwarded-Proto  $scheme;
+
+Danach den Proxy neu laden (z.B. "apachectl graceful" bzw.
+"nginx -s reload").
+
+Zusätzlich sollte der Proxy das WebSocket-Upgrade für
+/planning-poker/ws durchlassen – die App nutzt WebSockets für das
+Live-Voting. Ohne das läuft sie nur über einen langsameren Fallback.
+
+  Apache (mod_rewrite + mod_proxy_wstunnel):
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} websocket [NC]
+    RewriteRule /planning-poker/(.*) ws://<container-host>:8080/$1 [P,L]
+
+  nginx:
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade    $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+HINWEIS: Falls der Proxy den Prefix NICHT abschneidet, sondern
+/planning-poker/... unverändert an Port 8080 weitergibt, wird der
+Header nicht gebraucht. Dann statt dessen in der ".env" eintragen:
+
+  APP_CONTEXT_PATH=/planning-poker
+
+Prüfen lässt sich das so: liefert
+http://<server-adresse>:8080/actuator/health eine Antwort, während
+der Proxy /planning-poker/actuator/health durchreicht, dann wird
+abgeschnitten – dann gilt die Header-Variante oben.
+
+
+SCHRITT 6: Über den Proxy testen
+------------------------------------
+  https://appl-tools01.siv.de/planning-poker/
+
+Im Browser mit F12 die Konsole öffnen. Sie sollte frei von Meldungen
+wie "Refused to apply style ..." oder "404 (Not Found)" für Dateien
+unter /css/ oder /js/ sein.
+
+
+LOGS ANSEHEN (bei Problemen)
+--------------------------------
+  docker compose logs -f app
+  docker compose logs -f db
+
+("-f" zeigt die Logs live weiter, mit Strg+C beenden)
+
+
+CONTAINER STOPPEN / NEU STARTEN
+------------------------------------
+  docker compose down       -> stoppt beide Container
+  docker compose up -d      -> startet sie wieder
+
+Die Datenbank-Inhalte bleiben dabei erhalten (siehe nächster Punkt).
+
+
+WICHTIG: WO LIEGEN DIE DATENBANK-DATEN?
+--------------------------------------------
+Die Datenbank-Daten liegen NICHT in der .tar-Datei und NICHT im
+Container selbst. Sie werden beim ersten Start automatisch in einem
+separaten Docker-Volume angelegt, das vollständig unabhängig vom
+Anwendungs-Container ist.
+
+Das bedeutet:
+  - Container neu starten        -> Daten bleiben erhalten
+  - Neues Image laden (Update)   -> Daten bleiben erhalten
+  - "docker compose down"        -> Daten bleiben erhalten
+  - "docker compose down -v"     -> ACHTUNG: löscht auch die Daten!
+    (nur das "-v" ist gefährlich, ohne "-v" ist es sicher)
+
+Volume einsehen:
+  docker volume ls
+
+
+UPDATE VON VERSION 1.0.0 AUF 1.0.1
+---------------------------------------
+  docker compose down
+  docker load -i planning-poker-1.0.1.tar
+  docker compose up -d
+
+Die docker-compose.yml aus diesem Paket zeigt bereits auf das Image
+"planning-poker:1.0.1", also die neue Version. Anschließend noch
+SCHRITT 5 am Proxy erledigen, sonst bleibt der Fehler bestehen.
+
+Das alte Image kann danach aufgeräumt werden:
+  docker image rm planning-poker:latest
+
+Die Datenbank-Inhalte bleiben bei allem unangetastet, da sie im
+separaten Volume liegen und vom Image komplett unabhängig sind.
+
+
+ZURÜCK AUF DIE ALTE VERSION
+--------------------------------
+Falls etwas nicht funktioniert: in der docker-compose.yml die Zeile
+
+  image: planning-poker:1.0.1
+
+wieder auf
+
+  image: planning-poker:latest
+
+ändern und "docker compose up -d" ausführen. Das alte Image ist dann
+noch vorhanden, solange es nicht gelöscht wurde.

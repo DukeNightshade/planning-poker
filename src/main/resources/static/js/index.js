@@ -16,7 +16,7 @@ function handleSessionCreated(data, moderatorName) {
     sessionStorage.setItem('isModerator',     'true');
     sessionStorage.setItem('participantRole', data.moderatorRole);
     localStorage.setItem('pp_name_' + data.roomCode, moderatorName);
-    globalThis.location.href = '/session/' + data.roomCode;
+    globalThis.location.href = appUrl('/session/' + data.roomCode);
 }
 
 // ====================================
@@ -32,7 +32,7 @@ document.getElementById('createForm').addEventListener('submit', async function 
 
     if (!moderatorName) return;
 
-    const response = await fetch('/api/sessions', {
+    const response = await fetch(appUrl('/api/sessions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moderatorName, method, moderatorRole, browserId: getBrowserId() })
@@ -67,7 +67,7 @@ document.getElementById('createWithTicketsForm').addEventListener('submit', asyn
         return;
     }
 
-    const response = await fetch('/api/sessions', {
+    const response = await fetch(appUrl('/api/sessions'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moderatorName, method, moderatorRole, tickets, browserId: getBrowserId() })
@@ -96,7 +96,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
 
     if (!name || !roomCode) return;
 
-    const response = await fetch(`/api/sessions/${roomCode}/join`, {
+    const response = await fetch(appUrl(`/api/sessions/${roomCode}/join`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, role, browserId: getBrowserId() })
@@ -108,7 +108,7 @@ document.getElementById('joinForm').addEventListener('submit', async function (e
         sessionStorage.setItem('isModerator',     'false');
         sessionStorage.setItem('participantRole', data.role);
         localStorage.setItem('pp_name_' + roomCode, name);
-        globalThis.location.href = '/session/' + roomCode;
+        globalThis.location.href = appUrl('/session/' + roomCode);
     } else {
         let msg = globalThis.i18n.toast.errorJoin;
         try {

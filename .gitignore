@@ -15,6 +15,7 @@ logs/
 ### Sensitive Konfiguration ###
 application-prod.properties
 application-local.properties
+.env
 
 ### IntelliJ IDEA ###
 .idea
@@ -47,3 +48,7 @@ build/
 ### macOS ###
 .DS_Store
 Thumbs.db
+
+### Deploy-Artefakte ###
+deploy/*.zip
+deploy/**/*.tar

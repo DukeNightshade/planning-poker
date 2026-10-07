@@ -23,6 +23,10 @@
 <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
 <script th:inline="javascript">
+    globalThis.APP_BASE = /*[[@{/}]]*/ '/';
+</script>
+
+<script th:inline="javascript">
     globalThis.i18n = {
         toast: {
             revealed:          /*[[#{toast.revealed}]]*/ '',
