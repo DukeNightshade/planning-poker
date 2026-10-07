@@ -19,6 +19,32 @@ function recalculateStats() {
     };
 }
 
+/**
+ * Verteilung der aufgedeckten Karten, anonym und in Deck-Reihenfolge.
+ * "mostCommon" ist leer, wenn kein Wert öfter als einmal gewählt wurde
+ * (dann gibt es nichts hervorzuheben). Skip zählt nicht mit.
+ *
+ * @returns {{ stacks: {value: string, count: number}[], mostCommon: string[] }}
+ */
+function voteDistribution() {
+    const counts = new Map();
+    Object.values(players)
+        .filter(p => p.cardValue)
+        .forEach(p => counts.set(p.cardValue, (counts.get(p.cardValue) || 0) + 1));
+
+    const stacks = [...counts.entries()]
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => compareCardValues(a.value, b.value));
+
+    const counted = stacks.filter(s => s.value !== SKIP_CARD);
+    const max     = Math.max(0, ...counted.map(s => s.count));
+    const mostCommon = max > 1
+        ? counted.filter(s => s.count === max).map(s => s.value)
+        : [];
+
+    return { stacks, mostCommon };
+}
+
 // ====================================
 // Interne Hilfsfunktionen
 // ====================================
