@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.service;
 
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
@@ -149,20 +150,29 @@ public class SessionService {
         session.setShowTopic(showTopic);
         session.setModeratorCanVote(moderatorCanVote);
         session.setAutoReveal(autoReveal);
-        session.setShowOnlyTotal(showOnlyTotal);   // NEU
+        session.setShowOnlyTotal(showOnlyTotal);
         sessionRepository.save(session);
     }
 
+    /**
+     * Befördert einen Teilnehmer. Erlaubt für sich selbst oder durch einen Moderator.
+     */
     @Transactional
-    public Participant promoteToModerator(Long participantId) {
-        Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
+    public Participant promoteToModerator(String roomCode, Participant caller, Long participantId) {
+        requireSelfOrModerator(caller, participantId);
+        Participant participant = getParticipantInRoom(roomCode, participantId);
         participant.setModerator(true);
         return participantRepository.save(participant);
     }
 
+    /**
+     * Entzieht Moderator-Rechte. Erlaubt für sich selbst oder durch einen Moderator.
+     */
     @Transactional
-    public Participant demoteFromModerator(String roomCode, Long participantId) {
+    public Participant demoteFromModerator(String roomCode, Participant caller, Long participantId) {
+        requireSelfOrModerator(caller, participantId);
+        Participant participant = getParticipantInRoom(roomCode, participantId);
+
         long moderatorCount = participantRepository.findBySessionRoomCode(roomCode)
                 .stream()
                 .filter(Participant::isModerator)
@@ -173,10 +183,48 @@ public class SessionService {
                     "Der letzte Moderator kann nicht demoted werden.");
         }
 
-        Participant participant = participantRepository.findById(participantId)
-                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
         participant.setModerator(false);
         return participantRepository.save(participant);
+    }
+
+    // ====================================
+    // Berechtigungen
+    // ====================================
+
+    /**
+     * Ermittelt den Teilnehmer zu einem Token innerhalb des Raums.
+     *
+     * @throws ForbiddenException wenn das Token fehlt oder nicht zum Raum gehört
+     */
+    public Participant authenticate(String roomCode, String token) {
+        if (token == null || token.isBlank()) {
+            throw new ForbiddenException("Kein Teilnehmer-Token übermittelt.");
+        }
+        return participantRepository.findBySessionRoomCodeAndToken(roomCode, token)
+                .orElseThrow(() -> new ForbiddenException("Ungültiges Teilnehmer-Token."));
+    }
+
+    /**
+     * Wie {@link #authenticate}, verlangt zusätzlich Moderator-Rechte.
+     */
+    public Participant requireModerator(String roomCode, String token) {
+        Participant participant = authenticate(roomCode, token);
+        if (!participant.isModerator()) {
+            throw new ForbiddenException("Nur Moderatoren dürfen diese Aktion ausführen.");
+        }
+        return participant;
+    }
+
+    private void requireSelfOrModerator(Participant caller, Long participantId) {
+        if (!caller.getId().equals(participantId) && !caller.isModerator()) {
+            throw new ForbiddenException("Nur Moderatoren dürfen andere Teilnehmer ändern.");
+        }
+    }
+
+    private Participant getParticipantInRoom(String roomCode, Long participantId) {
+        return participantRepository.findById(participantId)
+                .filter(p -> p.getSession().getRoomCode().equals(roomCode))
+                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
     }
 
     // ====================================

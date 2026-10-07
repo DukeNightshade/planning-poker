@@ -55,8 +55,7 @@ function renderTicketSidebar() {
 }
 
 function selectTicket(ticketId) {
-    stompClient.send('/app/session/' + roomCode + '/ticket/select', {},
-        JSON.stringify({ ticketId: ticketId.toString() }));
+    sendWs('/ticket/select', { ticketId: ticketId.toString() });
 }
 
 function showAddTicketForm() {
@@ -74,7 +73,6 @@ function cancelAddTicket() {
 function submitNewTicket() {
     const title = document.getElementById('newTicketInput').value.trim();
     if (!title) return;
-    stompClient.send('/app/session/' + roomCode + '/ticket/add', {},
-        JSON.stringify({ title }));
+    sendWs('/ticket/add', { title });
     cancelAddTicket();
 }

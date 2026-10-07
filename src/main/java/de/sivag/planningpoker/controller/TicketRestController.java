@@ -53,39 +53,4 @@ public class TicketRestController {
                 "orderIndex",    t.getOrderIndex()
         )).toList());
     }
-
-    @PostMapping("/{roomCode}/tickets")
-    public ResponseEntity<Map<String, Object>> addTicket(
-            @PathVariable String roomCode,
-            @RequestBody Map<String, String> body) {
-
-        Ticket ticket = ticketService.addTicket(roomCode, body.get(TITLE));
-
-        log.info("Ticket hinzugefügt: title='{}', roomCode={}",
-                ticket.getTitle(), roomCode);
-
-        return ResponseEntity.ok(Map.of(
-                "id",         ticket.getId(),
-                TITLE,        ticket.getTitle(),
-                STATUS,       ticket.getStatus().name(),
-                "orderIndex", ticket.getOrderIndex()
-        ));
-    }
-
-    @PostMapping("/{roomCode}/tickets/{ticketId}/select")
-    public ResponseEntity<Map<String, Object>> selectTicket(
-            @PathVariable String roomCode,
-            @PathVariable Long ticketId) {
-
-        Ticket ticket = ticketService.selectTicket(roomCode, ticketId);
-
-        log.info("Ticket ausgewählt: title='{}', roomCode={}",
-                ticket.getTitle(), roomCode);
-
-        return ResponseEntity.ok(Map.of(
-                "id",    ticket.getId(),
-                TITLE,   ticket.getTitle(),
-                STATUS,  ticket.getStatus().name()
-        ));
-    }
 }

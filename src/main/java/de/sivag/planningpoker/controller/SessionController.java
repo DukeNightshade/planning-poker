@@ -53,6 +53,7 @@ public class SessionController {
         model.addAttribute("session",          session);
         model.addAttribute("roomCode",         roomCode);
         model.addAttribute("estimationMethod", session.getEstimationMethod().name());
+        model.addAttribute("cards",            session.getEstimationMethod().getCards());
         model.addAttribute("participants",     sessionService.getParticipants(roomCode));
         model.addAttribute("showTopic",        session.isShowTopic());
         model.addAttribute("moderatorCanVote", session.isModeratorCanVote());

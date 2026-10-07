@@ -40,6 +40,18 @@ public class GlobalExceptionHandler {
     }
 
     // ====================================
+    // 403 – Keine Berechtigung
+    // ====================================
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenException e) {
+        log.warn("Zugriff verweigert: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of(ERROR, e.getMessage()));
+    }
+
+    // ====================================
     // 400 – Ungültige Anfrage
     // ====================================
 

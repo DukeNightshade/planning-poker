@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Entity für einen Teilnehmer einer Planning-Poker-Session.
@@ -45,6 +46,10 @@ public class Participant {
     @Column(length = 36)
     private String browserId;
 
+    // Geheimes Token, mit dem sich der Teilnehmer bei Aktionen ausweist
+    @Column(length = 36, unique = true)
+    private String token;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;
@@ -59,5 +64,6 @@ public class Participant {
     @PrePersist
     protected void onCreate() {
         this.joinedAt = LocalDateTime.now();
+        this.token    = UUID.randomUUID().toString();
     }
 }

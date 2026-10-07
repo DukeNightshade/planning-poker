@@ -1,5 +1,6 @@
 package de.sivag.planningpoker.service;
 
+import de.sivag.planningpoker.exception.ForbiddenException;
 import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
@@ -274,22 +275,56 @@ class SessionServiceTest {
     // promoteToModerator()
     // ====================================
 
-    @Test
-    @DisplayName("promoteToModerator: Teilnehmer wird korrekt befördert")
-    void promoteToModerator_success() {
-        Participant participant = new Participant();
-        participant.setId(2L);
-        participant.setName("Lisa");
-        participant.setModerator(false);
 
-        when(participantRepository.findById(2L))
-                .thenReturn(Optional.of(participant));
+    @Test
+    @DisplayName("promoteToModerator: Teilnehmer darf sich selbst befördern")
+    void promoteToModerator_self_success() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
         when(participantRepository.save(any(Participant.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        Participant result = sessionService.promoteToModerator(2L);
+        Participant result = sessionService.promoteToModerator("ABCD1234", lisa, 2L);
 
         assertThat(result.isModerator()).isTrue();
+    }
+
+    @Test
+    @DisplayName("promoteToModerator: Moderator darf andere befördern")
+    void promoteToModerator_byModerator_success() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+        when(participantRepository.save(any(Participant.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(sessionService.promoteToModerator("ABCD1234", testModerator, 2L).isModerator())
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("promoteToModerator: Normaler Teilnehmer darf andere nicht befördern")
+    void promoteToModerator_otherByNonModerator_forbidden() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        assertThatThrownBy(() -> sessionService.promoteToModerator("ABCD1234", lisa, 3L))
+                .isInstanceOf(ForbiddenException.class);
+        verify(participantRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("promoteToModerator: Teilnehmer aus fremdem Raum wird nicht gefunden")
+    void promoteToModerator_otherRoom_notFound() {
+        Session otherSession = new Session();
+        otherSession.setRoomCode("ZZZZ9999");
+        Participant stranger = participantInRoom(5L, "Fremd", false, otherSession);
+
+        when(participantRepository.findById(5L)).thenReturn(Optional.of(stranger));
+
+        assertThatThrownBy(() -> sessionService.promoteToModerator("ABCD1234", testModerator, 5L))
+                .isInstanceOf(NoSuchElementException.class);
+        verify(participantRepository, never()).save(any());
     }
 
     @Test
@@ -299,7 +334,7 @@ class SessionServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                sessionService.promoteToModerator(99L))
+                sessionService.promoteToModerator("ABCD1234", testModerator, 99L))
                 .isInstanceOf(NoSuchElementException.class);
     }
 
@@ -310,11 +345,12 @@ class SessionServiceTest {
     @Test
     @DisplayName("demoteFromModerator: Letzter Moderator kann nicht demoted werden")
     void demoteFromModerator_lastModerator_throwsException() {
+        when(participantRepository.findById(1L)).thenReturn(Optional.of(testModerator));
         when(participantRepository.findBySessionRoomCode("ABCD1234"))
                 .thenReturn(List.of(testModerator));
 
         assertThatThrownBy(() ->
-                sessionService.demoteFromModerator("ABCD1234", 1L))
+                sessionService.demoteFromModerator("ABCD1234", testModerator, 1L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("letzte Moderator");
     }
@@ -322,10 +358,7 @@ class SessionServiceTest {
     @Test
     @DisplayName("demoteFromModerator: Moderator wird erfolgreich demoted wenn mehrere vorhanden")
     void demoteFromModerator_multipleModerators_success() {
-        Participant secondModerator = new Participant();
-        secondModerator.setId(2L);
-        secondModerator.setName("Lisa");
-        secondModerator.setModerator(true);
+        Participant secondModerator = participantInRoom(2L, "Lisa", true, testSession);
 
         when(participantRepository.findBySessionRoomCode("ABCD1234"))
                 .thenReturn(List.of(testModerator, secondModerator));
@@ -334,9 +367,64 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        Participant result = sessionService.demoteFromModerator("ABCD1234", 1L);
+        Participant result = sessionService.demoteFromModerator("ABCD1234", testModerator, 1L);
 
         assertThat(result.isModerator()).isFalse();
+    }
+
+    @Test
+    @DisplayName("demoteFromModerator: Normaler Teilnehmer darf Moderator nicht demoten")
+    void demoteFromModerator_byNonModerator_forbidden() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        assertThatThrownBy(() -> sessionService.demoteFromModerator("ABCD1234", lisa, 1L))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    // ====================================
+    // authenticate() / requireModerator()
+    // ====================================
+
+    @Test
+    @DisplayName("authenticate: Gültiges Token liefert den Teilnehmer")
+    void authenticate_validToken_returnsParticipant() {
+        when(participantRepository.findBySessionRoomCodeAndToken("ABCD1234", "tok"))
+                .thenReturn(Optional.of(testModerator));
+
+        assertThat(sessionService.authenticate("ABCD1234", "tok")).isSameAs(testModerator);
+    }
+
+    @Test
+    @DisplayName("authenticate: Fehlendes oder unbekanntes Token wird abgelehnt")
+    void authenticate_missingOrUnknownToken_forbidden() {
+        when(participantRepository.findBySessionRoomCodeAndToken("ABCD1234", "falsch"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sessionService.authenticate("ABCD1234", null))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> sessionService.authenticate("ABCD1234", "falsch"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("requireModerator: Normaler Teilnehmer wird abgelehnt")
+    void requireModerator_nonModerator_forbidden() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        when(participantRepository.findBySessionRoomCodeAndToken("ABCD1234", "tok"))
+                .thenReturn(Optional.of(lisa));
+
+        assertThatThrownBy(() -> sessionService.requireModerator("ABCD1234", "tok"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    private static Participant participantInRoom(Long id, String name, boolean moderator, Session session) {
+        Participant p = new Participant();
+        p.setId(id);
+        p.setName(name);
+        p.setRole(ParticipantRole.DEVELOPER);
+        p.setModerator(moderator);
+        p.setSession(session);
+        return p;
     }
 
     // ====================================

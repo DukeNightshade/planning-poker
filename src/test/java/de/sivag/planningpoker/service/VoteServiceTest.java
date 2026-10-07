@@ -174,6 +174,19 @@ class VoteServiceTest {
     }
 
     @Test
+    @DisplayName("submitVote: Kartenwert außerhalb des Decks wird abgelehnt")
+    void submitVote_invalidCard_throwsException() {
+        when(sessionService.getSessionByRoomCode("ABCD1234"))
+                .thenReturn(testSession);
+
+        assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "9999", false))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "XL", false))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(voteRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("submitVote: Normaler Vote ändert keine Ticket-Schätzung")
     void submitVote_normalVote_doesNotTouchTicket() {
         testSession.setCurrentTicketId(1L);

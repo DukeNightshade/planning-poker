@@ -31,6 +31,7 @@ public class ParticipantRestController {
     private static final String TOPIC_SESSION    = "/topic/session/";
     private static final String PARTICIPANT_ID   = "participantId";
     private static final String PARTICIPANT_NAME = "participantName";
+    private static final String TOKEN_HEADER     = "X-Participant-Token";
 
     // ====================================
     // Abhängigkeiten
@@ -71,17 +72,20 @@ public class ParticipantRestController {
         return ResponseEntity.ok(Map.of(
                 PARTICIPANT_ID, participant.getId(),
                 "name",          participant.getName(),
-                "role",          participant.getRole().name()
+                "role",          participant.getRole().name(),
+                "token",         participant.getToken()
         ));
     }
 
     @PostMapping("/{roomCode}/participants/{participantId}/promote")
     public ResponseEntity<Map<String, Object>> promoteToModerator(
             @PathVariable String roomCode,
-            @PathVariable Long participantId) {
+            @PathVariable Long participantId,
+            @RequestHeader(value = TOKEN_HEADER, required = false) String token) {
 
+        Participant caller = sessionService.authenticate(roomCode, token);
         Participant participant =
-                sessionService.promoteToModerator(participantId);
+                sessionService.promoteToModerator(roomCode, caller, participantId);
 
         log.info("Teilnehmer zum Moderator befördert: name={}, roomCode={}",
                 participant.getName(), roomCode);
@@ -104,10 +108,12 @@ public class ParticipantRestController {
     @PostMapping("/{roomCode}/participants/{participantId}/demote")
     public ResponseEntity<Map<String, Object>> demoteFromModerator(
             @PathVariable String roomCode,
-            @PathVariable Long participantId) {
+            @PathVariable Long participantId,
+            @RequestHeader(value = TOKEN_HEADER, required = false) String token) {
 
+        Participant caller = sessionService.authenticate(roomCode, token);
         Participant participant =
-                sessionService.demoteFromModerator(roomCode, participantId);
+                sessionService.demoteFromModerator(roomCode, caller, participantId);
 
         log.info("Moderator-Rechte entzogen: name={}, roomCode={}",
                 participant.getName(), roomCode);
