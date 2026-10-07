@@ -41,6 +41,8 @@
     .header__roomcode   { background: #1e3a52; color: #7dbfef; }
     .header__copy-btn   { background: #4a9ede; border-color: #4a9ede; color: #0a1628; }
     .header__copy-btn:hover { background: #5baee8; border-color: #5baee8; }
+    .header__leave-btn  { border-color: #3a4a5a; color: #a8d0f0; }
+    .header__leave-btn:hover { border-color: #f87171; color: #f87171; }
 
     /* Buttons */
     .btn--primary         { background: #4a9ede; color: #0a1628; }
@@ -52,6 +54,7 @@
     .btn--icon:hover      { background: #252535; }
     .btn--promote:hover   { background: #2a2400; border-color: #eab308; }
     .btn--demote:hover    { background: #1f0a0a; border-color: #f87171; color: #f87171; }
+    .btn--kick:hover      { background: #1f0a0a; border-color: #f87171; color: #f87171; }
 
     /* Forms */
     .form__input,
@@ -107,6 +110,7 @@
 
     /* Modal */
     .join-modal { background: #1e1e2e; border-color: #4a9ede; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+    .confirm-modal { box-shadow: 0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(74,158,222,0.18), 0 0 48px rgba(74,158,222,0.16); }
     .join-modal__title    { color: #4a9ede; }
     .join-modal__roomcode { background: #1e3a52; color: #7dbfef; }
     .join-modal__error    { background: #1f0a0a; border-color: #f87171; color: #f87171; }

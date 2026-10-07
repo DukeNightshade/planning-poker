@@ -134,6 +134,40 @@ function escapeHtml(str) {
 // ====================================
 
 /**
+ * Eigener Bestätigungsdialog (#confirmModal) statt Browser-confirm().
+ * Esc, Klick neben den Dialog oder "Abbrechen" schließen ohne Aktion.
+ *
+ * @param {string}   message      - Frage im Dialog
+ * @param {string}   confirmLabel - Beschriftung des Bestätigen-Buttons
+ * @param {Function} onConfirm    - wird nach Bestätigung ausgeführt
+ */
+function showConfirm(message, confirmLabel, onConfirm) {
+    const modal  = document.getElementById('confirmModal');
+    const ok     = document.getElementById('confirmModalOk');
+    const cancel = document.getElementById('confirmModalCancel');
+    if (!modal || !ok || !cancel) return;
+
+    const previousFocus = document.activeElement;
+    document.getElementById('confirmModalText').textContent = message;
+    ok.textContent = confirmLabel;
+
+    const close = () => {
+        modal.style.display = 'none';
+        document.removeEventListener('keydown', onKey);
+        previousFocus?.focus?.();
+    };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+
+    ok.onclick     = () => { close(); onConfirm(); };
+    cancel.onclick = close;
+    modal.onclick  = e => { if (e.target === modal) close(); };
+    document.addEventListener('keydown', onKey);
+
+    modal.style.display = 'flex';
+    cancel.focus();
+}
+
+/**
  * @param {string} message   - Haupttext der Benachrichtigung
  * @param {'success'|'error'|'warning'|'info'} type - Typ (Standard: 'info')
  * @param {string} [sub]     - Optionaler Untertext

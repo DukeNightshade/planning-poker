@@ -6,7 +6,7 @@ import de.sivag.planningpoker.model.Participant;
 import de.sivag.planningpoker.model.Session;
 import de.sivag.planningpoker.model.Ticket;
 import de.sivag.planningpoker.model.Vote;
-import de.sivag.planningpoker.model.enums.SessionStatus;
+import de.sivag.planningpoker.service.RevealService;
 import de.sivag.planningpoker.service.SessionService;
 import de.sivag.planningpoker.service.TicketService;
 import de.sivag.planningpoker.service.VoteService;
@@ -20,7 +20,6 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
-import java.util.List;
 import java.util.Map;
 
 import static de.sivag.planningpoker.utility.ApiConstants.*;
@@ -52,6 +51,7 @@ public class PokerWsController {
     private final TicketService            ticketService;
     private final SimpMessagingTemplate    messagingTemplate;
     private final WebSocketSessionRegistry sessionRegistry;
+    private final RevealService            revealService;
 
     // ====================================
     // WebSocket Endpunkte
@@ -109,9 +109,9 @@ public class PokerWsController {
             return;
         }
 
-        if (revealIfComplete(roomCode)) return;
+        if (revealService.revealIfComplete(roomCode)) return;
 
-        VoteCount count = countVotes(roomCode);
+        RevealService.VoteCount count = revealService.countVotes(roomCode);
         broadcast(roomCode, Map.of(
                 "type",       "VOTE_UPDATE",
                 "votedCount", count.voted(),
@@ -126,7 +126,7 @@ public class PokerWsController {
             @Header(name = WS_TOKEN_HEADER, required = false) String token) {
 
         sessionService.requireModerator(roomCode, token);
-        broadcastReveal(roomCode, voteService.revealCards(roomCode));
+        revealService.reveal(roomCode);
     }
 
     @MessageMapping("/session/{roomCode}/reset")
@@ -169,7 +169,7 @@ public class PokerWsController {
         ));
 
         // Weniger Stimmberechtigte oder Auto-Reveal neu an: evtl. haben jetzt alle abgestimmt
-        revealIfComplete(roomCode);
+        revealService.revealIfComplete(roomCode);
     }
 
     @MessageMapping("/session/{roomCode}/ticket/add")
@@ -208,34 +208,35 @@ public class PokerWsController {
         ));
     }
 
+    /**
+     * Nimmt einen Teilnehmer vom Tisch: Moderatoren dürfen andere entfernen,
+     * jeder darf selbst gehen. Für den Raum sieht es aus wie ein normales Verlassen.
+     */
+    @MessageMapping("/session/{roomCode}/participant/remove")
+    public void removeFromTable(
+            @DestinationVariable String roomCode,
+            @Header(name = WS_TOKEN_HEADER, required = false) String token,
+            @Payload Map<String, String> payload) {
+
+        Participant caller   = sessionService.authenticate(roomCode, token);
+        Long        targetId = Long.parseLong(payload.get(PARTICIPANT_ID));
+
+        String name = sessionService.removeFromTable(roomCode, caller, targetId);
+        sessionRegistry.cancelRemoval(targetId);
+
+        broadcast(roomCode, Map.of(
+                "type",           "PLAYER_LEFT",
+                PARTICIPANT_ID,   targetId.toString(),
+                PARTICIPANT_NAME, name
+        ));
+
+        // Weniger Stimmberechtigte: evtl. haben jetzt alle abgestimmt
+        revealService.revealIfComplete(roomCode);
+    }
+
     // ====================================
     // Hilfsmethoden
     // ====================================
-
-    private record VoteCount(int voted, int total) {}
-
-    /** Zählt abgegebene Stimmen der Stimmberechtigten; getrennte Teilnehmer (Grace Period) zählen nicht. */
-    private VoteCount countVotes(String roomCode) {
-        List<Long> votingIds = sessionService.getVotingParticipants(roomCode)
-                .stream()
-                .map(Participant::getId)
-                .filter(id -> !sessionRegistry.isRemovalPending(id))
-                .toList();
-        List<Long> votedIds = voteService.getVotedParticipantIds(roomCode);
-        return new VoteCount((int) votingIds.stream().filter(votedIds::contains).count(), votingIds.size());
-    }
-
-    /** Deckt bei aktivem Auto-Reveal auf, sobald alle Stimmberechtigten abgestimmt haben. */
-    private boolean revealIfComplete(String roomCode) {
-        Session session = sessionService.getSessionByRoomCode(roomCode);
-        if (!session.isAutoReveal() || session.getStatus() == SessionStatus.REVEALED) return false;
-
-        VoteCount count = countVotes(roomCode);
-        if (count.total() == 0 || count.voted() < count.total()) return false;
-
-        broadcastReveal(roomCode, voteService.revealCards(roomCode));
-        return true;
-    }
 
     private static boolean flag(Map<String, Object> payload, String key, boolean fallback) {
         Object value = payload.get(key);
@@ -244,16 +245,5 @@ public class PokerWsController {
 
     private void broadcast(String roomCode, Map<String, ?> message) {
         messagingTemplate.convertAndSend(TOPIC_SESSION + roomCode, message);
-    }
-
-    private void broadcastReveal(String roomCode, List<Vote> votes) {
-        broadcast(roomCode, Map.of(
-                "type",  "REVEAL",
-                "votes", votes.stream().map(v -> Map.of(
-                        PARTICIPANT_NAME,  v.getParticipant().getName(),
-                        PARTICIPANT_ROLE, v.getParticipant().getRole().name(),
-                        CARD_VALUE,        v.getCardValue()
-                )).toList()
-        ));
     }
 }

@@ -618,8 +618,17 @@ function _buildSidebarItem(id, player, activeModerators) {
         ? `<button class="btn--demote" onclick="demoteParticipant('${id}')"
                    title="Moderator-Rechte entziehen"
                    aria-label="Moderator-Rechte entziehen">↓</button>` : ''}
+        ${_buildRemoveButton(id, isSelfEntry)}
     `;
     return li;
+}
+
+/** ✕ zum Entfernen anderer Teilnehmer (nur Moderatoren; selbst gehen über "Tisch verlassen" im Header). */
+function _buildRemoveButton(id, isSelfEntry) {
+    if (isSelfEntry || !isModerator) return '';
+    const label = escapeHtml(globalThis.i18n?.labels?.remove || 'Vom Tisch entfernen');
+    return `<button class="btn--kick" onclick="removeFromTable('${id}')"
+                    title="${label}" aria-label="${label}">✕</button>`;
 }
 
 function _buildStatusOrValue(player, hasVoted) {

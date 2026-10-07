@@ -382,6 +382,54 @@ class SessionServiceTest {
     }
 
     // ====================================
+    // removeFromTable()
+    // ====================================
+
+    @Test
+    @DisplayName("removeFromTable: Teilnehmer darf selbst gehen")
+    void removeFromTable_self_success() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        assertThat(sessionService.removeFromTable("ABCD1234", lisa, 2L)).isEqualTo("Lisa");
+        verify(participantRepository).delete(lisa);
+    }
+
+    @Test
+    @DisplayName("removeFromTable: Moderator darf andere entfernen")
+    void removeFromTable_byModerator_success() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        sessionService.removeFromTable("ABCD1234", testModerator, 2L);
+
+        verify(participantRepository).delete(lisa);
+    }
+
+    @Test
+    @DisplayName("removeFromTable: Normaler Teilnehmer darf andere nicht entfernen")
+    void removeFromTable_otherByNonModerator_forbidden() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        assertThatThrownBy(() -> sessionService.removeFromTable("ABCD1234", lisa, 1L))
+                .isInstanceOf(ForbiddenException.class);
+        verify(participantRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("removeFromTable: Teilnehmer aus fremdem Raum wird nicht gefunden")
+    void removeFromTable_otherRoom_notFound() {
+        Session otherSession = new Session();
+        otherSession.setRoomCode("ZZZZ9999");
+        Participant stranger = participantInRoom(5L, "Fremd", false, otherSession);
+        when(participantRepository.findById(5L)).thenReturn(Optional.of(stranger));
+
+        assertThatThrownBy(() -> sessionService.removeFromTable("ABCD1234", testModerator, 5L))
+                .isInstanceOf(NoSuchElementException.class);
+        verify(participantRepository, never()).delete(any());
+    }
+
+    // ====================================
     // authenticate() / requireModerator()
     // ====================================
 

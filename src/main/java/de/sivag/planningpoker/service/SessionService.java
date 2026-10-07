@@ -143,6 +143,23 @@ public class SessionService {
         return name;
     }
 
+    /**
+     * Nimmt einen Teilnehmer vom Tisch (inkl. seiner Stimme). Erlaubt für sich
+     * selbst oder durch einen Moderator, nur innerhalb des eigenen Raums.
+     *
+     * @return Name des entfernten Teilnehmers
+     */
+    @Transactional
+    public String removeFromTable(String roomCode, Participant caller, Long participantId) {
+        requireSelfOrModerator(caller, participantId);
+        Participant participant = getParticipantInRoom(roomCode, participantId);
+        participant.getSession().touch();
+
+        String name = participant.getName();
+        participantRepository.delete(participant);
+        return name;
+    }
+
     @Transactional
     public void updateSettings(String roomCode, boolean showTopic,
                                boolean moderatorCanVote, boolean autoReveal,
