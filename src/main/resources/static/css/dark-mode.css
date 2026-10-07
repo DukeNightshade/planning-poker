@@ -68,7 +68,15 @@
     .hero__headline { color: #e8eaf0; }
     .hero__pill    { background: #1e1e2e; border-color: var(--color-border); color: #4a9ede; }
     .hero__pill:hover { border-color: #4a9ede; background: #1e3a52; }
-    .card, .card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
+    .card, .card:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 18px 40px rgba(0,0,0,0.55); border-color: #2a3346; }
+    * { scrollbar-color: rgba(74,158,222,0.45) transparent; }
+    ::-webkit-scrollbar-thumb { background-color: rgba(74,158,222,0.4); }
+    .home-table {
+        background:
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0 / 10px 10px,
+            radial-gradient(ellipse at 38% 30%, #0b4a85 0%, #072f57 55%, #041d38 100%);
+        border-color: #03152a;
+    }
     .card__title   { color: #4a9ede; border-bottom-color: #1e3a52; }
     .card__title::before { background: #4a9ede; }
 

@@ -68,17 +68,18 @@ public class WebSocketEventListener {
 
         sessionRegistry.scheduleRemoval(participantId, () -> {
             try {
-                String participantName = sessionService.removeParticipant(participantId);
+                SessionService.Departure departure = sessionService.handleConnectionLost(participantId);
 
-                log.info("Teilnehmer entfernt nach Grace Period: name={}, roomCode={}",
-                        participantName, roomCode);
+                log.info("Teilnehmer nach Grace Period {}: name={}, roomCode={}",
+                        departure.keptAsAbsent() ? "abwesend" : "entfernt", departure.name(), roomCode);
 
+                // Team-Räume merken sich das Mitglied (PLAYER_AWAY), sonst ist es weg (PLAYER_LEFT)
                 messagingTemplate.convertAndSend(
                         TOPIC_SESSION + roomCode,
                         Map.of(
-                                "type",            "PLAYER_LEFT",
+                                "type",           departure.keptAsAbsent() ? "PLAYER_AWAY" : "PLAYER_LEFT",
                                 PARTICIPANT_ID,   participantId.toString(),
-                                PARTICIPANT_NAME, participantName
+                                PARTICIPANT_NAME, departure.name()
                         )
                 );
 

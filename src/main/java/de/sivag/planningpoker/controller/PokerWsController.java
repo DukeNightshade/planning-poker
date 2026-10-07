@@ -65,14 +65,15 @@ public class PokerWsController {
 
         // Veraltetes Token (Teilnehmer nach Grace Period entfernt) ist hier kein Fehler:
         // der Client tritt danach ohnehin per browserId neu bei und registriert sich erneut
-        Long participantId;
+        Participant participant;
         try {
-            participantId = sessionService.authenticate(roomCode, token).getId();
+            participant = sessionService.authenticate(roomCode, token);
         } catch (ForbiddenException e) {
             log.debug("Register ignoriert: {} (roomCode={})", e.getMessage(), roomCode);
             return;
         }
-        String wsSessionId = headerAccessor.getSessionId();
+        Long   participantId = participant.getId();
+        String wsSessionId   = headerAccessor.getSessionId();
 
         sessionRegistry.register(wsSessionId, roomCode, participantId);
 
@@ -80,6 +81,11 @@ public class PokerWsController {
         if (wasReconnect) {
             log.info("Reconnect innerhalb Grace Period: participantId={}, roomCode={}",
                     participantId, roomCode);
+        }
+
+        // Team-Raum: wer als abwesend galt (z. B. nach Server-Neustart), ist wieder da
+        if (sessionService.markPresent(participantId)) {
+            broadcast(roomCode, playerJoined(participant));
         }
     }
 
@@ -221,13 +227,13 @@ public class PokerWsController {
         Participant caller   = sessionService.authenticate(roomCode, token);
         Long        targetId = Long.parseLong(payload.get(PARTICIPANT_ID));
 
-        String name = sessionService.removeFromTable(roomCode, caller, targetId);
+        SessionService.Departure departure = sessionService.removeFromTable(roomCode, caller, targetId);
         sessionRegistry.cancelRemoval(targetId);
 
         broadcast(roomCode, Map.of(
-                "type",           "PLAYER_LEFT",
+                "type",           departure.keptAsAbsent() ? "PLAYER_AWAY" : "PLAYER_LEFT",
                 PARTICIPANT_ID,   targetId.toString(),
-                PARTICIPANT_NAME, name
+                PARTICIPANT_NAME, departure.name()
         ));
 
         // Weniger Stimmberechtigte: evtl. haben jetzt alle abgestimmt
@@ -237,6 +243,17 @@ public class PokerWsController {
     // ====================================
     // Hilfsmethoden
     // ====================================
+
+    /** Gleiche Nachricht wie beim REST-Join, damit Clients beide Wege gleich behandeln. */
+    static Map<String, Object> playerJoined(Participant participant) {
+        return Map.of(
+                "type",           "PLAYER_JOINED",
+                PARTICIPANT_ID,   participant.getId().toString(),
+                PARTICIPANT_NAME, participant.getName(),
+                PARTICIPANT_ROLE, participant.getRole().name(),
+                "moderator",      participant.isModerator()
+        );
+    }
 
     private static boolean flag(Map<String, Object> payload, String key, boolean fallback) {
         Object value = payload.get(key);

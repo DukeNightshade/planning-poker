@@ -31,3 +31,72 @@
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(0,65,120,0.1);
 }
+/* ================================
+   Gestaltetes Dropdown (enhanceSelect in utils.js)
+   ================================ */
+.select {
+    position: relative;
+}
+.select__native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+.select__button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    text-align: left;
+    cursor: pointer;
+}
+.select__button::after {
+    content: '';
+    flex-shrink: 0;
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-top: -0.2rem;
+    border-right: 2px solid var(--color-text-light);
+    border-bottom: 2px solid var(--color-text-light);
+    transform: rotate(45deg);
+    transition: transform var(--transition);
+}
+.select__button[aria-expanded="true"]::after {
+    margin-top: 0.2rem;
+    transform: rotate(-135deg);
+}
+.select__list {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 6px rgba(0,30,60,0.08), 0 14px 32px rgba(0,30,60,0.18);
+    max-height: 16rem;
+    overflow-y: auto;
+}
+.select__option {
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    color: var(--color-text);
+    cursor: pointer;
+}
+.select__option:hover,
+.select__option:focus {
+    background: var(--color-ice);
+    outline: none;
+}
+.select__option[aria-selected="true"] {
+    font-weight: 600;
+    color: var(--color-primary);
+}

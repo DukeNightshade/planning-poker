@@ -3,6 +3,7 @@ package de.sivag.planningpoker.utility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.*;
@@ -58,6 +59,31 @@ class StringUtilsTest {
         assertThatThrownBy(() -> StringUtils.sanitizeTicketTitle("   "))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> StringUtils.sanitizeTicketTitle(null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ====================================
+    // sanitizeTeamName()
+    // ====================================
+
+    @ParameterizedTest
+    @DisplayName("sanitizeTeamName: wird URL-tauglich normalisiert")
+    @CsvSource({
+            "backend,              backend",
+            "Backend Team,         backend-team",
+            "  Mobile_App  ,       mobile-app",
+            "Tür & Tor,            tuer-tor",
+            "--x--team--2026--,    x-team-2026"
+    })
+    void sanitizeTeamName_normalizes(String input, String expected) {
+        assertThat(StringUtils.sanitizeTeamName(input)).isEqualTo(expected.trim());
+    }
+
+    @ParameterizedTest
+    @DisplayName("sanitizeTeamName: zu kurz, zu lang oder leer wird abgelehnt")
+    @ValueSource(strings = {"", "ab", "!!!", "abcdefghijabcdefghijabcdefghijabcdefghijX"})
+    void sanitizeTeamName_invalid_throws(String input) {
+        assertThatThrownBy(() -> StringUtils.sanitizeTeamName(input))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

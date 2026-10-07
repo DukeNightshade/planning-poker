@@ -6,6 +6,15 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 ## [Unreleased]
 
 ### Neu
+- Permanente Team-Räume unter `/team/{name}`: gleicher Link für jedes Meeting, der Raum
+  wird nie aufgeräumt. Mitglieder werden gemerkt – wer nicht verbunden ist, erscheint
+  eingeklappt unter "Abwesend" und zählt nicht mit; beim nächsten Öffnen des Links ist
+  man ohne Dialog wieder drin (auf neuem Gerät per gleichem Namen). Nach einem
+  Server-Neustart gelten alle als abwesend, bis ihre Tabs sich neu verbinden.
+- Neue Startseite im Stil des Pokertischs: "Session starten" und "Beitreten" liegen als
+  Spielkarten auf dem Filz (Team-Raum als Schalter, Tickets optional eingeklappt,
+  zuletzt gewählte Rolle vorbelegt; Beitreten per Raumcode oder Team-Name); besuchte Team-Räume
+  als Ein-Klick-Chips.
 - Ergebnisdarstellung mit Kartenstapeln: Nach dem Aufdecken liegt in der Tischmitte
   pro gewähltem Wert ein Stapel (anonym, Höhe = Anzahl), der häufigste Wert ist
   golden hervorgehoben; darunter "Meist · Ø" und optional der Durchschnitt je Rolle.
@@ -29,6 +38,9 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   JavaScript-Logik zusammengeführt; Heroku-Dateien (`Procfile`, `system.properties`) entfernt.
 
 ### Behoben
+- Nach Änderungen an einzelnen CSS-Dateien konnten Browser mit Cache Teile des
+  Stylings verlieren (z. B. Dark Mode): `style.css` mit `@import` behielt ihren Hash.
+  Die Stylesheets werden jetzt einzeln eingebunden, jedes mit eigenem Inhalts-Hash.
 - Abstimmungsanzeige zählte Moderatoren mit, auch wenn sie nicht abstimmen dürfen,
   und wurde beim Ändern der Einstellung nicht aktualisiert.
 - Wird "Moderator darf abstimmen" ausgeschaltet, werden bereits abgegebene

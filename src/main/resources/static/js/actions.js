@@ -1,7 +1,8 @@
 /* global selectedCard, averageValue, isRevealed, players, participantId,
           participantRole, roomCode, stompClient, currentTicketId, tickets,
           isModerator, renderTable, renderSidebar, renderTicketSidebar,
-          recalculateStats, showToast, showConfirm, sendWs, authHeaders */
+          recalculateStats, showToast, showConfirm, sendWs, authHeaders,
+          teamName, absentPlayers */
 
 // ====================================
 // Kartenwahl
@@ -256,7 +257,7 @@ function leaveTable() {
 
 function removeFromTable(targetId) {
     const labels   = globalThis.i18n?.labels || {};
-    const name     = players[targetId]?.name || '';
+    const name     = (players[targetId] || absentPlayers[targetId])?.name || '';
     const question = (labels.removeConfirm || '{0} vom Tisch entfernen?').replace('{0}', name);
     showConfirm(question, labels.removeAction || 'Entfernen', () => {
         sendWs('/participant/remove', { participantId: targetId });
@@ -346,12 +347,15 @@ function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
 // ====================================
 
 function copyRoomCode() {
-    navigator.clipboard.writeText(roomCode).then(() => {
+    // Team-Raum: den lesbaren, permanenten Link teilen; sonst wie bisher den Raumcode
+    const text  = teamName ? globalThis.location.origin + appUrl('/team/' + teamName) : roomCode;
+    const toast = teamName ? globalThis.i18n.toast.copiedLink : globalThis.i18n.toast.copied;
+    navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copyBtn');
         if (!btn.dataset.label) btn.dataset.label = btn.textContent;
         btn.textContent = globalThis.i18n.nav.copied;
         setTimeout(() => btn.textContent = btn.dataset.label, 2000);
-        showToast(globalThis.i18n.toast.copied, 'success', roomCode, 2500);
+        showToast(toast, 'success', text, 2500);
     }).catch(() => {
         showToast(globalThis.i18n.toast.errorCopy, 'error');
     });

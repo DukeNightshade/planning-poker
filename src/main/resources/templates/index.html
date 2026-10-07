@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="#{app.title}">Planning Poker</title>
     <link rel="icon" type="image/png" th:href="@{/images/siv-logo.png}">
-    <link rel="stylesheet" th:href="@{/vendor/fonts/fira-sans.css}">
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <th:block th:replace="~{fragments/styles :: styles}"></th:block>
     <style>
         .skip-link { position: absolute; top: -48px; left: 1rem; background: var(--color-primary, #004178); color: #ffffff; padding: 0.5rem 1rem; border-radius: 0 0 6px 6px; font-family: var(--font-main, sans-serif), sans-serif; font-size: 0.9rem; font-weight: 600; text-decoration: none; z-index: 10000; transition: top 0.15s ease; }
         .skip-link:focus { top: 0; outline: 3px solid #ffffff; outline-offset: 2px; }
@@ -41,7 +40,7 @@
             reconnected:       /*[[#{toast.reconnected}]]*/ '',
             errorCreate:       /*[[#{toast.error.create}]]*/ '',
             errorJoin:         /*[[#{toast.error.join}]]*/ '',
-            errorTickets:      /*[[#{toast.error.tickets}]]*/ '',
+            notFound:          /*[[#{toast.notfound}]]*/ '',
             errorCopy:         /*[[#{toast.error.copy}]]*/ '',
             errorPromote:      /*[[#{toast.error.promote}]]*/ '',
             errorAction:       /*[[#{toast.error.action}]]*/ '',
@@ -52,6 +51,11 @@
             errorNameTaken:   /*[[#{toast.error.name.taken}]]*/ '',
         },
         nav:     { copied: /*[[#{nav.copied}]]*/ '' },
+        home:    {
+            forgetTeam:   /*[[#{home.teams.forget}]]*/ '',
+            ticketsCount: /*[[#{home.tickets.count}]]*/ '',
+            ticketsNone:  /*[[#{home.tickets.optional}]]*/ ''
+        },
         session: { voted:  /*[[#{session.voted}]]*/ '' }
     };
 </script>
@@ -76,83 +80,107 @@
     </nav>
 </header>
 
-<main id="main-content" class="main">
-    <div class="main__row">
+<main id="main-content" class="main home">
+<!-- Die Startseite ist der Pokertisch: die beiden Formulare liegen als Karten darauf -->
+<div class="home-table">
 
-        <section class="card">
-            <h2 class="card__title" th:text="#{home.create.title}">Neue Session erstellen</h2>
+    <div class="home-table__intro">
+        <h2 class="home-table__title" th:text="#{home.hero.title}">Schätzrunde starten oder dazukommen</h2>
+        <p class="home-table__sub" th:text="#{home.hero.sub}">Ein Link für alle: teilen, Karten wählen, gemeinsam aufdecken.</p>
+    </div>
+
+    <div class="main__row">
+        <section class="card card--play card--spade">
+            <h2 class="card__title" th:text="#{home.start.title}">Session starten</h2>
             <form id="createForm" class="form">
                 <label class="form__label" for="moderatorName" th:text="#{home.create.name}">Ihr Name</label>
-                <input class="form__input" type="text" id="moderatorName" th:placeholder="#{home.create.name.placeholder}" required>
-                <label class="form__label" for="method" th:text="#{home.create.method}">Schätzmethode</label>
-                <select class="form__select" id="method">
-                    <option th:each="m : ${methods}" th:value="${m.name()}" th:text="${methodLabels[m.name()]}"></option>
-                </select>
-                <label class="form__label" for="moderatorRole" th:text="#{home.create.role}">Ihre Rolle</label>
-                <select class="form__select" id="moderatorRole">
-                    <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
-                    <option value="TESTER"    th:text="#{role.tester}">Tester</option>
-                    <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
-                    <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
-                </select>
-                <button class="btn btn--primary" type="submit" th:text="#{home.create.submit}">Session erstellen</button>
+                <input class="form__input" type="text" id="moderatorName"
+                       th:placeholder="#{home.create.name.placeholder}" autocomplete="off" required>
+
+                <div class="form__row">
+                    <div>
+                        <label class="form__label" for="moderatorRole" th:text="#{home.create.role}">Ihre Rolle</label>
+                        <select class="form__select" id="moderatorRole">
+                            <option value="DEVELOPER"     th:text="#{role.developer}">Entwickler</option>
+                            <option value="TESTER"        th:text="#{role.tester}">Tester</option>
+                            <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
+                            <option value="IT_ARCHITECT"  th:text="#{role.it_architect}">IT-Architekt</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form__label" for="method" th:text="#{home.create.method}">Schätzmethode</label>
+                        <select class="form__select" id="method">
+                            <option th:each="m : ${methods}" th:value="${m.name()}" th:text="${methodLabels[m.name()]}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <label class="home-switch">
+                    <input type="checkbox" id="teamToggle">
+                    <span class="home-switch__track" aria-hidden="true"></span>
+                    <span>
+                        <span class="home-switch__label" th:text="#{home.team.toggle}">Permanenter Team-Raum</span>
+                        <span class="home-switch__hint" th:text="#{home.team.hint}">Gleicher Link für jedes Meeting</span>
+                    </span>
+                </label>
+                <!-- Eine kompakte Zeile, damit die Karte beim Einschalten kaum wächst -->
+                <div class="home-team" id="teamFields" style="display:none;">
+                    <span class="home-team__prefix" aria-hidden="true">/team/</span>
+                    <input class="home-team__input" type="text" id="teamNameInput" maxlength="40"
+                           th:placeholder="#{home.team.placeholder}"
+                           th:aria-label="#{home.team.name}" autocomplete="off">
+                </div>
+
+                <!-- Tickets werden im Dialog vorbereitet, die Karte zeigt nur die Anzahl -->
+                <button type="button" class="home-tickets-btn" id="ticketsBtn" onclick="openTicketDialog()">
+                    <span id="ticketsBtnText" th:text="#{home.tickets.optional}">Tickets vorab hinzufügen (optional)</span>
+                </button>
+
+                <button class="btn btn--primary" type="submit" th:text="#{home.start.submit}">Session starten</button>
             </form>
         </section>
 
-        <section class="card">
+        <section class="card card--play card--heart card--join">
             <h2 class="card__title" th:text="#{home.join.title}">Session beitreten</h2>
             <form id="joinForm" class="form">
-                <label class="form__label" for="participantName" th:text="#{home.join.name}">Ihr Name</label>
-                <input class="form__input" type="text" id="participantName" th:placeholder="#{home.join.name.placeholder}" required>
-                <label class="form__label" for="roomCode" th:text="#{home.join.roomcode}">Raumcode</label>
-                <input class="form__input" type="text" id="roomCode" th:placeholder="#{home.join.roomcode.placeholder}" required>
-                <label class="form__label" for="participantRole" th:text="#{home.join.role}">Ihre Rolle</label>
-                <select class="form__select" id="participantRole">
-                    <option value="DEVELOPER"     th:text="#{role.developer}">Entwickler</option>
-                    <option value="TESTER"        th:text="#{role.tester}">Tester</option>
-                    <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
-                    <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
-                </select>
+                <label class="form__label" for="joinQuery" th:text="#{home.join.query}">Raumcode oder Team-Name</label>
+                <input class="form__input" type="text" id="joinQuery" maxlength="40"
+                       th:placeholder="#{home.join.query.placeholder}" autocomplete="off" required>
                 <button class="btn btn--secondary" type="submit" th:text="#{home.join.submit}">Beitreten</button>
             </form>
         </section>
-
     </div>
 
-    <section class="card card--wide">
-        <h2 class="card__title" th:text="#{home.tickets.title}">Session mit Ticket-Liste erstellen</h2>
-        <form id="createWithTicketsForm" class="form">
-            <label class="form__label" for="moderatorNameTickets" th:text="#{home.create.name}">Ihr Name</label>
-            <input class="form__input" type="text" id="moderatorNameTickets" th:placeholder="#{home.create.name.placeholder}" required>
-            <label class="form__label" for="methodTickets" th:text="#{home.create.method}">Schätzmethode</label>
-            <select class="form__select" id="methodTickets">
-                <option th:each="m : ${methods}" th:value="${m.name()}" th:text="${methodLabels[m.name()]}"></option>
-            </select>
-            <label class="form__label" for="moderatorRoleTickets" th:text="#{home.create.role}">Ihre Rolle</label>
-            <select class="form__select" id="moderatorRoleTickets">
-                <option value="DEVELOPER" th:text="#{role.developer}">Entwickler</option>
-                <option value="TESTER"    th:text="#{role.tester}">Tester</option>
-                <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
-                <option value="IT_ARCHITECT" th:text="#{role.it_architect}">IT-Architekt</option>
-            </select>
-            <label class="form__label" for="firstTicketInput" th:text="#{home.tickets.label}">Tickets</label>
-            <div id="ticketList" class="ticket-list">
-                <div class="ticket-entry">
-                    <input class="form__input ticket-input"
-                           type="text"
-                           id="firstTicketInput"
-                           maxlength="255"
-                           th:placeholder="#{home.tickets.placeholder}"
-                           th:aria-label="#{home.tickets.placeholder}"
-                           required>
-                    <button type="button" class="btn--remove" onclick="removeTicket(this)" aria-label="Ticket entfernen">&#x2715;</button>
-                </div>
-            </div>
-            <button type="button" class="btn btn--outline" onclick="addTicketField()" th:text="#{home.tickets.add}">+ Ticket hinzufügen</button>
-            <button class="btn btn--primary" type="submit" th:text="#{home.tickets.submit}">Session erstellen</button>
-        </form>
+    <!-- Gemerkte Team-Räume: ein Klick zum Beitreten (index.js füllt die Chips) -->
+    <section class="home-teams" id="teamRooms" style="display:none;" th:aria-label="#{home.teams.title}">
+        <span class="home-teams__label" th:text="#{home.teams.title}">Deine Team-Räume</span>
+        <div class="home-teams__chips" id="teamRoomChips"></div>
     </section>
+
+</div>
 </main>
+
+<!-- Tickets vorbereiten (optional): Dialog statt aufklappbarem Bereich in der Karte -->
+<div id="ticketDialog" class="join-modal-backdrop"
+     role="dialog" aria-modal="true" aria-labelledby="ticketDialogTitle">
+    <div class="join-modal ticket-dialog">
+        <h2 class="join-modal__title" id="ticketDialogTitle" th:text="#{home.tickets.dialog.title}">Tickets vorbereiten</h2>
+        <p class="join-modal__subtitle" th:text="#{home.tickets.dialog.hint}">Werden nacheinander geschätzt.</p>
+        <div id="ticketList" class="ticket-list">
+            <div class="ticket-entry">
+                <input class="form__input ticket-input" type="text" maxlength="255"
+                       th:placeholder="#{home.tickets.placeholder}"
+                       th:aria-label="#{home.tickets.placeholder}">
+            </div>
+        </div>
+        <button type="button" class="btn--add-ticket" onclick="addTicketField()"
+                th:text="#{home.tickets.add}">+ Ticket hinzufügen</button>
+        <div class="confirm-modal__actions">
+            <button type="button" class="btn btn--primary" onclick="closeTicketDialog()"
+                    th:text="#{home.tickets.done}">Fertig</button>
+        </div>
+    </div>
+</div>
 
 <footer class="footer">&copy; 2026 <span th:text="#{app.footer}">SIV.AG &#8211; Internes Tool</span></footer>
 

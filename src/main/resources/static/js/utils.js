@@ -67,6 +67,135 @@ function getBrowserId() {
 }
 
 // ====================================
+// Gestaltetes Dropdown
+// ====================================
+
+/**
+ * Ersetzt die Darstellung eines <select> durch ein gestaltetes Dropdown
+ * (die native Liste lässt sich nicht stylen). Das <select> bleibt unsichtbar
+ * erhalten und liefert weiter .value sowie 'change'-Events.
+ * Bedienung: Klick, Pfeiltasten, Enter/Leertaste, Esc, Klick daneben.
+ */
+function enhanceSelect(select) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'select';
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+    select.classList.add('select__native');
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+
+    const button = document.createElement('button');
+    button.type      = 'button';
+    button.id        = select.id + 'Button';
+    button.className = 'form__select select__button';
+    button.setAttribute('aria-haspopup', 'listbox');
+    button.setAttribute('aria-expanded', 'false');
+    const label = document.querySelector(`label[for="${select.id}"]`);
+    if (label) {
+        label.htmlFor = button.id;
+        button.setAttribute('aria-labelledby', (label.id ||= select.id + 'Label') + ' ' + button.id);
+    }
+
+    const list = document.createElement('ul');
+    list.className     = 'select__list';
+    list.id            = select.id + 'List';
+    list.style.display = 'none';
+    list.setAttribute('role', 'listbox');
+    button.setAttribute('aria-controls', list.id);
+
+    const items = [...select.options].map(option => {
+        const li = document.createElement('li');
+        li.className   = 'select__option';
+        li.textContent = option.textContent;
+        li.dataset.value = option.value;
+        li.tabIndex    = -1;
+        li.setAttribute('role', 'option');
+        li.addEventListener('click', () => choose(option.value));
+        list.appendChild(li);
+        return li;
+    });
+    wrapper.append(button, list);
+
+    const isOpen = () => list.style.display !== 'none';
+
+    function sync() {
+        const current = select.options[select.selectedIndex];
+        button.textContent = current ? current.textContent : '';
+        items.forEach(li => li.setAttribute('aria-selected', String(li.dataset.value === select.value)));
+    }
+
+    function open() {
+        list.style.display = '';
+        button.setAttribute('aria-expanded', 'true');
+        (items.find(li => li.dataset.value === select.value) || items[0])?.focus();
+    }
+
+    function close(focusButton = true) {
+        list.style.display = 'none';
+        button.setAttribute('aria-expanded', 'false');
+        if (focusButton) button.focus();
+    }
+
+    function choose(value) {
+        if (select.value !== value) {
+            select.value = value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        sync();
+        close();
+    }
+
+    button.addEventListener('click', () => (isOpen() ? close() : open()));
+    button.addEventListener('keydown', e => {
+        if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); open(); }
+    });
+    list.addEventListener('keydown', e => {
+        const index = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(index + 1, items.length - 1)].focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); items[Math.max(index - 1, 0)].focus(); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (index >= 0) choose(items[index].dataset.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); close(); }
+        else if (e.key === 'Tab') { close(false); }
+    });
+    document.addEventListener('click', e => { if (isOpen() && !wrapper.contains(e.target)) close(false); });
+    select.addEventListener('change', sync);
+
+    sync();
+}
+
+// ====================================
+// Gemerkte Team-Räume (für die Startseite)
+// ====================================
+
+const TEAM_ROOMS_KEY = 'pp_teams';
+const MAX_TEAM_ROOMS = 6;
+
+function getRememberedTeamRooms() {
+    try {
+        const list = JSON.parse(localStorage.getItem(TEAM_ROOMS_KEY));
+        return Array.isArray(list) ? list : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+/** Zuletzt besuchter Team-Raum steht vorne. */
+function rememberTeamRoom(name) {
+    try {
+        const list = [name, ...getRememberedTeamRooms().filter(n => n !== name)];
+        localStorage.setItem(TEAM_ROOMS_KEY, JSON.stringify(list.slice(0, MAX_TEAM_ROOMS)));
+    } catch (e) { /* ohne localStorage keine Chips – kein Problem */ }
+}
+
+function forgetTeamRoom(name) {
+    try {
+        localStorage.setItem(TEAM_ROOMS_KEY,
+            JSON.stringify(getRememberedTeamRooms().filter(n => n !== name)));
+    } catch (e) { /* s. o. */ }
+}
+
+// ====================================
 // Teilnehmer-Token
 // ====================================
 

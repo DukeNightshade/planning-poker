@@ -1,4 +1,4 @@
-/* global participantId, isModerator, isRevealed, players, tickets, currentTicketId,
+/* global participantId, isModerator, isRevealed, players, absentPlayers, tickets, currentTicketId,
           ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
           selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD,
           compareCardValues, voteDistribution  */
@@ -557,6 +557,31 @@ function renderSidebar() {
 
     sorted.forEach(([id, player]) =>
         ul.appendChild(_buildSidebarItem(id, player, activeModerators)));
+
+    _renderAbsentList();
+}
+
+/** Team-Raum: gemerkte, gerade nicht verbundene Mitglieder (eingeklappt unter der Liste). */
+function _renderAbsentList() {
+    const section = document.getElementById('absentSection');
+    if (!section) return;
+
+    const entries = Object.entries(absentPlayers)
+        .sort(([, a], [, b]) => a.name.localeCompare(b.name));
+    section.style.display = entries.length > 0 ? '' : 'none';
+    document.getElementById('absentCount').textContent = String(entries.length);
+
+    const ul = document.getElementById('absentList');
+    ul.innerHTML = '';
+    entries.forEach(([id, player]) => {
+        const li = document.createElement('li');
+        li.className = 'sidebar__absent-item';
+        li.innerHTML = `
+            <span class="sidebar__absent-name">${escapeHtml(player.name)}</span>
+            <span class="sidebar__absent-role">${getRoleLabel(player.role)}</span>
+            ${_buildRemoveButton(id, false)}`;
+        ul.appendChild(li);
+    });
 }
 
 function _buildSidebarItem(id, player, activeModerators) {

@@ -287,6 +287,44 @@
     transition: background var(--transition);
 }
 
+/* Team-Raum: gemerkte, gerade abwesende Mitglieder */
+.sidebar__absent {
+    margin: -0.75rem 0 1.25rem;
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+}
+.sidebar__absent summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0;
+    user-select: none;
+}
+.sidebar__absent-list {
+    list-style: none;
+    margin-top: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.sidebar__absent-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.75;
+}
+.sidebar__absent-name {
+    font-weight: 600;
+}
+.sidebar__absent-role {
+    flex: 1;
+    font-size: 0.75rem;
+}
+.sidebar__absent-item .btn--kick {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+}
+
 .sidebar__method-block {
     background: var(--color-grey);
     border-radius: var(--radius);
