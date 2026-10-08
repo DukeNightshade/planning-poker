@@ -75,6 +75,8 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 - Moderatoren (bei ausgeschaltetem Stimmrecht) und Product Owner können auch
   serverseitig nicht mehr abstimmen.
 - Fehlende Rolle (`"role": null`) beim Beitreten führte zu einem Serverfehler.
+- Product Owner konnten keine Karte wählen, obwohl "Product Owner darf mitwählen"
+  aktiviert war.
 
 ## [1.1.0] – 2026-10-07
 
