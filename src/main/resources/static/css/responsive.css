@@ -15,7 +15,7 @@
     .session__actions   { margin-bottom: 0.5rem; padding-bottom: 0.5rem; }
     .session__sidebar,
     .ticket-sidebar     { padding: 0.875rem; }
-    .cards              { padding: 0.25rem 0; margin-bottom: 0.25rem; }
+    .cards              { padding: 0.9rem 0 1.25rem; }   /* Platz für den Bogen der Kartenhand */
     .footer             { padding: 0.4rem 1rem; font-size: 0.7rem; }
 }
 

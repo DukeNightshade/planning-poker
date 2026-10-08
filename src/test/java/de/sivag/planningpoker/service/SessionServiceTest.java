@@ -156,8 +156,8 @@ class SessionServiceTest {
     // ====================================
 
     @Test
-    @DisplayName("getVotingParticipants: Product Owner zählt nie, Moderator nur wenn er abstimmen darf")
-    void getVotingParticipants_respectsModeratorCanVote() {
+    @DisplayName("getVotingParticipants: Moderator zählt immer, Product Owner nur wenn er mitwählen darf")
+    void getVotingParticipants_respectsProductOwnerCanVote() {
         Participant dev = new Participant();
         dev.setId(2L);
         dev.setRole(ParticipantRole.DEVELOPER);
@@ -169,13 +169,13 @@ class SessionServiceTest {
         when(participantRepository.findBySessionRoomCode("ABCD1234"))
                 .thenReturn(List.of(testModerator, dev, po));
 
-        testSession.setModeratorCanVote(true);
+        testSession.setProductOwnerCanVote(true);
+        assertThat(sessionService.getVotingParticipants("ABCD1234"))
+                .containsExactly(testModerator, dev, po);
+
+        testSession.setProductOwnerCanVote(false);
         assertThat(sessionService.getVotingParticipants("ABCD1234"))
                 .containsExactly(testModerator, dev);
-
-        testSession.setModeratorCanVote(false);
-        assertThat(sessionService.getVotingParticipants("ABCD1234"))
-                .containsExactly(dev);
     }
 
     // ====================================

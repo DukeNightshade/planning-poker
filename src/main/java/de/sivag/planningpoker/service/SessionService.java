@@ -220,12 +220,12 @@ public class SessionService {
 
     @Transactional
     public void updateSettings(String roomCode, boolean showTopic,
-                               boolean moderatorCanVote, boolean autoReveal,
+                               boolean productOwnerCanVote, boolean autoReveal,
                                boolean showOnlyTotal) {
         Session session = getSessionByRoomCode(roomCode);
         session.touch();
         session.setShowTopic(showTopic);
-        session.setModeratorCanVote(moderatorCanVote);
+        session.setProductOwnerCanVote(productOwnerCanVote);
         session.setAutoReveal(autoReveal);
         session.setShowOnlyTotal(showOnlyTotal);
         sessionRepository.save(session);
@@ -333,12 +333,11 @@ public class SessionService {
     }
 
     public List<Participant> getVotingParticipants(String roomCode) {
-        boolean moderatorCanVote = getSessionByRoomCode(roomCode).isModeratorCanVote();
+        boolean productOwnerCanVote = getSessionByRoomCode(roomCode).isProductOwnerCanVote();
         return participantRepository.findBySessionRoomCode(roomCode)
                 .stream()
                 .filter(Participant::isPresent)
-                .filter(p -> p.getRole() != ParticipantRole.PRODUCT_OWNER)
-                .filter(p -> moderatorCanVote || !p.isModerator())
+                .filter(p -> productOwnerCanVote || p.getRole() != ParticipantRole.PRODUCT_OWNER)
                 .toList();
     }
 

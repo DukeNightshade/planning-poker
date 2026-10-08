@@ -202,10 +202,10 @@
                 <input type="checkbox" id="settingShowTopic"
                        th:checked="${showTopic}" onchange="saveSettings()">
             </label>
-            <label class="settings__toggle" for="settingModeratorCanVote">
-                <span th:text="#{settings.moderator_vote}">Moderator darf mitwählen</span>
-                <input type="checkbox" id="settingModeratorCanVote"
-                       th:checked="${moderatorCanVote}" onchange="saveSettings()">
+            <label class="settings__toggle" for="settingPoCanVote">
+                <span th:text="#{settings.po_vote}">Product Owner darf mitwählen</span>
+                <input type="checkbox" id="settingPoCanVote"
+                       th:checked="${productOwnerCanVote}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle" for="settingAutoReveal">
                 <span th:text="#{settings.auto_reveal}">Automatisch aufdecken</span>
@@ -261,11 +261,12 @@
 
         <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
 
-        <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
-            <div class="cards__grid" style="justify-content:center;">
+        <div class="cards" id="cardArea" style="justify-content: center;">
+            <div class="cards__grid" th:style="'--n:' + ${#lists.size(cards)}">
                 <button class="card-btn"
-                        th:each="v : ${cards}"
+                        th:each="v, it : ${cards}"
                         th:text="${v}" th:attr="data-value=${v}"
+                        th:style="'--i:' + ${it.index}"
                         onclick="selectCard(this)"></button>
             </div>
         </div>

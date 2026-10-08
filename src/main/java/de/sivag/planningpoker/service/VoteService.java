@@ -66,11 +66,8 @@ public class VoteService {
         }
         Participant participant = participantOpt.get();
 
-        if (participant.getRole() == ParticipantRole.PRODUCT_OWNER) {
-            throw new ForbiddenException("Der Product Owner stimmt nicht ab.");
-        }
-        if (participant.isModerator() && !session.isModeratorCanVote()) {
-            throw new ForbiddenException("Moderatoren dürfen in dieser Session nicht abstimmen.");
+        if (participant.getRole() == ParticipantRole.PRODUCT_OWNER && !session.isProductOwnerCanVote()) {
+            throw new ForbiddenException("Product Owner stimmen in dieser Session nicht mit.");
         }
 
         voteRepository.findBySessionRoomCodeAndParticipantId(roomCode, participantId)
@@ -120,23 +117,23 @@ public class VoteService {
     }
 
     /**
-     * Verwirft die Stimmen aller Moderatoren der laufenden Runde, z. B. wenn
-     * "Moderator darf abstimmen" ausgeschaltet wird. Nach dem Aufdecken bleibt
+     * Verwirft die Stimmen aller Product Owner der laufenden Runde, z. B. wenn
+     * "Product Owner darf mitwählen" ausgeschaltet wird. Nach dem Aufdecken bleibt
      * das Ergebnis unangetastet.
      *
      * @return Anzahl der verworfenen Stimmen
      */
     @Transactional
-    public int removeModeratorVotes(String roomCode) {
+    public int removeProductOwnerVotes(String roomCode) {
         Session session = sessionService.getSessionByRoomCode(roomCode);
         if (session.getStatus() == SessionStatus.REVEALED) return 0;
 
-        List<Vote> moderatorVotes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode)
+        List<Vote> poVotes = voteRepository.findBySessionRoomCodeWithParticipant(roomCode)
                 .stream()
-                .filter(v -> v.getParticipant().isModerator())
+                .filter(v -> v.getParticipant().getRole() == ParticipantRole.PRODUCT_OWNER)
                 .toList();
-        voteRepository.deleteAll(moderatorVotes);
-        return moderatorVotes.size();
+        voteRepository.deleteAll(poVotes);
+        return poVotes.size();
     }
 
     public List<Vote> getVotes(String roomCode) {

@@ -1,5 +1,5 @@
 /* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, getBrowserId, sendWs, authHeaders,
-          leavingTable, rememberTeamRoom, enhanceSelect */
+          leavingTable, rememberTeamRoom, enhanceSelect, syncHand */
 
 // ====================================
 // Session-Daten aus DOM
@@ -110,15 +110,10 @@ function initSession() {
 
     applySettings(
         document.getElementById('settingShowTopic')?.checked        ?? false,
-        document.getElementById('settingModeratorCanVote')?.checked ?? false,
+        document.getElementById('settingPoCanVote')?.checked        ?? true,
         document.getElementById('settingAutoReveal')?.checked       ?? false,
         document.getElementById('settingShowOnlyTotal')?.checked    ?? true
     );
-
-    if (participantRole === 'PRODUCT_OWNER') {
-        const cardArea = document.getElementById('cardArea');
-        if (cardArea) cardArea.style.display = 'none';
-    }
 }
 
 // ====================================
@@ -440,10 +435,10 @@ function handleReset() {
 }
 
 function handleSettingsUpdate(data) {
-    applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal, data.showOnlyTotal);
-    // "Moderator darf abstimmen" ändert, wer als stimmberechtigt zählt
+    applySettings(data.showTopic, data.productOwnerCanVote, data.autoReveal, data.showOnlyTotal);
+    // "Product Owner darf mitwählen" ändert, wer als stimmberechtigt zählt
     if (!isRevealed) {
-        if (!data.moderatorCanVote) _clearModeratorVotes();
+        if (!data.productOwnerCanVote) _clearProductOwnerVotes();
         _refreshVoteStatus();
     }
     showToast(globalThis.i18n.toast.settings, 'info', '', 2500);
@@ -548,6 +543,7 @@ function handleModeratorPromoted(data) {
     if (data.participantId === participantId) {
         isModerator = true;
         _setModeratorUi(true);
+        syncHand();
     } else {
         showToast(
             globalThis.i18n.toast.moderatorPromoted.replace('{0}', data.participantName),
@@ -565,6 +561,7 @@ function handleModeratorDemoted(data) {
         isModerator = false;
         sessionStorage.setItem('isModerator', 'false');
         _setModeratorUi(false);
+        syncHand();
     }
     renderSidebar();
 }
@@ -624,26 +621,23 @@ function _setModeratorUi(visible) {
         });
 }
 
-/** Der Server verwirft Moderator-Stimmen, sobald Moderatoren nicht mehr abstimmen dürfen. */
-function _clearModeratorVotes() {
+/** Der Server verwirft die Stimmen der Product Owner, sobald sie nicht mehr mitwählen dürfen. */
+function _clearProductOwnerVotes() {
     Object.entries(players).forEach(([id, p]) => {
-        const isSelf = id === participantId;
-        if (!(p.moderator || (isSelf && isModerator))) return;
+        if (p.role !== 'PRODUCT_OWNER') return;
         p.voted     = false;
         p.cardValue = null;
-        if (isSelf) {
+        if (id === participantId) {
             selectedCard = null;
             document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
         }
     });
 }
 
-/** Zählt die Stimmen lokal – gleiche Regel wie der Server (PO und ggf. Moderatoren zählen nicht). */
+/** Zählt die Stimmen lokal – gleiche Regel wie der Server (Product Owner nur, wenn erlaubt). */
 function _refreshVoteStatus() {
-    const moderatorCanVote = document.getElementById('settingModeratorCanVote')?.checked ?? true;
-    const voters = Object.entries(players)
-        .filter(([id, p]) => p.role !== 'PRODUCT_OWNER'
-            && (moderatorCanVote || !(p.moderator || (id === participantId && isModerator))))
-        .map(([, p]) => p);
+    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
+    const voters = Object.values(players)
+        .filter(p => poCanVote || p.role !== 'PRODUCT_OWNER');
     updateVoteStatus(voters.filter(p => p.voted).length, voters.length, null);
 }

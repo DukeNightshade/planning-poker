@@ -24,8 +24,13 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   erscheint das wie ein normales Verlassen; die Person kann über den Dialog direkt
   wieder beitreten. Danach wird Auto-Reveal sofort geprüft – das gilt jetzt auch,
   wenn jemand den Tab schließt.
+- Eigene Karten im Schätzraum als aufgefächerte Pokerhand direkt unter dem Tisch; der
+  Tisch und die Karten wachsen mit der Bildschirmgröße (Laptop bis 27-Zoll-Monitor).
 
 ### Geändert
+- Product Owner stimmen standardmäßig mit; die neue Einstellung "Product Owner darf
+  mitwählen" schaltet das ab. "Moderator darf mitwählen" entfällt – Moderatoren stimmen
+  immer mit (Migration `V4`).
 - Statische Dateien werden mit Inhalts-Hash ausgeliefert (`render-3f9a….js`), damit
   Browser nach einem Update keine alten und neuen Skripte mischen.
 - Datenbankschema über Flyway-Migrationen (`db/migration`) statt `ddl-auto=update`;
@@ -35,7 +40,9 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   einstellbar (`CLEANUP_MAX_IDLE_HOURS`, `CLEANUP_CRON`, `RECONNECT_GRACE_SECONDS`).
 - Testabdeckung mit JaCoCo (`mvn verify`).
 - Code aufgeräumt: gemeinsame Konstanten, `RoleParser` vereinheitlicht, doppelte
-  JavaScript-Logik zusammengeführt; Heroku-Dateien (`Procfile`, `system.properties`) entfernt.
+  JavaScript-Logik zusammengeführt.
+- Heroku-Dateien (`Procfile`, `system.properties`) bleiben erhalten; das `Procfile`
+  startet das Jar unabhängig von der Versionsnummer.
 
 ### Behoben
 - Nach Änderungen an einzelnen CSS-Dateien konnten Browser mit Cache Teile des

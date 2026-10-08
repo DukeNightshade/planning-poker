@@ -59,8 +59,9 @@ public class Session {
     @Column(nullable = false)
     private boolean showTopic = false;
 
+    // Product Owner stimmen standardmäßig mit, lässt sich in den Einstellungen abschalten
     @Column(nullable = false)
-    private boolean moderatorCanVote = true;
+    private boolean productOwnerCanVote = true;
 
     @Column(nullable = false)
     private boolean autoReveal = false;

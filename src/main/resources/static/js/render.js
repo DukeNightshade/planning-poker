@@ -56,9 +56,9 @@ function renderTable() {
     const cW = container.clientWidth  > 10 ? container.clientWidth  : window.innerWidth  * 0.62;
     const cH = container.clientHeight > 10 ? container.clientHeight : window.innerHeight * 0.50;
 
-    // Tisch: proportional zum Container, aber gedeckelt
-    const tableRx = Math.min(cW * 0.21, 200);
-    const tableRy = Math.min(cH * 0.21, 110);
+    // Tisch: wächst mit der verfügbaren Höhe, bleibt aber ein liegendes Oval
+    const tableRx = Math.min(cW * 0.22, 340);
+    const tableRy = Math.min(Math.max(cH * 0.24, 70), tableRx * 0.6);
 
     // Orbit = Tisch + Mindestabstand für Karte + Name-Badge (nie unter 80/70px)
     const gapX = Math.max(cW * 0.10, 80);
@@ -73,21 +73,23 @@ function renderTable() {
     const orbitRx = baseOrbitRx * scaleFactor;
     const orbitRy = baseOrbitRy * scaleFactor;
 
-    // ViewBox = Container; nur bei vielen Spielern aufweiten
-    const W  = Math.max(cW, orbitRx * 2 + 160);
-    const H  = Math.max(cH, orbitRy * 2 + 160);
-    const cx = W / 2;
-    const cy = H / 2;
-
     const cardW        = _resolveCardWidth(total);
     const cardH        = Math.round(cardW * 1.4);
     const nameFontSize = _resolveNameFontSize(total);
+
+    // ViewBox nur so hoch wie Tisch + Plätze (Karte oben, Karte + Namensschild unten);
+    // unten ausgerichtet, damit die eigene Kartenhand direkt unter dem Tisch liegt
+    const seatPad = cardH / 2 + 30;
+    const W  = Math.max(cW, orbitRx * 2 + 160);
+    const H  = orbitRy * 2 + seatPad * 2;
+    const cx = W / 2;
+    const cy = H / 2;
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('width',  '100%');
     svg.setAttribute('height', '100%');
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
     svg.style.overflow = 'visible';
     svg.setAttribute('role', 'img');
 

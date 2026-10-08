@@ -188,24 +188,24 @@ class VoteServiceTest {
     }
 
     @Test
-    @DisplayName("submitVote: Moderator wird abgelehnt, wenn Moderatoren nicht abstimmen dürfen")
-    void submitVote_moderatorNotAllowed_forbidden() {
-        testParticipant.setModerator(true);
-        testSession.setModeratorCanVote(false);
-        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
-        when(participantRepository.findById(1L)).thenReturn(Optional.of(testParticipant));
-
-        assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "5", false))
-                .isInstanceOf(ForbiddenException.class);
-        verify(voteRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("submitVote: Product Owner wird abgelehnt")
-    void submitVote_productOwner_forbidden() {
+    @DisplayName("submitVote: Product Owner stimmt standardmäßig mit")
+    void submitVote_productOwner_allowedByDefault() {
         testParticipant.setRole(ParticipantRole.PRODUCT_OWNER);
         when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
         when(participantRepository.findById(1L)).thenReturn(Optional.of(testParticipant));
+        when(voteRepository.findBySessionRoomCodeAndParticipantId(any(), any())).thenReturn(Optional.empty());
+        when(voteRepository.save(any(Vote.class))).thenReturn(testVote);
+
+        assertThatNoException().isThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "5", false));
+    }
+
+    @Test
+    @DisplayName("submitVote: Product Owner wird abgelehnt, wenn POs nicht mitwählen dürfen")
+    void submitVote_productOwnerNotAllowed_forbidden() {
+        testParticipant.setRole(ParticipantRole.PRODUCT_OWNER);
+        testSession.setProductOwnerCanVote(false);
+        when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
+        when(participantRepository.findById(1L)).thenReturn(Optional.of(testParticipant));
 
         assertThatThrownBy(() -> voteService.submitVote("ABCD1234", 1L, "5", false))
                 .isInstanceOf(ForbiddenException.class);
@@ -213,33 +213,33 @@ class VoteServiceTest {
     }
 
     // ====================================
-    // removeModeratorVotes()
+    // removeProductOwnerVotes()
     // ====================================
 
     @Test
-    @DisplayName("removeModeratorVotes: Nur Stimmen von Moderatoren werden gelöscht")
-    void removeModeratorVotes_deletesOnlyModeratorVotes() {
-        Participant moderator = new Participant();
-        moderator.setId(2L);
-        moderator.setModerator(true);
-        Vote moderatorVote = new Vote();
-        moderatorVote.setParticipant(moderator);
+    @DisplayName("removeProductOwnerVotes: Nur Stimmen von Product Ownern werden gelöscht")
+    void removeProductOwnerVotes_deletesOnlyProductOwnerVotes() {
+        Participant po = new Participant();
+        po.setId(2L);
+        po.setRole(ParticipantRole.PRODUCT_OWNER);
+        Vote poVote = new Vote();
+        poVote.setParticipant(po);
 
         when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
         when(voteRepository.findBySessionRoomCodeWithParticipant("ABCD1234"))
-                .thenReturn(List.of(testVote, moderatorVote));
+                .thenReturn(List.of(testVote, poVote));
 
-        assertThat(voteService.removeModeratorVotes("ABCD1234")).isEqualTo(1);
-        verify(voteRepository).deleteAll(List.of(moderatorVote));
+        assertThat(voteService.removeProductOwnerVotes("ABCD1234")).isEqualTo(1);
+        verify(voteRepository).deleteAll(List.of(poVote));
     }
 
     @Test
-    @DisplayName("removeModeratorVotes: Nach dem Aufdecken bleibt das Ergebnis unverändert")
-    void removeModeratorVotes_afterReveal_keepsVotes() {
+    @DisplayName("removeProductOwnerVotes: Nach dem Aufdecken bleibt das Ergebnis unverändert")
+    void removeProductOwnerVotes_afterReveal_keepsVotes() {
         testSession.setStatus(SessionStatus.REVEALED);
         when(sessionService.getSessionByRoomCode("ABCD1234")).thenReturn(testSession);
 
-        assertThat(voteService.removeModeratorVotes("ABCD1234")).isZero();
+        assertThat(voteService.removeProductOwnerVotes("ABCD1234")).isZero();
         verify(voteRepository, never()).deleteAll(any());
     }
 

@@ -155,21 +155,21 @@ public class PokerWsController {
         Session current = sessionService.getSessionByRoomCode(roomCode);
 
         boolean showTopic        = flag(payload, "showTopic",        current.isShowTopic());
-        boolean moderatorCanVote = flag(payload, "moderatorCanVote", current.isModeratorCanVote());
+        boolean poCanVote        = flag(payload, "productOwnerCanVote", current.isProductOwnerCanVote());
         boolean autoReveal       = flag(payload, "autoReveal",       current.isAutoReveal());
         boolean showOnlyTotal    = flag(payload, "showOnlyTotal",    current.isShowOnlyTotal());
 
-        sessionService.updateSettings(roomCode, showTopic, moderatorCanVote, autoReveal, showOnlyTotal);
+        sessionService.updateSettings(roomCode, showTopic, poCanVote, autoReveal, showOnlyTotal);
 
-        // Dürfen Moderatoren nicht mehr abstimmen, zählen ihre bisherigen Stimmen nicht
-        if (!moderatorCanVote) {
-            voteService.removeModeratorVotes(roomCode);
+        // Dürfen Product Owner nicht mehr mitwählen, zählen ihre bisherigen Stimmen nicht
+        if (!poCanVote) {
+            voteService.removeProductOwnerVotes(roomCode);
         }
 
         broadcast(roomCode, Map.of(
                 "type",             "SETTINGS_UPDATE",
                 "showTopic",        showTopic,
-                "moderatorCanVote", moderatorCanVote,
+                "productOwnerCanVote", poCanVote,
                 "autoReveal",       autoReveal,
                 "showOnlyTotal",    showOnlyTotal
         ));

@@ -127,8 +127,7 @@ function showResults(votes, silent = false) {
     renderSidebar();
 
     document.getElementById('resultsArea').style.display  = 'block';
-    document.getElementById('cardArea').style.display     =
-        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
+    syncHand();
     document.getElementById('pokerPane').classList.add('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
@@ -151,8 +150,7 @@ function resetUI() {
     document.getElementById('pokerPane').classList.remove('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'none';
     document.getElementById('resultsArea').style.display     = 'none';
-    document.getElementById('cardArea').style.display        =
-        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
+    syncHand();
     document.getElementById('voteStatus').textContent = globalThis.i18n.labels.waiting;
     document.getElementById('progressBar').style.width       = '0%';
     document.querySelector('[onclick="revealCards()"]').disabled = false;
@@ -314,19 +312,19 @@ function toggleSettings() {
 
 function saveSettings() {
     const showTopic        = document.getElementById('settingShowTopic').checked;
-    const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
+    const productOwnerCanVote = document.getElementById('settingPoCanVote').checked;
     const autoReveal       = document.getElementById('settingAutoReveal').checked;
     const showOnlyTotal    = document.getElementById('settingShowOnlyTotal').checked;
-    sendWs('/settings', { showTopic, moderatorCanVote, autoReveal, showOnlyTotal });
+    sendWs('/settings', { showTopic, productOwnerCanVote, autoReveal, showOnlyTotal });
 }
 
-function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
+function applySettings(showTopic, productOwnerCanVote, autoReveal, onlyTotal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = (showTopic && Object.keys(tickets).length > 0) ? 'flex' : 'none';
 
     const showTopicEl = document.getElementById('settingShowTopic');
     if (showTopicEl) showTopicEl.checked = showTopic;
-    document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
+    document.getElementById('settingPoCanVote').checked = productOwnerCanVote;
     document.getElementById('settingAutoReveal').checked       = autoReveal;
 
     const onlyTotalEl = document.getElementById('settingShowOnlyTotal');
@@ -335,11 +333,16 @@ function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
 
     applyTicketSidebarVisibility();
 
-    const canVote = participantRole !== 'PRODUCT_OWNER' &&
-        !(isModerator && !moderatorCanVote);
-    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
+    syncHand();
 
     if (isRevealed) renderTable();
+}
+
+/** Blendet die Karten aus, wenn Product Owner in dieser Session nicht mitwählen. */
+function syncHand() {
+    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
+    const canVote   = participantRole !== 'PRODUCT_OWNER' || poCanVote;
+    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
 }
 
 // ====================================

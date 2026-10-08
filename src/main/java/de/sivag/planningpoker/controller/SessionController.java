@@ -92,7 +92,7 @@ public class SessionController {
         model.addAttribute("cards",            session.getEstimationMethod().getCards());
         model.addAttribute("participants",     sessionService.getParticipants(roomCode));
         model.addAttribute("showTopic",        session.isShowTopic());
-        model.addAttribute("moderatorCanVote", session.isModeratorCanVote());
+        model.addAttribute("productOwnerCanVote", session.isProductOwnerCanVote());
         model.addAttribute("autoReveal",       session.isAutoReveal());
         model.addAttribute("methodLabels",     methodLabels);
         model.addAttribute("hasTickets",       !ticketService.getTickets(roomCode).isEmpty());
