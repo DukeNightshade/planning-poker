@@ -31,6 +31,9 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   der goldene Ring kennzeichnet nur noch Moderatoren.
 
 ### Geändert
+- Der Datenbanktreiber wird an der JDBC-URL erkannt; `SPRING_DATASOURCE_DRIVER` ist
+  nicht mehr nötig. Auf Heroku reicht damit das Add-on Heroku Postgres ohne zusätzliche
+  Config-Var.
 - Product Owner stimmen standardmäßig mit; die neue Einstellung "Product Owner darf
   mitwählen" schaltet das ab. "Moderator darf mitwählen" entfällt – Moderatoren stimmen
   immer mit (Migration `V4`).

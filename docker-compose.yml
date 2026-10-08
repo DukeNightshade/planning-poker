@@ -14,7 +14,6 @@ services:
       # liefert ihn per X-Forwarded-Prefix.
       APP_CONTEXT_PATH: ${APP_CONTEXT_PATH:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/planningpoker
-      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
       SPRING_DATASOURCE_USERNAME: planningpoker
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD muss in .env gesetzt sein}
       SPRING_THYMELEAF_CACHE: "true"
