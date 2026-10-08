@@ -50,6 +50,10 @@ public class Participant {
     @Column(length = 36, unique = true)
     private String token;
 
+    // Nur in Team-Räumen relevant: false = gemerkt, aber gerade nicht verbunden
+    @Column(nullable = false)
+    private boolean present = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
     private Session session;

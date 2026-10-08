@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="#{app.title}">Planning Poker</title>
     <link rel="icon" type="image/png" th:href="@{/images/siv-logo.png}">
-    <link rel="stylesheet" th:href="@{/vendor/fonts/fira-sans.css}">
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <th:block th:replace="~{fragments/styles :: styles}"></th:block>
     <style>
         /* Session-spezifisch: Viewport füllen, kein globales Scrollen */
         html, body       { height: 100%; }
@@ -99,6 +98,7 @@
             revealed:          /*[[#{toast.revealed}]]*/ '',
             newround:          /*[[#{toast.newround}]]*/ '',
             copied:            /*[[#{toast.copied}]]*/ '',
+            copiedLink:        /*[[#{toast.copied.link}]]*/ '',
             promotedSelf:      /*[[#{toast.promoted.self}]]*/ '',
             demotedSelf:       /*[[#{toast.demoted.self}]]*/ '',
             settings:          /*[[#{toast.settings}]]*/ '',
@@ -106,6 +106,7 @@
             ticketSelected:    /*[[#{toast.ticket.selected}]]*/ '',
             joined:            /*[[#{toast.joined}]]*/ '',
             left:              /*[[#{toast.left}]]*/ '',
+            away:              /*[[#{toast.away}]]*/ '',
             moderatorPromoted: /*[[#{toast.moderator.promoted}]]*/ '',
             reconnected:       /*[[#{toast.reconnected}]]*/ '',
             errorCreate:       /*[[#{toast.error.create}]]*/ '',
@@ -135,6 +136,7 @@
             you:          /*[[#{session.you}]]*/ 'Du',
             mostCommon:   /*[[#{session.result.most}]]*/ 'Meist',
             noVotes:      /*[[#{session.result.none}]]*/ 'Keine Stimmen',
+            absent:       /*[[#{session.absent}]]*/ 'Abwesend',
             leave:        /*[[#{session.leave}]]*/ 'Tisch verlassen',
             leaveConfirm: /*[[#{session.leave.confirm}]]*/ 'Tisch wirklich verlassen?',
             leaveAction:  /*[[#{session.leave.action}]]*/ 'Verlassen',
@@ -173,8 +175,8 @@
             <a th:href="@{/}" class="header__back" th:text="#{nav.dashboard}">&#8592; Dashboard</a>
         </div>
         <div class="header__right">
-            <span class="header__roomcode-label" th:text="#{nav.roomcode}">Raumcode:</span>
-            <span class="header__roomcode" id="roomCodeDisplay" th:text="${roomCode}"></span>
+            <span class="header__roomcode-label" th:text="${teamName != null} ? #{nav.team} : #{nav.roomcode}">Raumcode:</span>
+            <span class="header__roomcode" id="roomCodeDisplay" th:text="${teamName != null} ? ${teamName} : ${roomCode}"></span>
             <button class="header__copy-btn" id="copyBtn"
                     onclick="copyRoomCode()" th:text="#{nav.copy}">Kopieren</button>
             <button class="header__leave-btn" id="leaveBtn" style="display:none;"
@@ -200,10 +202,10 @@
                 <input type="checkbox" id="settingShowTopic"
                        th:checked="${showTopic}" onchange="saveSettings()">
             </label>
-            <label class="settings__toggle" for="settingModeratorCanVote">
-                <span th:text="#{settings.moderator_vote}">Moderator darf mitwählen</span>
-                <input type="checkbox" id="settingModeratorCanVote"
-                       th:checked="${moderatorCanVote}" onchange="saveSettings()">
+            <label class="settings__toggle" for="settingPoCanVote">
+                <span th:text="#{settings.po_vote}">Product Owner darf mitwählen</span>
+                <input type="checkbox" id="settingPoCanVote"
+                       th:checked="${productOwnerCanVote}" onchange="saveSettings()">
             </label>
             <label class="settings__toggle" for="settingAutoReveal">
                 <span th:text="#{settings.auto_reveal}">Automatisch aufdecken</span>
@@ -259,11 +261,12 @@
 
         <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
 
-        <div class="cards" id="cardArea" style="justify-content: center; padding: 1rem 0;">
-            <div class="cards__grid" style="justify-content:center;">
+        <div class="cards" id="cardArea" style="justify-content: center;">
+            <div class="cards__grid" th:style="'--n:' + ${#lists.size(cards)}">
                 <button class="card-btn"
-                        th:each="v : ${cards}"
+                        th:each="v, it : ${cards}"
                         th:text="${v}" th:attr="data-value=${v}"
+                        th:style="'--i:' + ${it.index}"
                         onclick="selectCard(this)"></button>
             </div>
         </div>
@@ -277,6 +280,10 @@
         <h3 class="sidebar__title" id="sidebarTitle"
             th:text="#{session.sidebar.participants}">Teilnehmer</h3>
         <ul class="sidebar__list" id="participantList" aria-label="Teilnehmerliste"></ul>
+        <details class="sidebar__absent" id="absentSection" style="display:none;">
+            <summary><span th:text="#{session.absent}">Abwesend</span> (<span id="absentCount">0</span>)</summary>
+            <ul class="sidebar__absent-list" id="absentList"></ul>
+        </details>
         <div class="sidebar__method-block">
             <div class="sidebar__method-label" th:text="#{session.sidebar.method}">Methode</div>
             <div class="sidebar__method-value"
@@ -294,14 +301,15 @@
     <span id="progressBar"></span>
 </div>
 
-<div id="sessionData" th:attr="data-roomcode=${roomCode}" style="display:none;"></div>
+<div id="sessionData" th:attr="data-roomcode=${roomCode},data-teamname=${teamName}" style="display:none;"></div>
 
 <div id="playerData" style="display:none;">
     <span th:each="p : ${participants}" class="player-entry"
           th:attr="data-player-id=${p.id},
                    data-player-name=${p.name},
                    data-player-role=${p.role.name()},
-                   data-player-moderator=${p.isModerator()}"></span>
+                   data-player-moderator=${p.isModerator()},
+                   data-player-present=${p.isPresent()}"></span>
 </div>
 
 <script th:src="@{/vendor/sockjs.min.js}"></script>

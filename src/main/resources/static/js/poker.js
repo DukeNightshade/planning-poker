@@ -1,5 +1,5 @@
 /* global SockJS, Stomp, applyTicketSidebarVisibility, getParticipantToken, getBrowserId, sendWs, authHeaders,
-          leavingTable */
+          leavingTable, rememberTeamRoom, enhanceSelect, syncHand */
 
 // ====================================
 // Session-Daten aus DOM
@@ -7,6 +7,14 @@
 
 const sessionData   = document.getElementById('sessionData');
 const roomCode      = sessionData.dataset.roomcode;
+const teamName      = sessionData.dataset.teamname || '';
+
+// Die Identität im Tab gilt nur für den Raum, in dem sie entstanden ist
+if (sessionStorage.getItem('participantRoom') !== roomCode) {
+    ['participantId', 'participantToken', 'isModerator', 'participantRoom']
+        .forEach(k => sessionStorage.removeItem(k));
+}
+
 let participantId   = sessionStorage.getItem('participantId');
 let isModerator     = sessionStorage.getItem('isModerator') === 'true';
 let participantRole = sessionStorage.getItem('participantRole') || 'DEVELOPER';
@@ -22,8 +30,9 @@ let averageValue    = null;
 let currentTicketId = null;
 let showOnlyTotal= true;
 
-let tickets = {};
-let players = {};
+let tickets       = {};
+let players       = {};
+let absentPlayers = {};   // nur Team-Räume: gemerkt, aber gerade nicht verbunden
 
 let _reconnectAttempts = 0;
 let _wasDisconnected   = false;
@@ -36,15 +45,13 @@ let _joinModalBound    = false;
 // ====================================
 
 document.querySelectorAll('#playerData .player-entry').forEach(el => {
-    players[el.dataset.playerId] = {
-        name:              el.dataset.playerName,
-        role:              el.dataset.playerRole || 'DEVELOPER',
-        moderator:         el.dataset.playerModerator === 'true',
-        voted:             false,
-        cardValue:         null,
-        originalCardValue: null,
-        changed:           false
-    };
+    const player = _newPlayer(el.dataset.playerName, el.dataset.playerRole || 'DEVELOPER');
+    player.moderator = el.dataset.playerModerator === 'true';
+    if (el.dataset.playerPresent === 'false') {
+        absentPlayers[el.dataset.playerId] = player;
+    } else {
+        players[el.dataset.playerId] = player;
+    }
 });
 
 renderTable();
@@ -64,11 +71,33 @@ window.addEventListener('resize', () => {
 // Einstiegspunkt
 // ====================================
 
-if (!participantId || !getParticipantToken()) {
-    showJoinModal();
-} else {
+// Gestaltetes Dropdown für die Rolle im Beitrittsdialog
+const joinRoleSelect = document.getElementById('joinModalRole');
+if (joinRoleSelect) enhanceSelect(joinRoleSelect);
+
+if (teamName) rememberTeamRoom(teamName);
+
+if (participantId && getParticipantToken()) {
     initSession();
     connect();
+} else if (teamName && localStorage.getItem('pp_name_' + roomCode)) {
+    _autoJoinTeam();
+} else {
+    showJoinModal();
+}
+
+/** Team-Raum, schon einmal dabei gewesen: ohne Dialog mit gemerktem Namen beitreten. */
+async function _autoJoinTeam() {
+    const nameInput  = document.getElementById('joinModalName');
+    const roleSelect = document.getElementById('joinModalRole');
+    if (nameInput)  nameInput.value  = localStorage.getItem('pp_name_' + roomCode);
+    if (roleSelect) {
+        roleSelect.value = localStorage.getItem('pp_role_' + roomCode) || 'DEVELOPER';
+        roleSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Klappt es nicht (z. B. Name inzwischen vergeben), zeigt der Dialog den Grund
+    if (!await _handleJoinSubmit()) showJoinModal();
 }
 
 // ====================================
@@ -81,15 +110,10 @@ function initSession() {
 
     applySettings(
         document.getElementById('settingShowTopic')?.checked        ?? false,
-        document.getElementById('settingModeratorCanVote')?.checked ?? false,
+        document.getElementById('settingPoCanVote')?.checked        ?? true,
         document.getElementById('settingAutoReveal')?.checked       ?? false,
         document.getElementById('settingShowOnlyTotal')?.checked    ?? true
     );
-
-    if (participantRole === 'PRODUCT_OWNER') {
-        const cardArea = document.getElementById('cardArea');
-        if (cardArea) cardArea.style.display = 'none';
-    }
 }
 
 // ====================================
@@ -123,12 +147,12 @@ async function _handleJoinSubmit() {
     const errorDiv   = document.getElementById('joinModalError');
     const btn        = document.getElementById('joinModalBtn');
 
-    if (!nameInput || !roleSelect) return;
+    if (!nameInput || !roleSelect) return false;
 
     const name = nameInput.value.trim();
-    if (!name) { if (nameInput) nameInput.focus(); return; }
+    if (!name) { if (nameInput) nameInput.focus(); return false; }
 
-    if (_joinDone) return;
+    if (_joinDone) return false;
     _joinDone = true;
 
     if (btn)      btn.disabled           = true;
@@ -148,17 +172,22 @@ async function _handleJoinSubmit() {
 
             participantId   = String(data.participantId);
             participantRole = data.role || 'DEVELOPER';
-            isModerator     = false;
+            // Team-Raum: zurückkehrende Mitglieder behalten ihre Moderator-Rechte
+            isModerator     = data.moderator === true;
 
             sessionStorage.setItem('participantId',   participantId);
             sessionStorage.setItem('participantToken', data.token);
-            sessionStorage.setItem('isModerator',     'false');
+            sessionStorage.setItem('participantRoom', roomCode);
+            sessionStorage.setItem('isModerator',     String(isModerator));
             sessionStorage.setItem('participantRole', participantRole);
             localStorage.setItem('pp_name_' + roomCode, name);
+            localStorage.setItem('pp_role_' + roomCode, participantRole);
 
+            delete absentPlayers[participantId];
             if (!players[participantId]) {
                 players[participantId] = _newPlayer(name, participantRole);
             }
+            players[participantId].moderator = isModerator;
 
             const modal = document.getElementById('joinModal');
             if (modal) modal.style.display = 'none';
@@ -175,6 +204,7 @@ async function _handleJoinSubmit() {
             } else {
                 connect();
             }
+            return true;
         } else {
             _joinDone = false;
             if (btn) btn.disabled = false;
@@ -196,12 +226,14 @@ async function _handleJoinSubmit() {
             } catch (_) {}
 
             if (errorDiv) { errorDiv.textContent = msg; errorDiv.style.display = 'block'; }
+            return false;
         }
     } catch (e) {
         _joinDone = false;
         if (btn) btn.disabled = false;
         const msg = globalThis.i18n?.toast?.errorJoin || 'Verbindungsfehler.';
         if (errorDiv) { errorDiv.textContent = msg; errorDiv.style.display = 'block'; }
+        return false;
     }
 }
 
@@ -238,6 +270,7 @@ async function _ensureRegistered() {
         isModerator     = false;
 
         sessionStorage.setItem('participantId',   participantId);
+        sessionStorage.setItem('participantRoom', roomCode);
         sessionStorage.setItem('participantToken', data.token);
         sessionStorage.setItem('participantRole', participantRole);
         sessionStorage.setItem('isModerator',     'false');
@@ -388,6 +421,7 @@ function handleMessage(data) {
         case 'SETTINGS_UPDATE':    handleSettingsUpdate(data);    break;
         case 'PLAYER_JOINED':      handlePlayerJoined(data);      break;
         case 'PLAYER_LEFT':        handlePlayerLeft(data);        break;
+        case 'PLAYER_AWAY':        handlePlayerAway(data);        break;
         case 'MODERATOR_PROMOTED': handleModeratorPromoted(data); break;
         case 'MODERATOR_DEMOTED':  handleModeratorDemoted(data);  break;
         case 'TICKET_ADDED':       handleTicketAdded(data);       break;
@@ -401,10 +435,10 @@ function handleReset() {
 }
 
 function handleSettingsUpdate(data) {
-    applySettings(data.showTopic, data.moderatorCanVote, data.autoReveal, data.showOnlyTotal);
-    // "Moderator darf abstimmen" ändert, wer als stimmberechtigt zählt
+    applySettings(data.showTopic, data.productOwnerCanVote, data.autoReveal, data.showOnlyTotal);
+    // "Product Owner darf mitwählen" ändert, wer als stimmberechtigt zählt
     if (!isRevealed) {
-        if (!data.moderatorCanVote) _clearModeratorVotes();
+        if (!data.productOwnerCanVote) _clearProductOwnerVotes();
         _refreshVoteStatus();
     }
     showToast(globalThis.i18n.toast.settings, 'info', '', 2500);
@@ -439,10 +473,12 @@ function handleVoteUpdate(data) {
 }
 
 function handlePlayerJoined(data) {
+    delete absentPlayers[data.participantId];   // Team-Mitglied ist zurück
     const isNew = !players[data.participantId];
 
     if (isNew) {
         players[data.participantId] = _newPlayer(data.participantName, data.participantRole || 'DEVELOPER');
+        players[data.participantId].moderator = data.moderator === true;
         if (data.participantId !== participantId) {
             showToast(
                 globalThis.i18n.toast.joined.replace('{0}', data.participantName),
@@ -468,6 +504,7 @@ function handlePlayerLeft(data) {
         }
         return;
     }
+    delete absentPlayers[data.participantId];   // Moderator hat ein abwesendes Mitglied entfernt
     if (players[data.participantId]) {
         const leftName = players[data.participantId].name;
         delete players[data.participantId];
@@ -479,6 +516,26 @@ function handlePlayerLeft(data) {
     _refreshVoteStatus();
 }
 
+/** Team-Raum: Mitglied ist nicht mehr verbunden (oder für heute gegangen) – bleibt gemerkt. */
+function handlePlayerAway(data) {
+    if (data.participantId === participantId) {
+        if (leavingTable) {
+            ['participantId', 'participantToken', 'isModerator'].forEach(k => sessionStorage.removeItem(k));
+            globalThis.location.href = appUrl('/');
+        }
+        return;   // sonst: eigene Verbindung kommt gleich zurück
+    }
+    const player = players[data.participantId];
+    if (player) {
+        player.voted     = false;
+        player.cardValue = null;
+        absentPlayers[data.participantId] = player;
+        delete players[data.participantId];
+        showToast(globalThis.i18n.toast.away.replace('{0}', player.name), 'info', '', 3000);
+    }
+    _refreshVoteStatus();
+}
+
 function handleModeratorPromoted(data) {
     if (players[data.participantId]) {
         players[data.participantId].moderator = true;
@@ -486,6 +543,7 @@ function handleModeratorPromoted(data) {
     if (data.participantId === participantId) {
         isModerator = true;
         _setModeratorUi(true);
+        syncHand();
     } else {
         showToast(
             globalThis.i18n.toast.moderatorPromoted.replace('{0}', data.participantName),
@@ -503,6 +561,7 @@ function handleModeratorDemoted(data) {
         isModerator = false;
         sessionStorage.setItem('isModerator', 'false');
         _setModeratorUi(false);
+        syncHand();
     }
     renderSidebar();
 }
@@ -529,7 +588,10 @@ function _handleRemovedFromTable() {
     const nameInput = document.getElementById('joinModalName');
     if (nameInput && !nameInput.value) nameInput.value = localStorage.getItem('pp_name_' + roomCode) || '';
     const roleSelect = document.getElementById('joinModalRole');
-    if (roleSelect) roleSelect.value = participantRole;
+    if (roleSelect) {
+        roleSelect.value = participantRole;
+        roleSelect.dispatchEvent(new Event('change'));
+    }
     const btn = document.getElementById('joinModalBtn');
     if (btn) btn.disabled = false;
     const info = document.getElementById('joinModalInfo');
@@ -559,26 +621,23 @@ function _setModeratorUi(visible) {
         });
 }
 
-/** Der Server verwirft Moderator-Stimmen, sobald Moderatoren nicht mehr abstimmen dürfen. */
-function _clearModeratorVotes() {
+/** Der Server verwirft die Stimmen der Product Owner, sobald sie nicht mehr mitwählen dürfen. */
+function _clearProductOwnerVotes() {
     Object.entries(players).forEach(([id, p]) => {
-        const isSelf = id === participantId;
-        if (!(p.moderator || (isSelf && isModerator))) return;
+        if (p.role !== 'PRODUCT_OWNER') return;
         p.voted     = false;
         p.cardValue = null;
-        if (isSelf) {
+        if (id === participantId) {
             selectedCard = null;
             document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
         }
     });
 }
 
-/** Zählt die Stimmen lokal – gleiche Regel wie der Server (PO und ggf. Moderatoren zählen nicht). */
+/** Zählt die Stimmen lokal – gleiche Regel wie der Server (Product Owner nur, wenn erlaubt). */
 function _refreshVoteStatus() {
-    const moderatorCanVote = document.getElementById('settingModeratorCanVote')?.checked ?? true;
-    const voters = Object.entries(players)
-        .filter(([id, p]) => p.role !== 'PRODUCT_OWNER'
-            && (moderatorCanVote || !(p.moderator || (id === participantId && isModerator))))
-        .map(([, p]) => p);
+    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
+    const voters = Object.values(players)
+        .filter(p => poCanVote || p.role !== 'PRODUCT_OWNER');
     updateVoteStatus(voters.filter(p => p.voted).length, voters.length, null);
 }

@@ -168,26 +168,31 @@ class PermissionIntegrationTest {
     }
 
     @Test
-    @DisplayName("Moderator-Stimmrecht aus: Moderator-Stimme fällt weg, Auto-Reveal deckt auf")
+    @DisplayName("PO-Stimmrecht aus: PO-Stimme fällt weg, Auto-Reveal deckt mit den übrigen auf")
     @SuppressWarnings("unchecked")
-    void disablingModeratorVote_dropsVote_andAutoReveals() throws Exception {
+    void disablingProductOwnerVote_dropsVote_andAutoReveals() throws Exception {
+        Map<String, Object> po = rest.postForObject("/api/sessions/" + roomCode + "/join",
+                Map.of("name", "Paula", "role", "PRODUCT_OWNER", "browserId", "browser-po"), Map.class);
+        String poToken = (String) po.get("token");
+
+        // Standard: der Product Owner stimmt mit
+        send("/vote", poToken,        Map.of("cardValue", "13"));
         send("/vote", moderatorToken, Map.of("cardValue", "5"));
         send("/vote", devToken,       Map.of("cardValue", "8"));
-        assertThat(pollType("VOTE_UPDATE")).isNotNull();
-        assertThat(pollType("VOTE_UPDATE")).isNotNull();
+        for (int i = 0; i < 3; i++) assertThat(pollType("VOTE_UPDATE")).isNotNull();
 
-        send("/settings", moderatorToken, Map.of("moderatorCanVote", false, "autoReveal", true));
+        send("/settings", moderatorToken, Map.of("productOwnerCanVote", false, "autoReveal", true));
 
         assertThat(pollType("SETTINGS_UPDATE")).isNotNull();
         Map<String, Object> reveal = pollType("REVEAL");
         assertThat(reveal).isNotNull();
         List<Map<String, Object>> votes = (List<Map<String, Object>>) reveal.get("votes");
-        assertThat(votes).extracting(v -> v.get("participantName")).containsExactly("Lisa");
+        assertThat(votes).extracting(v -> v.get("participantName")).containsExactlyInAnyOrder("Max", "Lisa");
 
-        // Danach darf der Moderator nicht mehr abstimmen
+        // Danach darf der Product Owner nicht mehr abstimmen
         send("/reset", moderatorToken, Map.of());
         assertThat(pollType("RESET")).isNotNull();
-        send("/vote", moderatorToken, Map.of("cardValue", "3"));
+        send("/vote", poToken, Map.of("cardValue", "3"));
         assertThat(errors.poll(TIMEOUT_SEC, TimeUnit.SECONDS))
                 .isNotNull().containsEntry("code", "FORBIDDEN");
     }

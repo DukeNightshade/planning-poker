@@ -60,19 +60,23 @@ public class SessionRestController {
         ParticipantRole moderatorRole = RoleParser.parseRole(
                 (String) body.getOrDefault("moderatorRole", "DEVELOPER"));
 
+        // Optional: permanenter Team-Raum unter /team/{teamName}
+        String teamName = (String) body.get("teamName");
+
         @SuppressWarnings("unchecked")
         List<String> ticketTitles =
                 (List<String>) body.getOrDefault("tickets", List.of());
 
         Session session = ticketTitles.isEmpty()
-                ? sessionService.createSession(moderatorName, method, moderatorRole, browserId)
+                ? sessionService.createSession(moderatorName, method, moderatorRole, browserId, teamName)
                 : sessionService.createSessionWithTickets(
-                moderatorName, method, moderatorRole, ticketTitles, browserId);
+                moderatorName, method, moderatorRole, ticketTitles, browserId, teamName);
 
-        log.info("Session erstellt: roomCode={}, methode={}, tickets={}",
+        log.info("Session erstellt: roomCode={}, methode={}, tickets={}, team={}",
                 session.getRoomCode(),
                 method.name(),
-                ticketTitles.size());
+                ticketTitles.size(),
+                session.getTeamName());
 
         Participant moderator = sessionService.getParticipants(session.getRoomCode())
                 .stream()
@@ -86,7 +90,8 @@ public class SessionRestController {
                 "status",        session.getStatus().name(),
                 PARTICIPANT_ID, moderator.getId(),
                 "moderatorRole", moderatorRole.name(),
-                "token",         moderator.getToken()
+                "token",         moderator.getToken(),
+                "teamName",      session.getTeamName() != null ? session.getTeamName() : ""
         ));
     }
 

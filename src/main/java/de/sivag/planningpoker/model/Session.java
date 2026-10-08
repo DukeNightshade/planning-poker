@@ -52,11 +52,16 @@ public class Session {
     @Column(nullable = false)
     private LocalDateTime lastActivityAt;
 
+    // Gesetzt bei permanenten Team-Räumen (erreichbar über /team/{teamName})
+    @Column(length = 40, unique = true)
+    private String teamName;
+
     @Column(nullable = false)
     private boolean showTopic = false;
 
+    // Product Owner stimmen standardmäßig mit, lässt sich in den Einstellungen abschalten
     @Column(nullable = false)
-    private boolean moderatorCanVote = true;
+    private boolean productOwnerCanVote = true;
 
     @Column(nullable = false)
     private boolean autoReveal = false;
@@ -88,6 +93,11 @@ public class Session {
     // ====================================
     // Business Methoden
     // ====================================
+
+    /** Team-Räume sind permanent: Teilnehmer werden gemerkt, der Raum nie aufgeräumt. */
+    public boolean isTeamRoom() {
+        return teamName != null;
+    }
 
     /** Markiert die Session als aktiv (verschiebt das Aufräumen). */
     public void touch() {

@@ -69,62 +69,351 @@
 }
 
 /* ================================
-   Main Layout (Startseite)
+   Startseite: der Pokertisch als Bühne
    ================================ */
+/* Auf großen Monitoren wächst die ganze Startseite mit (alles ist in rem angegeben):
+   16px bis ca. Full HD, dann stufenlos bis 22px bei 2560px Breite */
+html:has(.home-table) {
+    font-size: clamp(16px, 0.55vw + 8px, 22px);
+}
+
 .main {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding: 3rem 1rem;
+    justify-content: center;
+    padding: 2.5rem 1.25rem 3rem;
+}
+
+.home-table {
+    position: relative;
+    width: 100%;
+    max-width: 67.5rem;
+    min-height: min(41rem, calc(100vh - 13.75rem));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.25rem;
+    padding: 3rem 3rem 2.5rem;
+    border-radius: 64px;
+    /* Filz wie auf der Spielseite, mit dunkler Tischkante */
+    background:
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0) 0 0 / 10px 10px,
+        radial-gradient(ellipse at 38% 30%, #005aa7 0%, #003d73 55%, #002a52 100%);
+    border: 12px solid #00284d;
+    box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,0.06),
+        inset 0 18px 40px rgba(0,0,0,0.18),
+        0 24px 60px rgba(0,30,60,0.22);
+}
+
+.home-table__intro {
+    text-align: center;
+    max-width: 46rem;
+}
+.home-table__title {
+    font-size: clamp(1.6rem, 1.1rem + 1.8vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    text-wrap: balance;
+}
+.home-table__sub {
+    margin-top: 0.6rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.78);
 }
 
 .main__row {
     display: flex;
     gap: 2rem;
     justify-content: center;
+    align-items: flex-start;
     flex-wrap: wrap;
     width: 100%;
 }
 
 /* ================================
-   Card (Startseite)
+   Formulare als Spielkarten
    ================================ */
 .card {
+    position: relative;
     background: var(--color-white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
-    padding: 2rem;
-    width: 100%;
-    max-width: 400px;
-    transition: transform var(--transition), box-shadow var(--transition);
-    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    border: 1px solid rgba(0,40,77,0.12);
+    box-shadow: 0 2px 4px rgba(0,20,40,0.18), 0 18px 40px rgba(0,20,40,0.32);
+    padding: 2.4rem 2rem 2rem;
+    flex: 1 1 25rem;
+    max-width: 28.75rem;
+    transition: transform 0.25s ease;
 }
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0,65,120,0.13);
+.card--join {
+    flex: 1 1 17.5rem;
+    max-width: 20.6rem;
 }
-.card--wide { max-width: 860px; }
+
+/* Leicht schräg auf den Tisch gelegt; beim Ausfüllen richtet sich die Karte auf */
+.card--spade { transform: rotate(-1.4deg); }
+.card--heart { transform: rotate(1.6deg) translateY(1.25rem); }
+.card--play:focus-within { transform: none; }
+
+/* Farbsymbol in den Ecken: ♠ blau = starten, ♥ rot = beitreten */
+.card--play::before,
+.card--play::after {
+    position: absolute;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--color-primary);
+}
+.card--play::before { top: 0.85rem; left: 1rem; }
+.card--play::after  { bottom: 0.85rem; right: 1rem; transform: rotate(180deg); }
+.card--spade::before,
+.card--spade::after { content: '♠'; }
+.card--heart::before,
+.card--heart::after { content: '♥'; color: var(--color-red); }
 
 .card__title {
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--color-primary);
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid var(--color-ice);
+    margin-bottom: 1.25rem;
+}
+.card--join .card__title { color: var(--color-red); }
+
+.form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+.form__row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;   /* Selects dürfen schrumpfen, sonst ragen sie aus der Karte */
+}
+.form__row .form__select { width: 100%; }
+.form .btn { margin-top: 0.5rem; }
+
+/* ================================
+   Gemerkte Team-Räume (auf dem Filz)
+   ================================ */
+.home-teams {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
-.card__title::before {
+.home-teams__label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+}
+.home-teams__chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.home-teams__chip {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px;
+    transition: background var(--transition), border-color var(--transition);
+}
+.home-teams__chip:hover {
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.5);
+}
+.home-teams__chip a {
+    padding: 0.4rem 0.35rem 0.4rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-decoration: none;
+}
+.home-teams__chip button {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.7rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+    cursor: pointer;
+}
+.home-teams__chip button:hover { color: #ffffff; }
+.home-teams__chip a:focus-visible,
+.home-teams__chip button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+    border-radius: 999px;
+}
+
+/* Wenig Bildschirmhöhe (z. B. Laptop 768px): alles rückt zusammen, kein Scrollen nötig */
+@media (max-height: 860px) and (min-width: 761px) {
+    .main { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+    .home-table {
+        gap: 1.4rem;
+        padding: 1.75rem 2.5rem 1.5rem;
+        min-height: 0;
+    }
+    .home-table__title { font-size: clamp(1.5rem, 1rem + 1.4vw, 2rem); }
+    .home-table__sub { margin-top: 0.35rem; }
+    .card { padding-top: 2rem; padding-bottom: 1.5rem; }
+    .card .form { gap: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+}
+
+@media (max-width: 760px) {
+    .main { padding: 1rem 0.75rem 2rem; }
+    .home-table {
+        border-radius: 32px;
+        border-width: 8px;
+        padding: 2rem 1rem 1.75rem;
+        min-height: 0;
+    }
+    .card--spade,
+    .card--heart { transform: none; }
+    .card,
+    .card--join {
+        flex: 1 1 100%;
+        max-width: none;
+        min-width: 0;
+    }
+}
+
+/* ================================
+   Schalter "Permanenter Team-Raum"
+   ================================ */
+.home-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    cursor: pointer;
+}
+.home-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.home-switch__track {
+    flex-shrink: 0;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    margin-top: 1px;
+    border-radius: 999px;
+    background: var(--color-border);
+    transition: background var(--transition);
+}
+.home-switch__track::after {
     content: '';
-    display: inline-block;
-    width: 4px;
-    height: 1.2em;
-    background: var(--color-primary);
-    border-radius: 2px;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform var(--transition);
+}
+.home-switch input:checked + .home-switch__track { background: var(--color-primary); }
+.home-switch input:checked + .home-switch__track::after { transform: translateX(16px); }
+.home-switch input:focus-visible + .home-switch__track { box-shadow: 0 0 0 3px rgba(0,65,120,0.25); }
+.home-switch__label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+.home-switch__hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+/* Eine Zeile: "/team/" + Name, wirkt wie ein Teil des Links */
+.home-team {
+    display: flex;
+    align-items: center;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-white);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.home-team:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0,65,120,0.1);
+}
+.home-team__prefix {
+    padding: 0 0.15rem 0 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+}
+.home-team__input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.625rem 0.875rem 0.625rem 0;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    font-family: var(--font-main), sans-serif;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+.home-team__input:focus { outline: none; }
+
+/* ================================
+   Tickets vorbereiten (Button + Dialog)
+   ================================ */
+.home-tickets-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0;
+    font-family: var(--font-main), sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    cursor: pointer;
+}
+.home-tickets-btn::before {
+    content: '+ ';
+    color: var(--color-primary);
+}
+.home-tickets-btn:hover { color: var(--color-primary); }
+
+.ticket-dialog { max-width: 460px; }
+.ticket-dialog .ticket-list {
+    max-height: 45vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px;
+}
+.btn--add-ticket {
+    background: transparent;
+    border: none;
+    color: var(--color-primary);
+    font-family: var(--font-main), sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+.btn--add-ticket:hover { text-decoration: underline; }
+
+@media (max-width: 520px) {
+    .form__row { grid-template-columns: 1fr; }
+    .card { padding: 2.2rem 1.25rem 1.5rem; }
 }
 
 /* ================================
@@ -142,4 +431,4 @@
     gap: 0.5rem;
     align-items: center;
 }
-.ticket-entry .form__input { flex: 1; }
+.ticket-entry .form__input { flex: 1; min-width: 0; }   /* lange Titel laufen im Feld weiter statt es zu verbreitern */

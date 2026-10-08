@@ -27,6 +27,11 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     boolean existsByRoomCode(String roomCode);
 
-    @Query("SELECT s.id FROM Session s WHERE s.lastActivityAt < :cutoff")
+    Optional<Session> findByTeamName(String teamName);
+
+    boolean existsByTeamName(String teamName);
+
+    // Team-Räume sind permanent und werden nie aufgeräumt
+    @Query("SELECT s.id FROM Session s WHERE s.lastActivityAt < :cutoff AND s.teamName IS NULL")
     List<Long> findInactiveSessionIds(@Param("cutoff") LocalDateTime cutoff);
 }

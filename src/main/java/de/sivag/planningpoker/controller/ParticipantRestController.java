@@ -58,20 +58,15 @@ public class ParticipantRestController {
                 name, role.name(), roomCode);
 
         messagingTemplate.convertAndSend(
-                TOPIC_SESSION + roomCode,
-                Map.of(
-                        "type",            "PLAYER_JOINED",
-                        PARTICIPANT_ID,    participant.getId().toString(),
-                        PARTICIPANT_NAME,  participant.getName(),
-                        PARTICIPANT_ROLE, participant.getRole().name()
-                )
-        );
+                TOPIC_SESSION + roomCode, PokerWsController.playerJoined(participant));
 
+        // "moderator": in Team-Räumen behält ein zurückkehrendes Mitglied seine Rechte
         return ResponseEntity.ok(Map.of(
                 PARTICIPANT_ID, participant.getId(),
                 "name",          participant.getName(),
                 "role",          participant.getRole().name(),
-                "token",         participant.getToken()
+                "token",         participant.getToken(),
+                "moderator",     participant.isModerator()
         ));
     }
 

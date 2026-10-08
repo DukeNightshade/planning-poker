@@ -36,6 +36,10 @@ class FlywayMigrationTest {
         assertThat(columnExists(ds, "PARTICIPANTS", "TOKEN")).isTrue();
         assertThat(columnExists(ds, "SESSIONS", "LAST_ACTIVITY_AT")).isTrue();
         assertThat(columnExists(ds, "VOTES", "CARD_VALUE")).isTrue();
+        assertThat(columnExists(ds, "SESSIONS", "TEAM_NAME")).isTrue();
+        assertThat(columnExists(ds, "PARTICIPANTS", "PRESENT")).isTrue();
+        assertThat(columnExists(ds, "SESSIONS", "PRODUCT_OWNER_CAN_VOTE")).isTrue();
+        assertThat(columnExists(ds, "SESSIONS", "MODERATOR_CAN_VOTE")).isFalse();
     }
 
     @Test
@@ -79,6 +83,10 @@ class FlywayMigrationTest {
         migrate(ds);
 
         assertThat(columnExists(ds, "PARTICIPANTS", "TOKEN")).isTrue();
+        assertThat(columnExists(ds, "PARTICIPANTS", "PRESENT")).isTrue();
+        assertThat(columnExists(ds, "SESSIONS", "PRODUCT_OWNER_CAN_VOTE")).isTrue();
+        assertThat(columnExists(ds, "SESSIONS", "MODERATOR_CAN_VOTE")).isFalse();
+        assertThat(columnExists(ds, "SESSIONS", "TEAM_NAME")).isTrue();
         try (Connection c = ds.getConnection(); Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(
                      "select room_code, last_activity_at, created_at from sessions")) {

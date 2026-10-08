@@ -6,7 +6,8 @@ function recalculateStats() {
     const devVotes       = extractNumericVotes('DEVELOPER');
     const testerVotes    = extractNumericVotes('TESTER');
     const architectVotes = extractNumericVotes('IT_ARCHITECT');
-    const allVotes       = [...devVotes, ...testerVotes, ...architectVotes];
+    const poVotes        = extractNumericVotes('PRODUCT_OWNER');   // nur vorhanden, wenn POs mitwählen dürfen
+    const allVotes       = [...devVotes, ...testerVotes, ...architectVotes, ...poVotes];
 
     return {
         devAvg:          average(devVotes),

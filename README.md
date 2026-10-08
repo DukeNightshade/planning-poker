@@ -50,7 +50,7 @@ Planning Poker ist eine Methode, mit der agile Teams gemeinsam den Aufwand für 
 | Frontend | Thymeleaf-Templates + JavaScript, eigens entwickelte SVG-Visualisierung des Pokertischs |
 | Datenhaltung (Entwicklung) | H2-Datenbank (lokale Dateidatenbank) |
 | Datenhaltung (Produktion) | PostgreSQL |
-| Betrieb | Docker (App + PostgreSQL) hinter Reverse Proxy, siehe `docs/deployment.md` |
+| Betrieb | Docker (App + PostgreSQL) hinter Reverse Proxy, siehe `docs/deployment.md`; alternativ Heroku (`Procfile`, `system.properties`) |
 
 ---
 

@@ -1,7 +1,8 @@
 /* global selectedCard, averageValue, isRevealed, players, participantId,
           participantRole, roomCode, stompClient, currentTicketId, tickets,
           isModerator, renderTable, renderSidebar, renderTicketSidebar,
-          recalculateStats, showToast, showConfirm, sendWs, authHeaders */
+          recalculateStats, showToast, showConfirm, sendWs, authHeaders,
+          teamName, absentPlayers */
 
 // ====================================
 // Kartenwahl
@@ -126,8 +127,7 @@ function showResults(votes, silent = false) {
     renderSidebar();
 
     document.getElementById('resultsArea').style.display  = 'block';
-    document.getElementById('cardArea').style.display     =
-        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
+    syncHand();
     document.getElementById('pokerPane').classList.add('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'block';
     document.querySelector('[onclick="revealCards()"]').disabled = true;
@@ -150,8 +150,7 @@ function resetUI() {
     document.getElementById('pokerPane').classList.remove('session__poker--discussion');
     document.getElementById('discussionLabel').style.display = 'none';
     document.getElementById('resultsArea').style.display     = 'none';
-    document.getElementById('cardArea').style.display        =
-        participantRole === 'PRODUCT_OWNER' ? 'none' : 'block';
+    syncHand();
     document.getElementById('voteStatus').textContent = globalThis.i18n.labels.waiting;
     document.getElementById('progressBar').style.width       = '0%';
     document.querySelector('[onclick="revealCards()"]').disabled = false;
@@ -256,7 +255,7 @@ function leaveTable() {
 
 function removeFromTable(targetId) {
     const labels   = globalThis.i18n?.labels || {};
-    const name     = players[targetId]?.name || '';
+    const name     = (players[targetId] || absentPlayers[targetId])?.name || '';
     const question = (labels.removeConfirm || '{0} vom Tisch entfernen?').replace('{0}', name);
     showConfirm(question, labels.removeAction || 'Entfernen', () => {
         sendWs('/participant/remove', { participantId: targetId });
@@ -313,19 +312,19 @@ function toggleSettings() {
 
 function saveSettings() {
     const showTopic        = document.getElementById('settingShowTopic').checked;
-    const moderatorCanVote = document.getElementById('settingModeratorCanVote').checked;
+    const productOwnerCanVote = document.getElementById('settingPoCanVote').checked;
     const autoReveal       = document.getElementById('settingAutoReveal').checked;
     const showOnlyTotal    = document.getElementById('settingShowOnlyTotal').checked;
-    sendWs('/settings', { showTopic, moderatorCanVote, autoReveal, showOnlyTotal });
+    sendWs('/settings', { showTopic, productOwnerCanVote, autoReveal, showOnlyTotal });
 }
 
-function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
+function applySettings(showTopic, productOwnerCanVote, autoReveal, onlyTotal) {
     const topicBar = document.getElementById('topicBar');
     if (topicBar) topicBar.style.display = (showTopic && Object.keys(tickets).length > 0) ? 'flex' : 'none';
 
     const showTopicEl = document.getElementById('settingShowTopic');
     if (showTopicEl) showTopicEl.checked = showTopic;
-    document.getElementById('settingModeratorCanVote').checked = moderatorCanVote;
+    document.getElementById('settingPoCanVote').checked = productOwnerCanVote;
     document.getElementById('settingAutoReveal').checked       = autoReveal;
 
     const onlyTotalEl = document.getElementById('settingShowOnlyTotal');
@@ -334,11 +333,16 @@ function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
 
     applyTicketSidebarVisibility();
 
-    const canVote = participantRole !== 'PRODUCT_OWNER' &&
-        !(isModerator && !moderatorCanVote);
-    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
+    syncHand();
 
     if (isRevealed) renderTable();
+}
+
+/** Blendet die Karten aus, wenn Product Owner in dieser Session nicht mitwählen. */
+function syncHand() {
+    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
+    const canVote   = participantRole !== 'PRODUCT_OWNER' || poCanVote;
+    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
 }
 
 // ====================================
@@ -346,12 +350,15 @@ function applySettings(showTopic, moderatorCanVote, autoReveal, onlyTotal) {
 // ====================================
 
 function copyRoomCode() {
-    navigator.clipboard.writeText(roomCode).then(() => {
+    // Team-Raum: den lesbaren, permanenten Link teilen; sonst wie bisher den Raumcode
+    const text  = teamName ? globalThis.location.origin + appUrl('/team/' + teamName) : roomCode;
+    const toast = teamName ? globalThis.i18n.toast.copiedLink : globalThis.i18n.toast.copied;
+    navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copyBtn');
         if (!btn.dataset.label) btn.dataset.label = btn.textContent;
         btn.textContent = globalThis.i18n.nav.copied;
         setTimeout(() => btn.textContent = btn.dataset.label, 2000);
-        showToast(globalThis.i18n.toast.copied, 'success', roomCode, 2500);
+        showToast(toast, 'success', text, 2500);
     }).catch(() => {
         showToast(globalThis.i18n.toast.errorCopy, 'error');
     });

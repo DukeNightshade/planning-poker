@@ -58,17 +58,21 @@ public class SessionService {
     // Business Logik Methoden
     // ====================================
 
+    /**
+     * @param teamName optional: macht die Session zum permanenten Team-Raum (/team/{name})
+     */
     @Transactional
     public Session createSession(String moderatorName, EstimationMethod method,
-                                 ParticipantRole moderatorRole, String browserId) {
-        return buildSession(moderatorName, method, moderatorRole, browserId);
+                                 ParticipantRole moderatorRole, String browserId, String teamName) {
+        return buildSession(moderatorName, method, moderatorRole, browserId, teamName);
     }
 
     @Transactional
     public Session createSessionWithTickets(String moderatorName, EstimationMethod method,
                                             ParticipantRole moderatorRole,
-                                            List<String> ticketTitles, String browserId) {
-        Session session = buildSession(moderatorName, method, moderatorRole, browserId);
+                                            List<String> ticketTitles, String browserId,
+                                            String teamName) {
+        Session session = buildSession(moderatorName, method, moderatorRole, browserId, teamName);
         session.setShowTopic(true);
 
         List<String> titles = ticketTitles.stream()
@@ -113,13 +117,25 @@ public class SessionService {
                 Participant p = existing.get();
                 p.setName(cleanedName);
                 p.setRole(role);
+                p.setPresent(true);
                 log.info("Reconnect: Bestehender Teilnehmer gefunden: name={}, roomCode={}",
                         p.getName(), roomCode);
                 return participantRepository.save(p);
             }
         }
 
-        if (participantRepository.existsBySessionRoomCodeAndName(roomCode, cleanedName)) {
+        Optional<Participant> sameName = participantRepository
+                .findBySessionRoomCodeAndName(roomCode, cleanedName);
+        if (sameName.isPresent()) {
+            Participant p = sameName.get();
+            // Team-Raum, neues Gerät: abwesendes Mitglied mit gleichem Namen übernimmt seinen Platz
+            if (session.isTeamRoom() && !p.isPresent()) {
+                p.setBrowserId(browserId);
+                p.setRole(role);
+                p.setPresent(true);
+                log.info("Team-Mitglied übernimmt Platz: name={}, team={}", p.getName(), session.getTeamName());
+                return participantRepository.save(p);
+            }
             throw new IllegalStateException(
                     "Der Name \"" + cleanedName + "\" ist in dieser Session bereits vergeben.");
         }
@@ -131,6 +147,40 @@ public class SessionService {
         participant.setSession(session);
 
         return participantRepository.save(participant);
+    }
+
+    /** Ergebnis, wenn die Verbindung eines Teilnehmers endgültig weg ist. */
+    public record Departure(String name, boolean keptAsAbsent) {}
+
+    /**
+     * Verbindung nach der Grace Period nicht zurück: in Team-Räumen wird der Teilnehmer
+     * als abwesend gemerkt (Stimme der laufenden Runde verfällt), sonst gelöscht.
+     */
+    @Transactional
+    public Departure handleConnectionLost(Long participantId) {
+        Participant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new NoSuchElementException(PARTICIPANT_NOT_FOUND));
+
+        if (participant.getSession().isTeamRoom()) {
+            participant.setPresent(false);
+            participant.getVotes().clear();
+            return new Departure(participant.getName(), true);
+        }
+        participantRepository.delete(participant);
+        return new Departure(participant.getName(), false);
+    }
+
+    /**
+     * Markiert einen Team-Teilnehmer wieder als anwesend (z. B. nach Neustart des Servers).
+     *
+     * @return true, wenn er vorher abwesend war
+     */
+    @Transactional
+    public boolean markPresent(Long participantId) {
+        return participantRepository.findById(participantId)
+                .filter(p -> !p.isPresent())
+                .map(p -> { p.setPresent(true); return true; })
+                .orElse(false);
     }
 
     @Transactional
@@ -147,27 +197,35 @@ public class SessionService {
      * Nimmt einen Teilnehmer vom Tisch (inkl. seiner Stimme). Erlaubt für sich
      * selbst oder durch einen Moderator, nur innerhalb des eigenen Raums.
      *
-     * @return Name des entfernten Teilnehmers
+     * In Team-Räumen wird, wer selbst geht, nur als abwesend markiert.
+     *
+     * @return Name und ob der Teilnehmer als abwesend gemerkt bleibt
      */
     @Transactional
-    public String removeFromTable(String roomCode, Participant caller, Long participantId) {
+    public Departure removeFromTable(String roomCode, Participant caller, Long participantId) {
         requireSelfOrModerator(caller, participantId);
         Participant participant = getParticipantInRoom(roomCode, participantId);
         participant.getSession().touch();
 
-        String name = participant.getName();
+        // Team-Raum, selbst gegangen: "für heute" – bleibt als abwesend gemerkt
+        if (participant.getSession().isTeamRoom() && caller.getId().equals(participantId)) {
+            participant.setPresent(false);
+            participant.getVotes().clear();
+            return new Departure(participant.getName(), true);
+        }
+
         participantRepository.delete(participant);
-        return name;
+        return new Departure(participant.getName(), false);
     }
 
     @Transactional
     public void updateSettings(String roomCode, boolean showTopic,
-                               boolean moderatorCanVote, boolean autoReveal,
+                               boolean productOwnerCanVote, boolean autoReveal,
                                boolean showOnlyTotal) {
         Session session = getSessionByRoomCode(roomCode);
         session.touch();
         session.setShowTopic(showTopic);
-        session.setModeratorCanVote(moderatorCanVote);
+        session.setProductOwnerCanVote(productOwnerCanVote);
         session.setAutoReveal(autoReveal);
         session.setShowOnlyTotal(showOnlyTotal);
         sessionRepository.save(session);
@@ -256,16 +314,30 @@ public class SessionService {
                         "Session mit Raumcode " + roomCode + " nicht gefunden."));
     }
 
+    public boolean sessionExists(String roomCode) {
+        return sessionRepository.existsByRoomCode(roomCode);
+    }
+
+    public boolean teamRoomExists(String teamName) {
+        return sessionRepository.existsByTeamName(teamName);
+    }
+
+    public Session getSessionByTeamName(String teamName) {
+        return sessionRepository.findByTeamName(teamName.toLowerCase())
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Team-Raum " + teamName + " nicht gefunden."));
+    }
+
     public List<Participant> getParticipants(String roomCode) {
         return participantRepository.findBySessionRoomCode(roomCode);
     }
 
     public List<Participant> getVotingParticipants(String roomCode) {
-        boolean moderatorCanVote = getSessionByRoomCode(roomCode).isModeratorCanVote();
+        boolean productOwnerCanVote = getSessionByRoomCode(roomCode).isProductOwnerCanVote();
         return participantRepository.findBySessionRoomCode(roomCode)
                 .stream()
-                .filter(p -> p.getRole() != ParticipantRole.PRODUCT_OWNER)
-                .filter(p -> moderatorCanVote || !p.isModerator())
+                .filter(Participant::isPresent)
+                .filter(p -> productOwnerCanVote || p.getRole() != ParticipantRole.PRODUCT_OWNER)
                 .toList();
     }
 
@@ -274,10 +346,19 @@ public class SessionService {
     // ====================================
 
     private Session buildSession(String moderatorName, EstimationMethod method,
-                                 ParticipantRole moderatorRole, String browserId) {
+                                 ParticipantRole moderatorRole, String browserId,
+                                 String teamName) {
         Session session = new Session();
         session.setRoomCode(generateUniqueRoomCode());
         session.setEstimationMethod(method);
+        if (teamName != null && !teamName.isBlank()) {
+            String cleanedTeamName = StringUtils.sanitizeTeamName(teamName);
+            if (sessionRepository.existsByTeamName(cleanedTeamName)) {
+                throw new IllegalStateException(
+                        "Der Team-Name \"" + cleanedTeamName + "\" ist bereits vergeben.");
+            }
+            session.setTeamName(cleanedTeamName);
+        }
         sessionRepository.save(session);
 
         Participant moderator = new Participant();

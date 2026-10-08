@@ -1,0 +1,21 @@
+<!--
+  Alle Stylesheets einzeln statt per @import in einer style.css:
+  So bekommt jede Datei ihren eigenen Inhalts-Hash in der URL. Mit @import
+  behielt style.css bei Änderungen an eingebundenen Dateien ihren Hash, und
+  Browser luden aus dem Cache veraltete Verweise (404, z. B. fehlender Dark Mode).
+  Reihenfolge ist wichtig: dark-mode und responsive überschreiben zuletzt.
+-->
+<th:block th:fragment="styles">
+    <link rel="stylesheet" th:href="@{/vendor/fonts/fira-sans.css}">
+    <link rel="stylesheet" th:href="@{/css/variables.css}">
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/buttons.css}">
+    <link rel="stylesheet" th:href="@{/css/forms.css}">
+    <link rel="stylesheet" th:href="@{/css/homepage.css}">
+    <link rel="stylesheet" th:href="@{/css/session.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/modal.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-mode.css}">
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+</th:block>

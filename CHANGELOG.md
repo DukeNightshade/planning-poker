@@ -6,6 +6,15 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 ## [Unreleased]
 
 ### Neu
+- Permanente Team-Räume unter `/team/{name}`: gleicher Link für jedes Meeting, der Raum
+  wird nie aufgeräumt. Mitglieder werden gemerkt – wer nicht verbunden ist, erscheint
+  eingeklappt unter "Abwesend" und zählt nicht mit; beim nächsten Öffnen des Links ist
+  man ohne Dialog wieder drin (auf neuem Gerät per gleichem Namen). Nach einem
+  Server-Neustart gelten alle als abwesend, bis ihre Tabs sich neu verbinden.
+- Neue Startseite im Stil des Pokertischs: "Session starten" und "Beitreten" liegen als
+  Spielkarten auf dem Filz (Team-Raum als Schalter, Tickets optional eingeklappt,
+  zuletzt gewählte Rolle vorbelegt; Beitreten per Raumcode oder Team-Name); besuchte Team-Räume
+  als Ein-Klick-Chips.
 - Ergebnisdarstellung mit Kartenstapeln: Nach dem Aufdecken liegt in der Tischmitte
   pro gewähltem Wert ein Stapel (anonym, Höhe = Anzahl), der häufigste Wert ist
   golden hervorgehoben; darunter "Meist · Ø" und optional der Durchschnitt je Rolle.
@@ -15,8 +24,13 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   erscheint das wie ein normales Verlassen; die Person kann über den Dialog direkt
   wieder beitreten. Danach wird Auto-Reveal sofort geprüft – das gilt jetzt auch,
   wenn jemand den Tab schließt.
+- Eigene Karten im Schätzraum als aufgefächerte Pokerhand direkt unter dem Tisch; der
+  Tisch und die Karten wachsen mit der Bildschirmgröße (Laptop bis 27-Zoll-Monitor).
 
 ### Geändert
+- Product Owner stimmen standardmäßig mit; die neue Einstellung "Product Owner darf
+  mitwählen" schaltet das ab. "Moderator darf mitwählen" entfällt – Moderatoren stimmen
+  immer mit (Migration `V4`).
 - Statische Dateien werden mit Inhalts-Hash ausgeliefert (`render-3f9a….js`), damit
   Browser nach einem Update keine alten und neuen Skripte mischen.
 - Datenbankschema über Flyway-Migrationen (`db/migration`) statt `ddl-auto=update`;
@@ -26,9 +40,14 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   einstellbar (`CLEANUP_MAX_IDLE_HOURS`, `CLEANUP_CRON`, `RECONNECT_GRACE_SECONDS`).
 - Testabdeckung mit JaCoCo (`mvn verify`).
 - Code aufgeräumt: gemeinsame Konstanten, `RoleParser` vereinheitlicht, doppelte
-  JavaScript-Logik zusammengeführt; Heroku-Dateien (`Procfile`, `system.properties`) entfernt.
+  JavaScript-Logik zusammengeführt.
+- Heroku-Dateien (`Procfile`, `system.properties`) bleiben erhalten; das `Procfile`
+  startet das Jar unabhängig von der Versionsnummer.
 
 ### Behoben
+- Nach Änderungen an einzelnen CSS-Dateien konnten Browser mit Cache Teile des
+  Stylings verlieren (z. B. Dark Mode): `style.css` mit `@import` behielt ihren Hash.
+  Die Stylesheets werden jetzt einzeln eingebunden, jedes mit eigenem Inhalts-Hash.
 - Abstimmungsanzeige zählte Moderatoren mit, auch wenn sie nicht abstimmen dürfen,
   und wurde beim Ändern der Einstellung nicht aktualisiert.
 - Wird "Moderator darf abstimmen" ausgeschaltet, werden bereits abgegebene

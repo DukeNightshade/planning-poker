@@ -88,7 +88,7 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
 
         Session result = sessionService.createSession(
-                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID);
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID, null);
 
         assertThat(result).isNotNull();
         verify(sessionRepository, times(1)).save(any(Session.class));
@@ -105,7 +105,7 @@ class SessionServiceTest {
         when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
 
         sessionService.createSession(
-                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID);
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID, null);
 
         verify(sessionRepository, times(2)).existsByRoomCode(anyString());
     }
@@ -128,7 +128,7 @@ class SessionServiceTest {
 
         sessionService.createSessionWithTickets(
                 "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER,
-                List.of("Story A", "Story B"), BROWSER_ID);
+                List.of("Story A", "Story B"), BROWSER_ID, null);
 
         verify(ticketRepository, times(2)).save(any(Ticket.class));
     }
@@ -143,7 +143,7 @@ class SessionServiceTest {
 
         sessionService.createSessionWithTickets(
                 "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER,
-                List.of("  Story A  ", "   ", "x".repeat(300)), BROWSER_ID);
+                List.of("  Story A  ", "   ", "x".repeat(300)), BROWSER_ID, null);
 
         ArgumentCaptor<Ticket> captor = ArgumentCaptor.forClass(Ticket.class);
         verify(ticketRepository, times(2)).save(captor.capture());
@@ -156,8 +156,8 @@ class SessionServiceTest {
     // ====================================
 
     @Test
-    @DisplayName("getVotingParticipants: Product Owner zählt nie, Moderator nur wenn er abstimmen darf")
-    void getVotingParticipants_respectsModeratorCanVote() {
+    @DisplayName("getVotingParticipants: Moderator zählt immer, Product Owner nur wenn er mitwählen darf")
+    void getVotingParticipants_respectsProductOwnerCanVote() {
         Participant dev = new Participant();
         dev.setId(2L);
         dev.setRole(ParticipantRole.DEVELOPER);
@@ -169,13 +169,13 @@ class SessionServiceTest {
         when(participantRepository.findBySessionRoomCode("ABCD1234"))
                 .thenReturn(List.of(testModerator, dev, po));
 
-        testSession.setModeratorCanVote(true);
+        testSession.setProductOwnerCanVote(true);
+        assertThat(sessionService.getVotingParticipants("ABCD1234"))
+                .containsExactly(testModerator, dev, po);
+
+        testSession.setProductOwnerCanVote(false);
         assertThat(sessionService.getVotingParticipants("ABCD1234"))
                 .containsExactly(testModerator, dev);
-
-        testSession.setModeratorCanVote(false);
-        assertThat(sessionService.getVotingParticipants("ABCD1234"))
-                .containsExactly(dev);
     }
 
     // ====================================
@@ -382,6 +382,119 @@ class SessionServiceTest {
     }
 
     // ====================================
+    // Team-Räume
+    // ====================================
+
+    @Test
+    @DisplayName("Team-Raum: Name wird normalisiert und gesetzt")
+    void createSession_withTeamName_setsNormalizedName() {
+        when(sessionRepository.existsByRoomCode(anyString())).thenReturn(false);
+        when(sessionRepository.existsByTeamName("backend-team")).thenReturn(false);
+        when(sessionRepository.save(any(Session.class))).thenAnswer(i -> i.getArgument(0));
+        when(participantRepository.save(any(Participant.class))).thenReturn(testModerator);
+
+        Session result = sessionService.createSession(
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID, "Backend Team");
+
+        assertThat(result.getTeamName()).isEqualTo("backend-team");
+        assertThat(result.isTeamRoom()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Team-Raum: bereits vergebener Name wird abgelehnt")
+    void createSession_withTakenTeamName_throws() {
+        when(sessionRepository.existsByRoomCode(anyString())).thenReturn(false);
+        when(sessionRepository.existsByTeamName("backend")).thenReturn(true);
+
+        assertThatThrownBy(() -> sessionService.createSession(
+                "Max", EstimationMethod.FIBONACCI, ParticipantRole.DEVELOPER, BROWSER_ID, "backend"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bereits vergeben");
+    }
+
+    @Test
+    @DisplayName("Team-Raum: abwesendes Mitglied übernimmt mit gleichem Namen seinen Platz (neues Gerät)")
+    void joinSession_teamRoom_reclaimsAbsentMember() {
+        testSession.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", true, testSession);
+        lisa.setPresent(false);
+        lisa.setBrowserId("old-browser");
+
+        when(sessionRepository.findByRoomCode("ABCD1234")).thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCodeAndBrowserId("ABCD1234", "new-browser"))
+                .thenReturn(Optional.empty());
+        when(participantRepository.findBySessionRoomCodeAndName("ABCD1234", "Lisa"))
+                .thenReturn(Optional.of(lisa));
+        when(participantRepository.save(any(Participant.class))).thenAnswer(i -> i.getArgument(0));
+
+        Participant result = sessionService.joinSession(
+                "ABCD1234", "Lisa", ParticipantRole.TESTER, "new-browser");
+
+        assertThat(result).isSameAs(lisa);
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.isModerator()).isTrue();
+        assertThat(result.getBrowserId()).isEqualTo("new-browser");
+        assertThat(result.getRole()).isEqualTo(ParticipantRole.TESTER);
+    }
+
+    @Test
+    @DisplayName("Team-Raum: Name eines anwesenden Mitglieds bleibt vergeben")
+    void joinSession_teamRoom_presentNameTaken() {
+        testSession.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+
+        when(sessionRepository.findByRoomCode("ABCD1234")).thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCodeAndName("ABCD1234", "Lisa"))
+                .thenReturn(Optional.of(lisa));
+
+        assertThatThrownBy(() -> sessionService.joinSession(
+                "ABCD1234", "Lisa", ParticipantRole.TESTER, "new-browser"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bereits vergeben");
+    }
+
+    @Test
+    @DisplayName("Verbindung weg: Team-Mitglied wird abwesend, Stimme verfällt; sonst gelöscht")
+    void handleConnectionLost_teamKeepsAbsent_normalDeletes() {
+        Session team = new Session();
+        team.setRoomCode("TEAM0001");
+        team.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", false, team);
+        lisa.getVotes().add(new de.sivag.planningpoker.model.Vote());
+        Participant ben = participantInRoom(3L, "Ben", false, testSession);
+
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+        when(participantRepository.findById(3L)).thenReturn(Optional.of(ben));
+
+        SessionService.Departure teamResult = sessionService.handleConnectionLost(2L);
+        assertThat(teamResult.keptAsAbsent()).isTrue();
+        assertThat(lisa.isPresent()).isFalse();
+        assertThat(lisa.getVotes()).isEmpty();
+        verify(participantRepository, never()).delete(lisa);
+
+        SessionService.Departure normalResult = sessionService.handleConnectionLost(3L);
+        assertThat(normalResult.keptAsAbsent()).isFalse();
+        verify(participantRepository).delete(ben);
+    }
+
+    @Test
+    @DisplayName("Abwesende zählen nicht als Stimmberechtigte; markPresent holt sie zurück")
+    void absentMembers_notVoting_untilPresentAgain() {
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        lisa.setPresent(false);
+        when(sessionRepository.findByRoomCode("ABCD1234")).thenReturn(Optional.of(testSession));
+        when(participantRepository.findBySessionRoomCode("ABCD1234"))
+                .thenReturn(List.of(testModerator, lisa));
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        assertThat(sessionService.getVotingParticipants("ABCD1234")).containsExactly(testModerator);
+
+        assertThat(sessionService.markPresent(2L)).isTrue();
+        assertThat(sessionService.markPresent(2L)).isFalse();
+        assertThat(sessionService.getVotingParticipants("ABCD1234")).containsExactly(testModerator, lisa);
+    }
+
+    // ====================================
     // removeFromTable()
     // ====================================
 
@@ -391,8 +504,22 @@ class SessionServiceTest {
         Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
         when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
 
-        assertThat(sessionService.removeFromTable("ABCD1234", lisa, 2L)).isEqualTo("Lisa");
+        assertThat(sessionService.removeFromTable("ABCD1234", lisa, 2L).name()).isEqualTo("Lisa");
         verify(participantRepository).delete(lisa);
+    }
+
+    @Test
+    @DisplayName("removeFromTable: Im Team-Raum bleibt, wer selbst geht, als abwesend gemerkt")
+    void removeFromTable_selfInTeamRoom_keptAsAbsent() {
+        testSession.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        SessionService.Departure result = sessionService.removeFromTable("ABCD1234", lisa, 2L);
+
+        assertThat(result.keptAsAbsent()).isTrue();
+        assertThat(lisa.isPresent()).isFalse();
+        verify(participantRepository, never()).delete(any());
     }
 
     @Test
