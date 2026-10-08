@@ -2,19 +2,28 @@
 // Konstanten
 // ====================================
 
-const AVATAR_COLORS = [
-    '#004178', '#E1001A', '#2563eb', '#16a34a',
-    '#9333ea', '#ea580c', '#0891b2', '#be185d',
-    '#854d0e', '#166534'
-];
-
+// Jede Rolle hat eine Farbe – Avatar, Namensschild am Tisch und Legende nutzen dieselbe
+// Farbtöne weit auseinander (angelehnt an die farbenblind-sichere Okabe-Ito-Palette):
+// Blau, Türkisgrün, Ocker, Magenta – abgedunkelt, damit weiße Schrift lesbar bleibt
 const ROLE_COLORS = {
-    DEVELOPER:     '#004178',
-    TESTER:        '#16a34a',
-    PRODUCT_OWNER: '#9333ea',
-    MODERATOR:     '#004178',
-    IT_ARCHITECT: '#0891b2'
+    DEVELOPER:     '#0b62a8',
+    TESTER:        '#00876a',
+    PRODUCT_OWNER: '#b0468a',
+    MODERATOR:     '#0b62a8',
+    IT_ARCHITECT:  '#b86e00'
 };
+
+// Hellere Töne für Text auf dunklem Hintergrund (Dark Mode)
+const ROLE_COLORS_DARK = {
+    DEVELOPER:     '#5ab4f0',
+    TESTER:        '#34d1a6',
+    PRODUCT_OWNER: '#ec8cc8',
+    MODERATOR:     '#5ab4f0',
+    IT_ARCHITECT:  '#f5b041'
+};
+
+// Reihenfolge in der Legende
+const ROLE_ORDER = ['DEVELOPER', 'TESTER', 'IT_ARCHITECT', 'PRODUCT_OWNER'];
 
 // Wert der Skip-Karte – muss zu den Decks in EstimationMethod passen
 const SKIP_CARD = '-';
@@ -236,12 +245,15 @@ function getRoleLabel(role) {
     return labels[role] || '';
 }
 
-function getAvatarColor(name) {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = name.codePointAt(i) + ((hash << 5) - hash);
-    }
-    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+/** Füllfarbe der Rolle (Avatar, Punkte); weiße Schrift darauf ist in beiden Modi lesbar. */
+function getRoleColor(role) {
+    return ROLE_COLORS[role] || ROLE_COLORS.DEVELOPER;
+}
+
+/** Rollenfarbe für Text – im Dark Mode heller, damit sie auf dunklem Grund lesbar bleibt. */
+function getRoleTextColor(role) {
+    const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    return dark ? (ROLE_COLORS_DARK[role] || ROLE_COLORS_DARK.DEVELOPER) : getRoleColor(role);
 }
 
 function formatNumber(value) {

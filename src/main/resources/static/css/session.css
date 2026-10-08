@@ -327,6 +327,30 @@
 .sidebar__absent-name {
     font-weight: 600;
 }
+
+/* ================================
+   Rollenfarben: Punkt und Legende unter dem Tisch
+   ================================ */
+.role-dot {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-right: 0.4rem;
+    border-radius: 50%;
+    vertical-align: 0.05em;
+}
+.role-legend {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 1.25rem;
+    font-size: 0.78rem;
+    color: var(--color-text-light);
+}
+.role-legend__item {
+    white-space: nowrap;
+}
 .sidebar__absent-role {
     flex: 1;
     font-size: 0.75rem;
