@@ -107,8 +107,16 @@ function renderTable() {
         : `Laufende Abstimmung. ${Object.values(players).filter(p => p.voted).length} von ${total} haben abgestimmt.`;
     svg.appendChild(svgDesc);
 
+    const seats = playerList.map(([id, player], index) => {
+        const angle = (2 * Math.PI * index / total) - Math.PI / 2;
+        return { id, player, px: cx + orbitRx * Math.cos(angle), py: cy + orbitRy * Math.sin(angle) };
+    });
+
     _appendDefs(svg);
-    _appendTableEllipse(svg, cx, cy, tableRx, tableRy);
+    const felt = _appendPokerTable(svg, cx, cy, tableRx, tableRy);
+    // Chips vor dem Ergebnis zeichnen, damit Texte in der Tischmitte darüber liegen
+    _appendSeatChips(svg, cx, cy, felt, seats);
+    _appendFeltCards(svg, cx, cy, felt, seats);
 
     if (isRevealed) {
         _renderResult(svg, cx, cy, tableRx, tableRy);
@@ -117,14 +125,8 @@ function renderTable() {
         _appendProgressBar(svg, cx, cy);
     }
 
-    if (total > 0) {
-        playerList.forEach(([id, player], index) => {
-            const angle = (2 * Math.PI * index / total) - Math.PI / 2;
-            const px    = cx + orbitRx * Math.cos(angle);
-            const py    = cy + orbitRy * Math.sin(angle);
-            _appendPlayerCard(svg, id, player, { px, py }, { cardW, cardH, nameFontSize });
-        });
-    }
+    seats.forEach(({ id, player, px, py }) =>
+        _appendPlayerCard(svg, id, player, { px, py }, { cardW, cardH, nameFontSize }));
 
     container.appendChild(svg);
     syncStatusToSvg();
@@ -156,13 +158,29 @@ function _appendDefs(svg) {
     const patternColor = dark ? 'rgba(74,158,222,0.07)' : 'rgba(0,65,120,0.06)';
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     defs.innerHTML = `
-        <radialGradient id="tableGrad" cx="40%" cy="35%" r="60%">
-            <stop offset="0%"   stop-color="#005aa7"/>
-            <stop offset="100%" stop-color="#003060"/>
+        <radialGradient id="tableGrad" cx="45%" cy="38%" r="65%">
+            <stop offset="0%"   stop-color="#0063b5"/>
+            <stop offset="60%"  stop-color="#004a8c"/>
+            <stop offset="100%" stop-color="#00336a"/>
         </radialGradient>
+        <linearGradient id="railGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#1d3c60"/>
+            <stop offset="45%"  stop-color="#0b2747"/>
+            <stop offset="100%" stop-color="#041a33"/>
+        </linearGradient>
+        <pattern id="feltPattern" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+            <circle cx="1.5" cy="1.5" r="0.7" fill="rgba(255,255,255,0.045)"/>
+            <circle cx="4.5" cy="4.5" r="0.6" fill="rgba(0,0,0,0.08)"/>
+        </pattern>
         <filter id="tableShadow" x="-20%" y="-20%" width="140%" height="160%">
             <feDropShadow dx="0" dy="8" stdDeviation="12"
                           flood-color="rgba(0,48,96,0.4)"/>
+        </filter>
+        <filter id="feltEdgeBlur" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="6"/>
+        </filter>
+        <filter id="chipShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="rgba(0,0,0,0.45)"/>
         </filter>
         <pattern id="cardPattern" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
             <rect width="8" height="8" fill="none"/>
@@ -172,15 +190,356 @@ function _appendDefs(svg) {
     svg.appendChild(defs);
 }
 
-function _appendTableEllipse(svg, cx, cy, rx, ry) {
-    const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    ellipse.setAttribute('cx', cx);
-    ellipse.setAttribute('cy', cy);
-    ellipse.setAttribute('rx', rx);
-    ellipse.setAttribute('ry', ry);
-    ellipse.setAttribute('fill', 'url(#tableGrad)');
-    ellipse.setAttribute('filter', 'url(#tableShadow)');
-    svg.appendChild(ellipse);
+/** Pfad eines Stadions (gerade Längsseiten, halbrunde Enden) mit halber Breite hw und halber Höhe hh. */
+function _stadiumPath(cx, cy, hw, hh) {
+    const l = Math.max(0, hw - hh);
+    return `M ${cx - l} ${cy - hh} H ${cx + l} A ${hh} ${hh} 0 0 1 ${cx + l} ${cy + hh} `
+         + `H ${cx - l} A ${hh} ${hh} 0 0 1 ${cx - l} ${cy - hh} Z`;
+}
+
+function _svgPath(d, attrs) {
+    const p = document.createElementNS(SVG_NS, 'path');
+    p.setAttribute('d', d);
+    Object.entries(attrs).forEach(([k, v]) => p.setAttribute(k, String(v)));
+    return p;
+}
+
+/**
+ * Pokertisch: gepolsterter Rand, Filz mit Struktur und Schatten zur Kante, Setzlinie.
+ * Der Rand liegt je zur Hälfte innerhalb und außerhalb von rx/ry, damit die Plätze
+ * ihren Abstand behalten. Liefert die halben Maße des Filzes.
+ */
+function _appendPokerTable(svg, cx, cy, rx, ry) {
+    const railW = Math.min(22, Math.max(10, ry * 0.13));
+    const feltW = rx - railW / 2;
+    const feltH = ry - railW / 2;
+    const feltD = _stadiumPath(cx, cy, feltW, feltH);
+
+    // Polsterrand mit Glanzkante oben und dunkler Fuge zum Filz
+    svg.appendChild(_svgPath(_stadiumPath(cx, cy, rx + railW / 2, ry + railW / 2),
+        { fill: 'url(#railGrad)', filter: 'url(#tableShadow)' }));
+    svg.appendChild(_svgPath(_stadiumPath(cx, cy, rx + railW / 2 - 1.5, ry + railW / 2 - 1.5),
+        { fill: 'none', stroke: 'rgba(255,255,255,0.14)', 'stroke-width': 1.5 }));
+
+    svg.appendChild(_svgPath(feltD, { fill: 'url(#tableGrad)' }));
+    svg.appendChild(_svgPath(feltD, { fill: 'url(#feltPattern)' }));
+
+    // Schatten des Randes auf den Filz: weiche dunkle Kante, auf den Filz beschnitten
+    const clip = document.createElementNS(SVG_NS, 'clipPath');
+    clip.setAttribute('id', 'feltClip');
+    clip.appendChild(_svgPath(feltD, {}));
+    svg.querySelector('defs').appendChild(clip);
+    svg.appendChild(_svgPath(feltD, {
+        fill: 'none', stroke: 'rgba(0,10,30,0.55)', 'stroke-width': railW * 0.9,
+        filter: 'url(#feltEdgeBlur)', 'clip-path': 'url(#feltClip)'
+    }));
+    svg.appendChild(_svgPath(feltD, { fill: 'none', stroke: '#021428', 'stroke-width': 1.5 }));
+
+    // Setzlinie: die Chips der Spieler liegen zwischen ihr und dem Rand
+    const lineInset = _chipRadius(feltH) * 2 + 14;
+    svg.appendChild(_svgPath(_stadiumPath(cx, cy, feltW - lineInset, feltH - lineInset),
+        { fill: 'none', stroke: 'rgba(255,255,255,0.16)', 'stroke-width': 1.2 }));
+
+    return { hw: feltW, hh: feltH };
+}
+
+// ====================================
+// SVG Hilfsfunktionen — Chips
+// ====================================
+
+function _chipRadius(feltH) {
+    return Math.min(11, Math.max(6, feltH * 0.07));
+}
+
+/** Abstand vom Mittelpunkt bis zum Stadionrand entlang der Richtung (ux, uy), Einheitsvektor. */
+function _stadiumRayHit(ux, uy, hw, hh) {
+    const l = Math.max(0, hw - hh);
+    if (Math.abs(uy) > 1e-6) {
+        const t = hh / Math.abs(uy);
+        if (Math.abs(t * ux) <= l) return t;
+    }
+    // Halbkreis am Ende: Mittelpunkt (±l, 0), Radius hh
+    const dc = Math.abs(ux) * l;
+    return dc + Math.sqrt(dc * dc - l * l + hh * hh);
+}
+
+/**
+ * Nächster Punkt auf dem Filzrand zu (x, y), relativ zur Tischmitte gerechnet.
+ * Liefert den Randpunkt (bx, by), die Normale nach außen (nx, ny) und die
+ * Tangente entlang der Kante (tx, ty).
+ */
+function _feltEdge(cx, cy, felt, x, y) {
+    const l  = Math.max(0, felt.hw - felt.hh);
+    const rx = x - cx;
+    const ry = y - cy;
+    let nx, ny, bx, by;
+    if (Math.abs(rx) <= l) {
+        // gerade Längsseite
+        nx = 0;
+        ny = ry < 0 ? -1 : 1;
+        bx = rx;
+        by = ny * felt.hh;
+    } else {
+        // halbrundes Ende um (±l, 0)
+        const ex  = Math.sign(rx) * l;
+        const len = Math.hypot(rx - ex, ry) || 1;
+        nx = (rx - ex) / len;
+        ny = ry / len;
+        bx = ex + nx * felt.hh;
+        by = ny * felt.hh;
+    }
+    return { bx: cx + bx, by: cy + by, nx, ny, tx: -ny, ty: nx };
+}
+
+/** Punkt auf dem Filz: von (x, y) zum Rand projiziert, dann um inset nach innen. */
+function _feltInset(cx, cy, felt, x, y, inset) {
+    const e = _feltEdge(cx, cy, felt, x, y);
+    return { x: e.bx - e.nx * inset, y: e.by - e.ny * inset, edge: e };
+}
+
+/**
+ * Platz eines Spielers auf dem Filz: wo die Linie von der Tischmitte zum Spieler den
+ * Rand trifft. Von dort liegen Chip, Karte und Dealer-Button entlang der Kante.
+ */
+function _feltAnchor(cx, cy, felt, px, py) {
+    const len = Math.hypot(px - cx, py - cy) || 1;
+    const ux  = (px - cx) / len;
+    const uy  = (py - cy) / len;
+    const t   = _stadiumRayHit(ux, uy, felt.hw, felt.hh);
+    return _feltEdge(cx, cy, felt, cx + ux * t, cy + uy * t);
+}
+
+/** Entlang der Kante um s verschoben und um inset nach innen – bleibt auch an den Rundungen auf dem Filz. */
+function _alongEdge(cx, cy, felt, anchor, s, inset) {
+    return _feltInset(cx, cy, felt, anchor.bx + anchor.tx * s, anchor.by + anchor.ty * s, inset);
+}
+
+/**
+ * Vor jedem Platz ein Chip in der Rollenfarbe am Filzrand, beim Moderator
+ * zusätzlich der Dealer-Button. Reine Deko, die Rolle steht auch im Namensschild.
+ */
+function _appendSeatChips(svg, cx, cy, felt, seats) {
+    const r = _chipRadius(felt.hh);
+    seats.forEach(({ id, player, px, py }) => {
+        const anchor = _feltAnchor(cx, cy, felt, px, py);
+        const chip   = _alongEdge(cx, cy, felt, anchor, 0, r + 6);
+
+        svg.appendChild(_chip(chip.x, chip.y, r,
+            ROLE_COLORS_DARK[player.role] || ROLE_COLORS_DARK.DEVELOPER));
+
+        const moderator = player.moderator || (id === participantId && isModerator);
+        if (moderator) {
+            // auf der einen Seite des Chips der Dealer-Button, auf der anderen die Karte
+            const btn = _alongEdge(cx, cy, felt, anchor, r * 2.4, r * 1.05 + 8);
+            svg.appendChild(_dealerButton(btn.x, btn.y, r));
+        }
+    });
+}
+
+// ====================================
+// SVG Hilfsfunktionen — Karten auf dem Filz
+// ====================================
+
+// Stand der letzten Darstellung (id -> Karte), um Übergänge zu animieren:
+// neu abgestimmt → Karte gleitet vom Platz auf den Filz, Aufdecken → Karte dreht sich um,
+// neue Runde → Karten werden in die Mitte geschoben. null = noch nichts gezeichnet.
+let _feltCards       = null;
+let _feltWasRevealed = false;
+
+const FELT_STAGGER_MS = 45;
+
+/** Leichte, pro Spieler feste Schräglage, damit die Karten nicht wie gedruckt wirken. */
+function _feltTilt(id) {
+    let h = 0;
+    for (const ch of String(id)) h = (h * 31 + ch.codePointAt(0)) % 997;
+    return (h % 21) - 10;
+}
+
+function _appendFeltCards(svg, cx, cy, felt, seats) {
+    const r    = _chipRadius(felt.hh);
+    const w    = Math.max(14, r * 1.9);
+    const h    = w * 1.4;
+    const prev = _feltCards;
+    const next = {};
+
+    // Neue Runde: die Karten der letzten Runde wandern in die Mitte und verschwinden
+    if (prev !== null && _feltWasRevealed && !isRevealed) {
+        Object.values(prev).forEach((card, i) => {
+            svg.appendChild(_feltCard(card, w, h,
+                { anim: 'collect', dx: cx - card.x, dy: cy - card.y, delay: i * FELT_STAGGER_MS }));
+        });
+    }
+
+    seats.forEach(({ id, player, px, py }, i) => {
+        if (!player.voted) return;
+        // Abstand zum Rand: halbe Diagonale, damit auch die schräge Karte ganz auf dem Filz liegt
+        const anchor = _feltAnchor(cx, cy, felt, px, py);
+        const spot   = _alongEdge(cx, cy, felt, anchor, -(r + 5 + w * 0.6), Math.hypot(w, h) / 2 + 4);
+        // Unterkante zum Spieler (Normale nach außen), dazu die leichte Schräglage
+        const facing = Math.atan2(-spot.edge.nx, spot.edge.ny) * 180 / Math.PI;
+        const card = {
+            x:       spot.x,
+            y:       spot.y,
+            tilt:    facing + _feltTilt(id),
+            faceUp:  isRevealed && !!player.cardValue,
+            value:   player.cardValue,
+            changed: player.changed
+        };
+        next[id] = card;
+
+        const old = prev?.[id];
+        let opts  = {};
+        if (prev !== null && !old) {
+            opts = { anim: 'deal', dx: px - card.x, dy: py - card.y };
+        } else if (old && !old.faceUp && card.faceUp) {
+            opts = { anim: 'flip', delay: i * FELT_STAGGER_MS };
+        }
+        svg.appendChild(_feltCard(card, w, h, opts));
+    });
+
+    _feltCards       = next;
+    _feltWasRevealed = isRevealed;
+}
+
+/**
+ * Eine Karte auf dem Filz, um den eigenen Mittelpunkt gezeichnet:
+ * Position → Bewegung (Austeilen/Einsammeln) → Schräglage → Umdrehen.
+ */
+function _feltCard(card, w, h, { anim, dx = 0, dy = 0, delay = 0 } = {}) {
+    const outer = document.createElementNS(SVG_NS, 'g');
+    outer.setAttribute('transform', `translate(${card.x} ${card.y})`);
+    outer.setAttribute('class', 'felt-card');
+
+    const move = document.createElementNS(SVG_NS, 'g');
+    if (anim === 'deal' || anim === 'collect') {
+        move.setAttribute('class', `felt-card__move felt-card__move--${anim}`);
+        move.style.setProperty('--dx', `${dx}px`);
+        move.style.setProperty('--dy', `${dy}px`);
+        move.style.animationDelay = `${delay}ms`;
+    }
+    outer.appendChild(move);
+
+    const tilt = document.createElementNS(SVG_NS, 'g');
+    tilt.setAttribute('transform', `rotate(${card.tilt})`);
+    move.appendChild(tilt);
+
+    const flip = document.createElementNS(SVG_NS, 'g');
+    tilt.appendChild(flip);
+
+    const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (anim === 'flip') {
+        flip.setAttribute('class', 'felt-card__flip felt-card__flip--anim');
+        flip.style.animationDelay = `${delay}ms`;
+        flip.appendChild(_feltCardBack(w, h, dark, delay));
+        flip.appendChild(_feltCardFront(card, w, h, dark, delay));
+    } else {
+        flip.appendChild(card.faceUp ? _feltCardFront(card, w, h, dark) : _feltCardBack(w, h, dark));
+    }
+    return outer;
+}
+
+function _feltCardRect(w, h, fill, stroke) {
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('x', String(-w / 2));
+    rect.setAttribute('y', String(-h / 2));
+    rect.setAttribute('width',  String(w));
+    rect.setAttribute('height', String(h));
+    rect.setAttribute('rx', String(Math.max(2, w * 0.14)));
+    rect.setAttribute('fill', fill);
+    rect.setAttribute('stroke', stroke);
+    rect.setAttribute('stroke-width', '1');
+    return rect;
+}
+
+/** Rückseite in Rot wie die Karte eines Spielers, der schon abgestimmt hat. */
+function _feltCardBack(w, h, dark, delay) {
+    const { cfg } = _votedCardConfig(dark);
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'felt-card__back');
+    g.setAttribute('filter', 'url(#chipShadow)');
+    if (delay !== undefined) g.style.animationDelay = `${delay}ms`;
+    g.appendChild(_feltCardRect(w, h, cfg.fill, cfg.stroke));
+
+    const inset = Math.max(2, w * 0.16);
+    g.appendChild(_feltCardRect(w - inset * 2, h - inset * 2, 'none', 'rgba(255,255,255,0.45)'));
+    return g;
+}
+
+function _feltCardFront(card, w, h, dark, delay) {
+    const { cfg } = card.value === SKIP_CARD
+        ? _skipCardConfig(dark)
+        : _revealedCardConfig(card.changed, dark);
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'felt-card__front');
+    g.setAttribute('filter', 'url(#chipShadow)');
+    if (delay !== undefined) g.style.animationDelay = `${delay}ms`;
+    g.appendChild(_feltCardRect(w, h, cfg.fill, cfg.stroke));
+
+    const len = String(card.value ?? '').length;
+    g.appendChild(_svgText(0, 0.5, card.value ?? '', {
+        fill: cfg.textFill, 'font-size': Math.round(w * (len > 2 ? 0.38 : 0.52)),
+        'font-weight': 700, 'dominant-baseline': 'middle'
+    }));
+    return g;
+}
+
+function _chip(x, y, r, color) {
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'seat-chip');
+    g.setAttribute('filter', 'url(#chipShadow)');
+
+    const base = document.createElementNS(SVG_NS, 'circle');
+    base.setAttribute('cx', String(x));
+    base.setAttribute('cy', String(y));
+    base.setAttribute('r',  String(r));
+    base.setAttribute('fill', color);
+    base.setAttribute('stroke', 'rgba(0,0,0,0.35)');
+    base.setAttribute('stroke-width', '0.8');
+    g.appendChild(base);
+
+    // weiße Kantenmarken: 6 Segmente auf dem äußeren Ring
+    const ringR = r * 0.8;
+    const seg   = (2 * Math.PI * ringR) / 12;
+    const ring  = document.createElementNS(SVG_NS, 'circle');
+    ring.setAttribute('cx', String(x));
+    ring.setAttribute('cy', String(y));
+    ring.setAttribute('r',  String(ringR));
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', 'rgba(255,255,255,0.9)');
+    ring.setAttribute('stroke-width', String(r * 0.32));
+    ring.setAttribute('stroke-dasharray', `${seg} ${seg}`);
+    g.appendChild(ring);
+
+    const inlay = document.createElementNS(SVG_NS, 'circle');
+    inlay.setAttribute('cx', String(x));
+    inlay.setAttribute('cy', String(y));
+    inlay.setAttribute('r',  String(r * 0.5));
+    inlay.setAttribute('fill', color);
+    inlay.setAttribute('stroke', 'rgba(255,255,255,0.55)');
+    inlay.setAttribute('stroke-width', String(Math.max(0.6, r * 0.08)));
+    g.appendChild(inlay);
+    return g;
+}
+
+function _dealerButton(x, y, r) {
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'dealer-button');
+    g.setAttribute('filter', 'url(#chipShadow)');
+
+    const disc = document.createElementNS(SVG_NS, 'circle');
+    disc.setAttribute('cx', String(x));
+    disc.setAttribute('cy', String(y));
+    disc.setAttribute('r',  String(r * 1.05));
+    disc.setAttribute('fill', '#f8fafc');
+    disc.setAttribute('stroke', '#94a3b8');
+    disc.setAttribute('stroke-width', '0.8');
+    g.appendChild(disc);
+
+    g.appendChild(_svgText(x, y + 0.5, 'D', {
+        fill: '#1a1a2e', 'font-size': Math.round(r * 1.2), 'font-weight': 800,
+        'dominant-baseline': 'middle'
+    }));
+    return g;
 }
 
 function _appendVoteStatus(svg, cx, cy) {
@@ -360,6 +719,14 @@ function _appendPlayerCard(svg, id, player, pos, cardSize) {
     const { cfg }   = _resolveCardConfig(player, isSelf, hasVoted);
     const rx = 8;
 
+    // Vor dem Aufdecken nur die eigene große Karte; wer abgestimmt hat, sieht man an der
+    // Karte auf dem Filz. Auf den anderen Plätzen sitzt bis dahin eine Spielerfigur.
+    if (!isRevealed && !isSelf) {
+        svg.appendChild(_seatFigure(id, player, px, py, cardW, cardH));
+        _appendNameBadge(svg, player, { px, py }, cardH, nameFontSize, { roleColor, isSelf });
+        return;
+    }
+
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('id', `card-group-${id}`);
     g.style.transformOrigin = `${px}px ${py}px`;
@@ -456,6 +823,37 @@ function _appendPlayerCard(svg, id, player, pos, cardSize) {
     _appendNameBadge(svg, player, { px, py }, cardH, nameFontSize, { roleColor, isSelf });
 }
 
+/**
+ * Spielerfigur auf dem Platz einer Karte: Kopf und Schultern, Oberteil in der Rollenfarbe.
+ * Eigene ID statt card-group-*, damit die Austeil-Animation der neuen Runde sie nicht erfasst.
+ */
+function _seatFigure(id, player, px, py, cardW, cardH) {
+    const dark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('id', `seat-figure-${id}`);
+    g.setAttribute('class', 'seat-figure');
+
+    // Schultern: oben abgerundet, unten gerade abgeschnitten (sitzt hinter dem Namensschild)
+    const w   = cardW * 0.5;
+    const top = py - cardH * 0.02;
+    const bot = py + cardH / 2 + 2;
+    const rr  = w * 0.8;
+    g.appendChild(_svgPath(
+        `M ${px - w} ${bot} V ${top + rr} Q ${px - w} ${top} ${px - w + rr} ${top} `
+        + `H ${px + w - rr} Q ${px + w} ${top} ${px + w} ${top + rr} V ${bot} Z`,
+        { fill: getRoleTextColor(player.role), stroke: 'rgba(0,0,0,0.25)', 'stroke-width': 1 }));
+
+    const head = document.createElementNS(SVG_NS, 'circle');
+    head.setAttribute('cx', String(px));
+    head.setAttribute('cy', String(py - cardH * 0.22));
+    head.setAttribute('r',  String(cardW * 0.27));
+    head.setAttribute('fill',   dark ? '#cbd5e1' : '#e2e8f0');
+    head.setAttribute('stroke', '#94a3b8');
+    head.setAttribute('stroke-width', '1');
+    g.appendChild(head);
+    return g;
+}
+
 function _revealedCardConfig(changed, dark) {
     if (changed) {
         return { cfg: {
@@ -529,13 +927,13 @@ function _resolveCardConfig(player, isSelf, hasVoted) {
 function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
     const { px, py }            = pos;
     const { roleColor, isSelf } = style;
-    const nameY       = py + cardH / 2 + 4;
     const displayName = _resolveDisplayName(player.name, isSelf);
     // Links im Schild ein Punkt in der Rollenfarbe
     const dotR        = Math.max(3.5, nameFontSize * 0.4);
     const dotSpace    = dotR * 2 + 5;
     const nameW       = Math.min(displayName.length * 7 + 16, 120) + dotSpace;
     const nameH       = nameFontSize + 10;
+    const nameY       = py + cardH / 2 + 4;
     const badgeRx     = nameH / 2;
     const darkBadge   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
 

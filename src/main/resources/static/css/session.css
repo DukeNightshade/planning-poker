@@ -595,6 +595,69 @@
 }
 
 /* ================================
+   Karten auf dem Filz (render.js)
+   ================================ */
+.felt-card__move,
+.felt-card__flip {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+/* Abgestimmt: Karte gleitet vom Platz auf den Filz */
+.felt-card__move--deal {
+    animation: feltDeal 420ms cubic-bezier(.2,.8,.3,1) both;
+}
+
+/* Neue Runde: Karte wird in die Mitte geschoben */
+.felt-card__move--collect {
+    animation: feltCollect 480ms cubic-bezier(.4,0,.6,1) forwards;
+}
+
+/* Aufdecken: Karte dreht sich um, in der Mitte wechselt die Seite */
+.felt-card__flip--anim {
+    animation: feltFlip 460ms ease-in-out both;
+}
+.felt-card__flip--anim .felt-card__back {
+    animation: feltFaceOut 460ms step-end both;
+}
+.felt-card__flip--anim .felt-card__front {
+    animation: feltFaceIn 460ms step-end both;
+}
+
+@keyframes feltDeal {
+    from { transform: translate(var(--dx), var(--dy)) scale(0.6); opacity: 0; }
+    30%  { opacity: 1; }
+    to   { transform: none; opacity: 1; }
+}
+@keyframes feltCollect {
+    to { transform: translate(var(--dx), var(--dy)) scale(0.5); opacity: 0; }
+}
+@keyframes feltFlip {
+    0%   { transform: scaleX(1); }
+    50%  { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+}
+@keyframes feltFaceOut {
+    0%   { opacity: 1; }
+    50%  { opacity: 0; }
+    100% { opacity: 0; }
+}
+@keyframes feltFaceIn {
+    0%   { opacity: 0; }
+    50%  { opacity: 1; }
+    100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .felt-card__move--deal,
+    .felt-card__flip--anim,
+    .felt-card__flip--anim .felt-card__back,
+    .felt-card__flip--anim .felt-card__front { animation: none; }
+    .felt-card__flip--anim .felt-card__back { opacity: 0; }
+    .felt-card__move--collect { animation: none; opacity: 0; }
+}
+
+/* ================================
    Legacy: Poker-Tisch-Klassen (nicht verwendet)
    ================================ */
 .poker-table__ellipse,

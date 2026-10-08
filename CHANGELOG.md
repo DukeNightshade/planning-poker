@@ -29,6 +29,15 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
 - Rollenfarben: Entwickler, Tester, IT-Architekt und Product Owner haben je eine deutlich
   unterscheidbare Farbe (Avatar, Punkt im Namensschild am Tisch, Legende unter dem Tisch);
   der goldene Ring kennzeichnet nur noch Moderatoren.
+- Der Schätztisch sieht aus wie ein echter Pokertisch: Stadion-Form mit gepolstertem
+  Rand, Filzstruktur und Setzlinie. Vor jedem Platz liegt ein Chip in der Rollenfarbe,
+  beim Moderator zusätzlich der Dealer-Button.
+- Wer abstimmt, legt eine verdeckte Karte vor sich auf den Filz, zum eigenen Platz
+  ausgerichtet. Beim Aufdecken drehen sich die Karten um, bei einer neuen Runde werden
+  sie in die Mitte geschoben.
+- Vor dem Aufdecken sitzt auf den anderen Plätzen eine Spielerfigur in der Rollenfarbe
+  statt der großen Karte; erst beim Aufdecken erscheinen die Karten. Die eigene Karte
+  bleibt immer sichtbar.
 
 ### Geändert
 - Der Datenbanktreiber wird an der JDBC-URL erkannt; `SPRING_DATASOURCE_DRIVER` ist
