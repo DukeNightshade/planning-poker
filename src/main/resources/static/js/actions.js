@@ -9,7 +9,7 @@
 // ====================================
 
 function selectCard(button) {
-    if (participantRole === 'PRODUCT_OWNER') return;
+    if (!_canVote()) return;
 
     document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
     button.classList.add('selected');
@@ -338,11 +338,15 @@ function applySettings(showTopic, productOwnerCanVote, autoReveal, onlyTotal) {
     if (isRevealed) renderTable();
 }
 
+/** Darf ich abstimmen? Product Owner nur, wenn die Einstellung es erlaubt (Standard: ja). */
+function _canVote() {
+    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
+    return participantRole !== 'PRODUCT_OWNER' || poCanVote;
+}
+
 /** Blendet die Karten aus, wenn Product Owner in dieser Session nicht mitwählen. */
 function syncHand() {
-    const poCanVote = document.getElementById('settingPoCanVote')?.checked ?? true;
-    const canVote   = participantRole !== 'PRODUCT_OWNER' || poCanVote;
-    document.getElementById('cardArea').style.display = canVote ? 'block' : 'none';
+    document.getElementById('cardArea').style.display = _canVote() ? 'block' : 'none';
 }
 
 // ====================================
