@@ -26,11 +26,19 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   wenn jemand den Tab schließt.
 - Eigene Karten im Schätzraum als aufgefächerte Pokerhand direkt unter dem Tisch; der
   Tisch und die Karten wachsen mit der Bildschirmgröße (Laptop bis 27-Zoll-Monitor).
+- Rollenfarben: Entwickler, Tester, IT-Architekt und Product Owner haben je eine deutlich
+  unterscheidbare Farbe (Avatar, Punkt im Namensschild am Tisch, Legende unter dem Tisch);
+  der goldene Ring kennzeichnet nur noch Moderatoren.
 
 ### Geändert
 - Product Owner stimmen standardmäßig mit; die neue Einstellung "Product Owner darf
   mitwählen" schaltet das ab. "Moderator darf mitwählen" entfällt – Moderatoren stimmen
   immer mit (Migration `V4`).
+- Ergebnis in der Tischmitte (Kartenstapel, Ø) wächst mit der Tischgröße; die Zeile
+  "Meist: …" entfällt, der häufigste Wert ist am goldenen Stapel erkennbar.
+- Kein Maus-Tooltip "Pokertisch mit x Teilnehmern" mehr über dem Tisch.
+- Product Owner zeigen in der Teilnehmerliste wieder ihren Abstimmungsstatus; die
+  Rollenauswahl heißt nur noch "Product Owner" (ohne "Beobachter").
 - Statische Dateien werden mit Inhalts-Hash ausgeliefert (`render-3f9a….js`), damit
   Browser nach einem Update keine alten und neuen Skripte mischen.
 - Datenbankschema über Flyway-Migrationen (`db/migration`) statt `ddl-auto=update`;

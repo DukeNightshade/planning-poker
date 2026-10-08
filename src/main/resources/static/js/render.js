@@ -1,5 +1,5 @@
 /* global participantId, isModerator, isRevealed, players, absentPlayers, tickets, currentTicketId,
-          ROLE_COLORS, recalculateStats, escapeHtml, getRoleLabel, getAvatarColor,
+          getRoleColor, getRoleTextColor, ROLE_ORDER, ROLE_COLORS_DARK, recalculateStats, escapeHtml, getRoleLabel,
           selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD,
           compareCardValues, voteDistribution  */
 
@@ -30,8 +30,13 @@ function _resolveNameColor(darkBadge, isSelf) {
     return isSelf ? '#004178' : '#1a1a2e';
 }
 
+/** Stimmen Product Owner in dieser Session mit? (Einstellung, Standard: ja) */
+function _productOwnerVotes() {
+    return document.getElementById('settingPoCanVote')?.checked ?? true;
+}
+
 function _resolveStatusColor(role, hasVoted) {
-    if (role === 'PRODUCT_OWNER') return 'transparent';
+    if (role === 'PRODUCT_OWNER' && !_productOwnerVotes()) return 'transparent';
     return hasVoted ? '#22c55e' : '#9ca3af';
 }
 
@@ -93,9 +98,8 @@ function renderTable() {
     svg.style.overflow = 'visible';
     svg.setAttribute('role', 'img');
 
-    const svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    svgTitle.textContent = `Pokertisch mit ${total} Teilnehmer${total === 1 ? '' : 'n'}`;
-    svg.appendChild(svgTitle);
+    // aria-label statt <title>: Screenreader lesen es vor, aber es erscheint kein Maus-Tooltip
+    svg.setAttribute('aria-label', `Pokertisch mit ${total} Teilnehmer${total === 1 ? '' : 'n'}`);
 
     const svgDesc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
     svgDesc.textContent = isRevealed
@@ -124,6 +128,23 @@ function renderTable() {
 
     container.appendChild(svg);
     syncStatusToSvg();
+    _renderRoleLegend();
+}
+
+/** Legende unter dem Tisch: nur die Rollen, die gerade am Tisch sitzen. */
+function _renderRoleLegend() {
+    const legend = document.getElementById('roleLegend');
+    if (!legend) return;
+
+    const present = new Set(Object.values(players)
+        .map(p => (p.role === 'MODERATOR' ? 'DEVELOPER' : p.role)));
+    const roles = ROLE_ORDER.filter(r => present.has(r));
+
+    legend.innerHTML = roles.map(r => `
+        <span class="role-legend__item">
+            <span class="role-dot" style="background:${getRoleColor(r)};"></span>${escapeHtml(getRoleLabel(r))}
+        </span>`).join('');
+    legend.style.display = roles.length > 0 ? '' : 'none';
 }
 
 // ====================================
@@ -223,22 +244,27 @@ function _svgText(x, y, content, attrs) {
  */
 function _renderResult(svg, cx, cy, tableRx, tableRy) {
     const { stacks, mostCommon } = voteDistribution();
+    // Maßstab aus der Tischgröße: auf großen Bildschirmen wächst das Ergebnis mit
+    const s = Math.min(2.3, Math.max(1.15, tableRy / 65));
 
     if (stacks.length === 0) {
         svg.appendChild(_svgText(cx, cy + 6, globalThis.i18n?.labels?.noVotes || 'Keine Stimmen',
-            { fill: 'rgba(255,255,255,0.6)', 'font-size': 14 }));
+            { fill: 'rgba(255,255,255,0.6)', 'font-size': Math.round(14 * s) }));
         return;
     }
 
-    const baseline = cy + tableRy * 0.12;
-    _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon);
-    _appendResultSummary(svg, cx, baseline + Math.max(tableRy * 0.38, 34), mostCommon);
+    const baseline = cy + tableRy * 0.08;
+    _appendStacks(svg, cx, baseline, { tableRx, tableRy, s }, stacks, mostCommon);
+    // unter den ×-Zahlen (baseline + 14·s) mit etwas Abstand
+    _appendResultSummary(svg, cx, baseline + 36 * s, s);
 }
 
-function _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon) {
+function _appendStacks(svg, cx, baseline, size, stacks, mostCommon) {
+    const { tableRx, tableRy, s } = size;
     const dark   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
     const slotW  = (tableRx * 1.5) / stacks.length;
-    const cardW  = Math.max(14, Math.min(26, slotW * 0.62));
+    // begrenzt durch den Platz pro Stapel und die Tischhöhe, damit der Stapel auf dem Tisch bleibt
+    const cardW  = Math.max(14, Math.min(slotW * 0.62, tableRy * 0.45, 26 * s));
     const cardH  = Math.round(cardW * 1.4);
     const layerY = Math.max(2, Math.round(cardW * 0.13));
     const startX = cx - (slotW * (stacks.length - 1)) / 2;
@@ -263,7 +289,7 @@ function _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon) {
             card.setAttribute('rx',     String(Math.max(3, cardW * 0.18)));
             card.setAttribute('fill',   cfg.fill);
             card.setAttribute('stroke', isFront && isTop ? STACK_GOLD : cfg.stroke);
-            card.setAttribute('stroke-width', isFront && isTop ? '2.5' : '1.2');
+            card.setAttribute('stroke-width', String((isFront && isTop ? 2.5 : 1.2) * Math.sqrt(s)));
             g.appendChild(card);
         }
 
@@ -273,37 +299,37 @@ function _appendStacks(svg, cx, baseline, tableRx, stacks, mostCommon) {
             'font-weight': 700, 'dominant-baseline': 'middle'
         }));
 
-        g.appendChild(_svgText(x, baseline + 14, `×${stack.count}`, {
+        g.appendChild(_svgText(x, baseline + 14 * s, `×${stack.count}`, {
             fill: isTop ? STACK_GOLD : 'rgba(255,255,255,0.7)',
-            'font-size': 11, 'font-weight': isTop ? 700 : 500
+            'font-size': Math.round(11 * s), 'font-weight': isTop ? 700 : 500
         }));
 
         svg.appendChild(g);
     });
 }
 
-function _appendResultSummary(svg, cx, y, mostCommon) {
+function _appendResultSummary(svg, cx, y, s = 1) {
     const stats  = recalculateStats();
-    const labels = globalThis.i18n?.labels || {};
+    // Der häufigste Wert ist am goldenen Stapel erkennbar – hier nur noch der Durchschnitt
     const parts  = [];
-    if (mostCommon.length > 0) parts.push(`${labels.mostCommon || 'Meist'}: ${mostCommon.join(' / ')}`);
     if (stats.overallAvg !== null) parts.push(`Ø ${stats.overallAvg}`);
 
     if (parts.length > 0) {
         svg.appendChild(_svgText(cx, y, parts.join('  ·  '),
-            { fill: 'white', 'font-size': 14, 'font-weight': 700 }));
+            { fill: 'white', 'font-size': Math.round(14 * s), 'font-weight': 700 }));
     }
 
     // Optional: Durchschnitt je Rolle in den Rollenfarben
     if (showOnlyTotal) return;
+    // Helle Rollentöne, weil der Tisch dunkel ist
     const roles = [
-        { label: '⚙', avg: stats.devAvg,       color: '#60a5fa' },
-        { label: '✓', avg: stats.testerAvg,    color: '#4ade80' },
-        { label: '🏗', avg: stats.architectAvg, color: '#f9a825' }
+        { label: '⚙', avg: stats.devAvg,       color: ROLE_COLORS_DARK.DEVELOPER },
+        { label: '✓', avg: stats.testerAvg,    color: ROLE_COLORS_DARK.TESTER },
+        { label: '🏗', avg: stats.architectAvg, color: ROLE_COLORS_DARK.IT_ARCHITECT }
     ].filter(r => r.avg !== null);
     if (roles.length < 2) return;
 
-    const line = _svgText(cx, y + 18, '', { 'font-size': 11, 'font-weight': 600 });
+    const line = _svgText(cx, y + 18 * s, '', { 'font-size': Math.round(11 * s), 'font-weight': 600 });
     roles.forEach((r, i) => {
         const span = document.createElementNS(SVG_NS, 'tspan');
         span.setAttribute('fill', r.color);
@@ -329,7 +355,7 @@ function _appendPlayerCard(svg, id, player, pos, cardSize) {
     const { cardW, cardH, nameFontSize } = cardSize;
     const isSelf    = id === participantId;
     const hasVoted  = player.voted;
-    const roleColor = ROLE_COLORS[player.role] || '#004178';
+    const roleColor = getRoleColor(player.role);
     const showValue = (isRevealed && player.cardValue) || (isSelf && player.cardValue);
     const { cfg }   = _resolveCardConfig(player, isSelf, hasVoted);
     const rx = 8;
@@ -505,7 +531,10 @@ function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
     const { roleColor, isSelf } = style;
     const nameY       = py + cardH / 2 + 4;
     const displayName = _resolveDisplayName(player.name, isSelf);
-    const nameW       = Math.min(displayName.length * 7 + 16, 120);
+    // Links im Schild ein Punkt in der Rollenfarbe
+    const dotR        = Math.max(3.5, nameFontSize * 0.4);
+    const dotSpace    = dotR * 2 + 5;
+    const nameW       = Math.min(displayName.length * 7 + 16, 120) + dotSpace;
     const nameH       = nameFontSize + 10;
     const badgeRx     = nameH / 2;
     const darkBadge   = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -517,12 +546,19 @@ function _appendNameBadge(svg, player, pos, cardH, nameFontSize, style) {
     badgeBg.setAttribute('height', nameH);
     badgeBg.setAttribute('rx',     String(badgeRx));
     badgeBg.setAttribute('fill',         darkBadge ? '#0d1f35' : '#ffffff');
-    badgeBg.setAttribute('stroke',       roleColor);
+    badgeBg.setAttribute('stroke',       getRoleTextColor(player.role));
     badgeBg.setAttribute('stroke-width', '1.5');
     svg.appendChild(badgeBg);
 
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx',   String(px - nameW / 2 + badgeRx));
+    dot.setAttribute('cy',   String(nameY + nameH / 2));
+    dot.setAttribute('r',    String(dotR));
+    dot.setAttribute('fill', darkBadge ? getRoleTextColor(player.role) : roleColor);
+    svg.appendChild(dot);
+
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    nameText.setAttribute('x',                  px);
+    nameText.setAttribute('x',                  px + dotSpace / 2);
     nameText.setAttribute('y',                  nameY + nameH / 2 + 1);
     nameText.setAttribute('text-anchor',        'middle');
     nameText.setAttribute('dominant-baseline',  'middle');
@@ -579,7 +615,7 @@ function _renderAbsentList() {
         const li = document.createElement('li');
         li.className = 'sidebar__absent-item';
         li.innerHTML = `
-            <span class="sidebar__absent-name">${escapeHtml(player.name)}</span>
+            <span class="sidebar__absent-name"><span class="role-dot" style="background:${getRoleColor(player.role)};"></span>${escapeHtml(player.name)}</span>
             <span class="sidebar__absent-role">${getRoleLabel(player.role)}</span>
             ${_buildRemoveButton(id, false)}`;
         ul.appendChild(li);
@@ -589,15 +625,15 @@ function _renderAbsentList() {
 function _buildSidebarItem(id, player, activeModerators) {
     const isSelfEntry        = id === participantId;
     const hasVoted           = player.voted;
-    const avatarBg           = getAvatarColor(player.name);
-    const roleColor          = ROLE_COLORS[player.role] || '#004178';
+    const avatarBg           = getRoleColor(player.role);
+    const roleColor          = getRoleTextColor(player.role);
     const isAlreadyModerator = player.moderator || (isSelfEntry && isModerator);
     const canDemote          = isAlreadyModerator && activeModerators > 1;
     const statusColor        = _resolveStatusColor(player.role, hasVoted);
     const statusSymbol       = hasVoted ? '✓' : '';
     const isDark             = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
     const bgBorder           = isDark ? '#1e1e2e' : '#ffffff';
-    const outlineColor       = isAlreadyModerator ? '#eab308' : roleColor;
+    const outlineColor       = isAlreadyModerator ? '#eab308' : 'transparent';   // Ring nur für Moderatoren
 
     const li = document.createElement('li');
     li.className = 'sidebar__item';
@@ -613,7 +649,7 @@ function _buildSidebarItem(id, player, activeModerators) {
             ">
                 ${escapeHtml(player.name.charAt(0).toUpperCase())}
             </div>
-            ${player.role === 'PRODUCT_OWNER' ? '' : `
+            ${player.role === 'PRODUCT_OWNER' && !_productOwnerVotes() ? '' : `
             <div style="
                 position:absolute; bottom:1px; right:1px;
                 width:14px; height:14px; border-radius:50%;
@@ -674,7 +710,7 @@ function _buildStatusOrValue(player, hasVoted) {
                     ${escapeHtml(player.cardValue)}
                 </span>`;
     }
-    if (player.role === 'PRODUCT_OWNER') return '';
+    if (player.role === 'PRODUCT_OWNER' && !_productOwnerVotes()) return '';
     return `<div class="player-status ${_resolveStatusClass(player.changed, hasVoted)}"></div>`;
 }
 

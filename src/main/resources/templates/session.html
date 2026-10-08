@@ -66,7 +66,7 @@
             <select class="form__select" id="joinModalRole">
                 <option value="DEVELOPER"     th:text="#{role.developer}">Entwickler</option>
                 <option value="TESTER"        th:text="#{role.tester}">Tester</option>
-                <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner (Beobachter)</option>
+                <option value="PRODUCT_OWNER" th:text="#{role.product_owner}">Product Owner</option>
                 <option value="IT_ARCHITECT"  th:text="#{role.it_architect}">IT-Architekt</option>
             </select>
             <button class="btn btn--primary" id="joinModalBtn" style="width:100%;"
@@ -134,7 +134,6 @@
             moderator:    /*[[#{role.moderator}]]*/ '',
             moderatorStar: /*[[#{session.moderator.star}]]*/ '',
             you:          /*[[#{session.you}]]*/ 'Du',
-            mostCommon:   /*[[#{session.result.most}]]*/ 'Meist',
             noVotes:      /*[[#{session.result.none}]]*/ 'Keine Stimmen',
             absent:       /*[[#{session.absent}]]*/ 'Abwesend',
             leave:        /*[[#{session.leave}]]*/ 'Tisch verlassen',
@@ -260,6 +259,8 @@
         </div>
 
         <div id="pokerTable" style="width:100%;" aria-label="Pokertisch"></div>
+        <!-- Welche Farbe zu welcher Rolle gehört (render.js) -->
+        <div class="role-legend" id="roleLegend" style="display:none;"></div>
 
         <div class="cards" id="cardArea" style="justify-content: center;">
             <div class="cards__grid" th:style="'--n:' + ${#lists.size(cards)}">
