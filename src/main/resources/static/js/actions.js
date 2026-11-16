@@ -253,11 +253,18 @@ function leaveTable() {
     });
 }
 
+/** Team-Raum: Anwesende werden zuerst abwesend gesetzt, Abwesende endgültig entfernt. */
 function removeFromTable(targetId) {
     const labels   = globalThis.i18n?.labels || {};
     const name     = (players[targetId] || absentPlayers[targetId])?.name || '';
-    const question = (labels.removeConfirm || '{0} vom Tisch entfernen?').replace('{0}', name);
-    showConfirm(question, labels.removeAction || 'Entfernen', () => {
+    const setAway  = !!teamName && !!players[targetId];
+    const question = setAway
+        ? (labels.setAwayConfirm || '{0} auf abwesend setzen?').replace('{0}', name)
+        : (labels.removeConfirm  || '{0} vom Tisch entfernen?').replace('{0}', name);
+    const action   = setAway
+        ? (labels.setAwayAction || 'Abwesend setzen')
+        : (labels.removeAction  || 'Entfernen');
+    showConfirm(question, action, () => {
         sendWs('/participant/remove', { participantId: targetId });
     });
 }

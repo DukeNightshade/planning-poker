@@ -534,6 +534,34 @@ class SessionServiceTest {
     }
 
     @Test
+    @DisplayName("removeFromTable: Im Team-Raum setzt der Moderator Anwesende nur auf abwesend")
+    void removeFromTable_byModeratorInTeamRoom_presentKeptAsAbsent() {
+        testSession.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        SessionService.Departure result = sessionService.removeFromTable("ABCD1234", testModerator, 2L);
+
+        assertThat(result.keptAsAbsent()).isTrue();
+        assertThat(lisa.isPresent()).isFalse();
+        verify(participantRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("removeFromTable: Im Team-Raum entfernt der Moderator Abwesende endgültig")
+    void removeFromTable_byModeratorInTeamRoom_absentDeleted() {
+        testSession.setTeamName("backend");
+        Participant lisa = participantInRoom(2L, "Lisa", false, testSession);
+        lisa.setPresent(false);
+        when(participantRepository.findById(2L)).thenReturn(Optional.of(lisa));
+
+        SessionService.Departure result = sessionService.removeFromTable("ABCD1234", testModerator, 2L);
+
+        assertThat(result.keptAsAbsent()).isFalse();
+        verify(participantRepository).delete(lisa);
+    }
+
+    @Test
     @DisplayName("removeFromTable: Normaler Teilnehmer darf andere nicht entfernen")
     void removeFromTable_otherByNonModerator_forbidden() {
         Participant lisa = participantInRoom(2L, "Lisa", false, testSession);

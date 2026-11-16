@@ -516,14 +516,21 @@ function handlePlayerLeft(data) {
     _refreshVoteStatus();
 }
 
-/** Team-Raum: Mitglied ist nicht mehr verbunden (oder für heute gegangen) – bleibt gemerkt. */
+/** Team-Raum: Mitglied ist nicht mehr verbunden, für heute gegangen oder abwesend gesetzt – bleibt gemerkt. */
 function handlePlayerAway(data) {
     if (data.participantId === participantId) {
         if (leavingTable) {
             ['participantId', 'participantToken', 'isModerator'].forEach(k => sessionStorage.removeItem(k));
             globalThis.location.href = appUrl('/');
+        } else if (players[participantId]) {
+            // Vom Moderator abwesend gesetzt: Beitrittsdialog, Beitreten holt den Platz zurück
+            const me = players[participantId];
+            me.voted     = false;
+            me.cardValue = null;
+            absentPlayers[participantId] = me;
+            _handleRemovedFromTable();
         }
-        return;   // sonst: eigene Verbindung kommt gleich zurück
+        return;
     }
     const player = players[data.participantId];
     if (player) {

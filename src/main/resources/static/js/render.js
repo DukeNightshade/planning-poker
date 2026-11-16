@@ -1,4 +1,4 @@
-/* global participantId, isModerator, isRevealed, players, absentPlayers, tickets, currentTicketId,
+/* global participantId, isModerator, teamName, isRevealed, players, absentPlayers, tickets, currentTicketId,
           getRoleColor, getRoleTextColor, ROLE_ORDER, ROLE_COLORS_DARK, recalculateStats, escapeHtml, getRoleLabel,
           selectTicket, promoteMyself, demoteParticipant, showOnlyTotal, SKIP_CARD,
           compareCardValues, voteDistribution  */
@@ -1015,7 +1015,7 @@ function _renderAbsentList() {
         li.innerHTML = `
             <span class="sidebar__absent-name"><span class="role-dot" style="background:${getRoleColor(player.role)};"></span>${escapeHtml(player.name)}</span>
             <span class="sidebar__absent-role">${getRoleLabel(player.role)}</span>
-            ${_buildRemoveButton(id, false)}`;
+            ${_buildRemoveButton(id, false, true)}`;
         ul.appendChild(li);
     });
 }
@@ -1084,12 +1084,19 @@ function _buildSidebarItem(id, player, activeModerators) {
     return li;
 }
 
-/** ✕ zum Entfernen anderer Teilnehmer (nur Moderatoren; selbst gehen über "Tisch verlassen" im Header). */
-function _buildRemoveButton(id, isSelfEntry) {
+/**
+ * Button für andere Teilnehmer (nur Moderatoren; selbst gehen über "Tisch verlassen" im Header).
+ * Team-Raum: Anwesende werden erst abwesend gesetzt (⏸), Abwesende endgültig entfernt (✕).
+ */
+function _buildRemoveButton(id, isSelfEntry, isAbsent = false) {
     if (isSelfEntry || !isModerator) return '';
-    const label = escapeHtml(globalThis.i18n?.labels?.remove || 'Vom Tisch entfernen');
+    const labels  = globalThis.i18n?.labels || {};
+    const setAway = !!teamName && !isAbsent;
+    const label   = escapeHtml(setAway
+        ? (labels.setAway || 'Auf abwesend setzen')
+        : (labels.remove  || 'Vom Tisch entfernen'));
     return `<button class="btn--kick" onclick="removeFromTable('${id}')"
-                    title="${label}" aria-label="${label}">✕</button>`;
+                    title="${label}" aria-label="${label}">${setAway ? '⏸' : '✕'}</button>`;
 }
 
 function _buildStatusOrValue(player, hasVoted) {
