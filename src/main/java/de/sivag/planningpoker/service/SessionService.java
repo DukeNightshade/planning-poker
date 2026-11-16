@@ -197,7 +197,9 @@ public class SessionService {
      * Nimmt einen Teilnehmer vom Tisch (inkl. seiner Stimme). Erlaubt für sich
      * selbst oder durch einen Moderator, nur innerhalb des eigenen Raums.
      *
-     * In Team-Räumen wird, wer selbst geht, nur als abwesend markiert.
+     * In Team-Räumen wird ein anwesender Teilnehmer nur als abwesend markiert
+     * (selbst gegangen oder vom Moderator abwesend gesetzt); erst wer schon
+     * abwesend ist, wird endgültig entfernt.
      *
      * @return Name und ob der Teilnehmer als abwesend gemerkt bleibt
      */
@@ -207,8 +209,8 @@ public class SessionService {
         Participant participant = getParticipantInRoom(roomCode, participantId);
         participant.getSession().touch();
 
-        // Team-Raum, selbst gegangen: "für heute" – bleibt als abwesend gemerkt
-        if (participant.getSession().isTeamRoom() && caller.getId().equals(participantId)) {
+        // Team-Raum, noch anwesend: "für heute" – bleibt als abwesend gemerkt
+        if (participant.getSession().isTeamRoom() && participant.isPresent()) {
             participant.setPresent(false);
             participant.getVotes().clear();
             return new Departure(participant.getName(), true);

@@ -24,6 +24,8 @@ Server stehen in `deploy/planning-poker-server-deploy/ANLEITUNG.txt`.
   erscheint das wie ein normales Verlassen; die Person kann über den Dialog direkt
   wieder beitreten. Danach wird Auto-Reveal sofort geprüft – das gilt jetzt auch,
   wenn jemand den Tab schließt.
+  In Team-Räumen setzt der Moderator anwesende Teilnehmer zuerst nur auf abwesend (⏸);
+  erst abwesende werden per ✕ endgültig entfernt.
 - Eigene Karten im Schätzraum als aufgefächerte Pokerhand direkt unter dem Tisch; der
   Tisch und die Karten wachsen mit der Bildschirmgröße (Laptop bis 27-Zoll-Monitor).
 - Rollenfarben: Entwickler, Tester, IT-Architekt und Product Owner haben je eine deutlich

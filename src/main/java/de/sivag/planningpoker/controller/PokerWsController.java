@@ -216,7 +216,9 @@ public class PokerWsController {
 
     /**
      * Nimmt einen Teilnehmer vom Tisch: Moderatoren dürfen andere entfernen,
-     * jeder darf selbst gehen. Für den Raum sieht es aus wie ein normales Verlassen.
+     * jeder darf selbst gehen. In Team-Räumen wird ein Anwesender zuerst nur
+     * abwesend gesetzt, ein Abwesender endgültig entfernt.
+     * Für den Raum sieht es aus wie ein normales Verlassen bzw. Abwesend-Werden.
      */
     @MessageMapping("/session/{roomCode}/participant/remove")
     public void removeFromTable(
